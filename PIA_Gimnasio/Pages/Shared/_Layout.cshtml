@@ -26,6 +26,16 @@
                             <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
                         </li>
                     </ul>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="navbar-text">@User.FindFirst("NombreCompleto")?.Value</span>
+                            <form method="post" asp-page="/Login" asp-page-handler="Logout" class="m-0">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
+                            </form>
+                        </div>
+                    }
                 </div>
             </div>
         </nav>
