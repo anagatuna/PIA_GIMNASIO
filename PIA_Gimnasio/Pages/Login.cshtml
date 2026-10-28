@@ -10,9 +10,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"]</title>
+    <title>@ViewData["Title"] - Chispi Fit</title>
+    <link rel="icon" type="image/png" href="~/img/logo-icono.png" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/login.css" />
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
 </head>
 <body>
     <img src="~/img/fondo.jpeg" alt="" class="fondo" aria-hidden="true" />
@@ -21,14 +22,7 @@
     <main class="contenedor">
         <!-- Texto de bienvenida -->
         <section class="hero">
-            <div class="hero-marca">
-                <div class="mini-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round">
-                        <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" />
-                    </svg>
-                </div>
-                PIA Gimnasio
-            </div>
+            <img src="~/img/logo-oscuro.png" alt="Chispi Fit" class="hero-logo" />
             <h2>Tu gimnasio,<br /><span>bajo control.</span></h2>
             <p>Administra socios, membresías y sucursales desde un solo lugar.</p>
         </section>
@@ -66,7 +60,7 @@
                 </form>
             </div>
 
-            <p class="pie">&copy; @DateTime.Now.Year PIA Gimnasio</p>
+            <p class="pie">&copy; @DateTime.Now.Year Chispi Fit</p>
         </div>
     </main>
 

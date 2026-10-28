@@ -1,45 +1,150 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@{
+    // Página actual para marcar el link activo en el menú
+    var paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    string Activo(string ruta) => paginaActual.StartsWith(ruta, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    bool GrupoAbierto(params string[] rutas) => rutas.Any(r => paginaActual.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+}
+
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - PIA_Gimnasio</title>
+    <title>@ViewData["Title"] - Chispi Fit</title>
+    <link rel="icon" type="image/png" href="~/img/logo-icono.png" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/PIA_Gimnasio.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">PIA_Gimnasio</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                    </ul>
+    <header class="topbar mb-4">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a class="marca" asp-area="" asp-page="/Index">
+                <img src="~/img/logo-claro.png" alt="Chispi Fit" />
+            </a>
 
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="navbar-text">@User.FindFirst("NombreCompleto")?.Value</span>
-                            <form method="post" asp-page="/Login" asp-page-handler="Logout" class="m-0">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
-                            </form>
-                        </div>
-                    }
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="d-flex align-items-center gap-3">
+                    <span class="usuario-chip d-none d-sm-inline">
+                        <i class="bi bi-person-circle me-1"></i>@User.FindFirst("NombreCompleto")?.Value
+                    </span>
+                    <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuOpciones" aria-controls="menuOpciones" aria-label="Abrir menú">
+                        <i class="bi bi-list"></i>
+                    </button>
                 </div>
-            </div>
-        </nav>
+            }
+        </div>
     </header>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var nombre = User.FindFirst("NombreCompleto")?.Value ?? "Usuario";
+        var inicial = string.IsNullOrEmpty(nombre) ? "U" : nombre.Substring(0, 1).ToUpper();
+
+        <!-- ---------- Menú de opciones ---------- -->
+        <div class="offcanvas offcanvas-end menu-lateral" tabindex="-1" id="menuOpciones" aria-labelledby="menuOpcionesLabel">
+            <div class="offcanvas-header">
+                <img src="~/img/logo-oscuro.png" alt="Chispi Fit" class="menu-logo" id="menuOpcionesLabel" />
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="offcanvas-body">
+                <div class="menu-usuario">
+                    <div class="avatar">@inicial</div>
+                    <div>
+                        @nombre
+                        <small>Sesión activa</small>
+                    </div>
+                </div>
+
+                <a class="menu-link @Activo("/Index")" asp-page="/Index">
+                    <i class="bi bi-house"></i> Inicio
+                </a>
+
+                <!-- Socios -->
+                <div class="menu-seccion">Socios</div>
+                <a class="menu-link @Activo("/Socios")" asp-page="/Socios/Index">
+                    <i class="bi bi-people"></i> Socios
+                </a>
+                <a class="menu-link @Activo("/Asistencias")" asp-page="/Asistencias/Index">
+                    <i class="bi bi-calendar-check"></i> Asistencias
+                </a>
+
+                <!-- Membresías (desplegable) -->
+                @{
+                    var membresiasAbierto = GrupoAbierto("/Membresias", "/TiposMembresia", "/Pagos");
+                }
+                <button class="menu-link" type="button" data-bs-toggle="collapse" data-bs-target="#grupoMembresias"
+                        aria-expanded="@(membresiasAbierto ? "true" : "false")" aria-controls="grupoMembresias">
+                    <i class="bi bi-credit-card-2-front"></i> Membresías
+                    <i class="bi bi-chevron-down flecha"></i>
+                </button>
+                <div class="collapse @(membresiasAbierto ? "show" : "")" id="grupoMembresias">
+                    <div class="submenu">
+                        <a class="menu-link @Activo("/Membresias")" asp-page="/Membresias/Index">
+                            <i class="bi bi-person-badge"></i> Membresías de socios
+                        </a>
+                        <a class="menu-link @Activo("/TiposMembresia")" asp-page="/TiposMembresia/Index">
+                            <i class="bi bi-tags"></i> Tipos de membresía
+                        </a>
+                        <a class="menu-link @Activo("/Pagos")" asp-page="/Pagos/Index">
+                            <i class="bi bi-cash-coin"></i> Pagos
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Operación -->
+                <div class="menu-seccion">Operación</div>
+
+                @{
+                    var clasesAbierto = GrupoAbierto("/Clases", "/Horarios", "/Instructores");
+                }
+                <button class="menu-link" type="button" data-bs-toggle="collapse" data-bs-target="#grupoClases"
+                        aria-expanded="@(clasesAbierto ? "true" : "false")" aria-controls="grupoClases">
+                    <i class="bi bi-lightning-charge"></i> Clases
+                    <i class="bi bi-chevron-down flecha"></i>
+                </button>
+                <div class="collapse @(clasesAbierto ? "show" : "")" id="grupoClases">
+                    <div class="submenu">
+                        <a class="menu-link @Activo("/Clases")" asp-page="/Clases/Index">
+                            <i class="bi bi-bicycle"></i> Clases
+                        </a>
+                        <a class="menu-link @Activo("/Horarios")" asp-page="/Horarios/Index">
+                            <i class="bi bi-clock"></i> Horarios
+                        </a>
+                        <a class="menu-link @Activo("/Instructores")" asp-page="/Instructores/Index">
+                            <i class="bi bi-person-video3"></i> Instructores
+                        </a>
+                    </div>
+                </div>
+
+                <a class="menu-link @Activo("/Equipos")" asp-page="/Equipos/Index">
+                    <i class="bi bi-gear-wide-connected"></i> Equipo y aparatos
+                </a>
+
+                <!-- Administración -->
+                <div class="menu-seccion">Administración</div>
+                <a class="menu-link @Activo("/Sucursales")" asp-page="/Sucursales/Index">
+                    <i class="bi bi-building"></i> Sucursales
+                </a>
+                <a class="menu-link @Activo("/Empleados")" asp-page="/Empleados/Index">
+                    <i class="bi bi-person-workspace"></i> Empleados
+                </a>
+                <a class="menu-link @Activo("/Usuarios")" asp-page="/Usuarios/Index">
+                    <i class="bi bi-shield-lock"></i> Usuarios
+                </a>
+
+                <form method="post" asp-page="/Login" asp-page-handler="Logout" class="mt-4">
+                    <button type="submit" class="btn-cerrar-sesion">
+                        <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
@@ -48,7 +153,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 - PIA_Gimnasio - <a asp-area="" asp-page="/Privacy">Privacy</a>
+            &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-area="" asp-page="/Privacy">Privacidad</a>
         </div>
     </footer>
 
