@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="Entidades\" />
     <Folder Include="Logica\" />
+    <Folder Include="wwwroot\img\" />
   </ItemGroup>
 
   <ItemGroup>

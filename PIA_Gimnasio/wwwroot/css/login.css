@@ -1,0 +1,254 @@
+﻿:root {
+    --naranja: #ff9500; /* naranja de sistema iOS */
+    --naranja-hover: #f08a00;
+    --error: #ff3b30;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #111;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Fondo con la foto ---------- */
+.fondo {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Más oscuro a la izquierda para que se lea el texto */
+.fondo-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .50) 0%, rgba(0, 0, 0, .15) 55%, rgba(0, 0, 0, .05) 100%);
+}
+
+/* ---------- Layout: texto izquierda, login derecha ---------- */
+.contenedor {
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 64px;
+}
+
+.hero {
+    color: #fff;
+    max-width: 520px;
+}
+
+.hero-marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    margin-bottom: 28px;
+}
+
+    .hero-marca .mini-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(145deg, #ffcc00 0%, #ff9500 100%);
+        display: grid;
+        place-items: center;
+    }
+
+.hero h2 {
+    font-size: 3.6rem;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -.03em;
+    margin: 0 0 18px;
+}
+
+    .hero h2 span {
+        color: #ffb340;
+    }
+
+.hero p {
+    font-size: 1.15rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, .8);
+    margin: 0;
+}
+
+/* ---------- Card de vidrio claro ---------- */
+.login-col {
+    width: 100%;
+    max-width: 440px;
+    flex-shrink: 0;
+}
+
+.login-card {
+    padding: 44px 40px 36px;
+    border-radius: 28px;
+    background: rgba(255, 250, 243, .80);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, .6);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .35), 0 0 60px rgba(255, 149, 0, .15);
+}
+
+.titulo {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    text-align: center;
+    color: #1c1c1e;
+    margin: 0 0 6px;
+}
+
+.subtitulo {
+    font-size: 1rem;
+    text-align: center;
+    color: #6e6e73;
+    margin: 0 0 30px;
+}
+
+.form-label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: #d97a00; /* naranja más oscuro para que se lea sobre claro */
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin: 0 0 8px 4px;
+}
+
+.form-control {
+    background: rgba(255, 255, 255, .7);
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    color: #1c1c1e;
+    transition: background .2s, border-color .2s, box-shadow .2s;
+}
+
+    .form-control:focus {
+        background: #fff;
+        border-color: var(--naranja);
+        color: #1c1c1e;
+        box-shadow: 0 0 0 4px rgba(255, 149, 0, .2);
+    }
+
+    .form-control::placeholder {
+        color: #a1a1a6;
+    }
+
+    /* Autocompletado de Chrome */
+    .form-control:-webkit-autofill {
+        -webkit-text-fill-color: #1c1c1e;
+        -webkit-box-shadow: 0 0 0 1000px #fff inset;
+        caret-color: #1c1c1e;
+    }
+
+.campo-pass {
+    position: relative;
+}
+
+    .campo-pass .form-control {
+        padding-right: 84px;
+    }
+
+.btn-ver {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--naranja);
+    font-size: .88rem;
+    font-weight: 500;
+    padding: 6px 10px;
+}
+
+.text-validacion {
+    display: block;
+    color: var(--error);
+    font-size: .8rem;
+    margin: 4px 0 0 4px;
+}
+
+.btn-entrar {
+    background: var(--naranja);
+    border: none;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 10px;
+    box-shadow: 0 8px 24px rgba(255, 149, 0, .3);
+    transition: background .15s, transform .1s;
+}
+
+    .btn-entrar:hover,
+    .btn-entrar:focus {
+        background: var(--naranja-hover);
+        color: #fff;
+    }
+
+    .btn-entrar:active {
+        transform: scale(.98);
+    }
+
+.alerta-error {
+    background: rgba(255, 59, 48, .1);
+    color: var(--error);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: .9rem;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pie {
+    text-align: center;
+    color: rgba(255, 255, 255, .75);
+    font-size: .78rem;
+    margin-top: 22px;
+}
+
+/* Navegadores sin soporte de blur: tarjeta casi sólida */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .login-card {
+        background: rgba(255, 250, 243, .95);
+    }
+}
+
+/* Pantallas medianas y celular: solo la tarjeta, centrada */
+@media (max-width: 991.98px) {
+    .contenedor {
+        justify-content: center;
+        padding: 32px 16px;
+    }
+
+    .hero {
+        display: none;
+    }
+
+    .fondo-overlay {
+        background: rgba(0, 0, 0, .35);
+    }
+}
+
+@media (max-width: 480px) {
+    .login-card {
+        padding: 36px 24px 28px;
+    }
+}

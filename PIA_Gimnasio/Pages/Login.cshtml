@@ -10,19 +10,38 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - PIA Gimnasio</title>
+    <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/login.css" />
 </head>
-<body class="bg-light">
-    <div class="container d-flex justify-content-center align-items-center min-vh-100">
-        <div class="card shadow-sm" style="width: 100%; max-width: 380px;">
-            <div class="card-body p-4">
-                <h1 class="h4 text-center mb-1">PIA Gimnasio</h1>
-                <p class="text-center text-muted mb-4">Inicia sesión para continuar</p>
+<body>
+    <img src="~/img/fondo.jpeg" alt="" class="fondo" aria-hidden="true" />
+    <div class="fondo-overlay"></div>
+
+    <main class="contenedor">
+        <!-- Texto de bienvenida -->
+        <section class="hero">
+            <div class="hero-marca">
+                <div class="mini-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round">
+                        <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" />
+                    </svg>
+                </div>
+                PIA Gimnasio
+            </div>
+            <h2>Tu gimnasio,<br /><span>bajo control.</span></h2>
+            <p>Administra socios, membresías y sucursales desde un solo lugar.</p>
+        </section>
+
+        <!-- Login -->
+        <div class="login-col">
+            <div class="login-card">
+                <h1 class="titulo">Bienvenido</h1>
+                <p class="subtitulo">Inicia sesión para continuar</p>
 
                 @if (!string.IsNullOrEmpty(Model.MensajeError))
                 {
-                    <div class="alert alert-danger py-2">@Model.MensajeError</div>
+                    <div class="alerta-error" role="alert">@Model.MensajeError</div>
                 }
 
                 <form method="post">
@@ -30,24 +49,42 @@
 
                     <div class="mb-3">
                         <label asp-for="Input.Cuenta" class="form-label">Cuenta</label>
-                        <input asp-for="Input.Cuenta" class="form-control" autocomplete="username" autofocus />
-                        <span asp-validation-for="Input.Cuenta" class="text-danger small"></span>
+                        <input asp-for="Input.Cuenta" class="form-control" placeholder="Usuario" autocomplete="username" autofocus />
+                        <span asp-validation-for="Input.Cuenta" class="text-validacion"></span>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="Input.Contrasenia" class="form-label">Contraseña</label>
-                        <input asp-for="Input.Contrasenia" class="form-control" autocomplete="current-password" />
-                        <span asp-validation-for="Input.Contrasenia" class="text-danger small"></span>
+                        <div class="campo-pass">
+                            <input asp-for="Input.Contrasenia" class="form-control" placeholder="Contraseña" autocomplete="current-password" />
+                            <button type="button" class="btn-ver" id="btnVer">Mostrar</button>
+                        </div>
+                        <span asp-validation-for="Input.Contrasenia" class="text-validacion"></span>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                    <button type="submit" class="btn btn-entrar w-100">Entrar</button>
                 </form>
             </div>
+
+            <p class="pie">&copy; @DateTime.Now.Year PIA Gimnasio</p>
         </div>
-    </div>
+    </main>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+            // Mostrar / ocultar contraseña
+            (function() {
+                const btn = document.getElementById('btnVer');
+                const input = document.getElementById('Input_Contrasenia');
+                if (!btn || !input) return;
+                btn.addEventListener('click', function() {
+                    const oculto = input.type === 'password';
+                    input.type = oculto ? 'text' : 'password';
+                    btn.textContent = oculto ? 'Ocultar' : 'Mostrar';
+                });
+            })();
+    </script>
 </body>
 </html>
