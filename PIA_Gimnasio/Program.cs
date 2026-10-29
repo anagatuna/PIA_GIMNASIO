@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using PIA_Gimnasio.Datos;
+using PIA_Gimnasio.Logica;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Clases que se inyectan en las páginas
 builder.Services.AddScoped<bdConexion>();
+builder.Services.AddScoped<logicaUsuario>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

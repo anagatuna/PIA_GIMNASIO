@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security.Claims;
 using System.Text;
@@ -7,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
-using PIA_Gimnasio.Datos;
+using PIA_Gimnasio.Entidades;
+using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
@@ -16,40 +16,18 @@ namespace PIA_Gimnasio.Pages
     public class UsuarioModel : PageModel
     {
         private const int TamanioPagina = 10;
-        private readonly bdConexion _bd;
+        private readonly logicaUsuario _logica;
 
-        public UsuarioModel(bdConexion bd)
+        public UsuarioModel(logicaUsuario logica)
         {
-            _bd = bd;
+            _logica = logica;
         }
 
-        // ---------- Formulario de gestión ----------
+        // Datos del formulario
         [BindProperty]
-        public UsuarioInput Input { get; set; } = new();
+        public bdUsuario Usuario { get; set; } = new bdUsuario();
 
-        public class UsuarioInput
-        {
-            // 0 = nuevo registro, > 0 = edición
-            public int IdUsuario { get; set; }
-
-            [Required(ErrorMessage = "Ingresa la cuenta.")]
-            [StringLength(50, ErrorMessage = "La cuenta no puede pasar de 50 caracteres.")]
-            [RegularExpression(@"^\S+$", ErrorMessage = "La cuenta no puede llevar espacios.")]
-            public string Cuenta { get; set; } = string.Empty;
-
-            // Obligatoria solo al crear; al editar, vacía = conservar la actual
-            [StringLength(50, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 50 caracteres.")]
-            [DataType(DataType.Password)]
-            public string? Contrasenia { get; set; }
-
-            [Required(ErrorMessage = "Selecciona el rol.")]
-            public int? IdRol { get; set; }
-
-            [Required(ErrorMessage = "Selecciona el estatus.")]
-            public int? IdEstatus { get; set; } = 1;
-        }
-
-        // ---------- Filtros de búsqueda (viajan en la URL para conservarse al paginar) ----------
+        // Filtros de búsqueda (vienen en la URL para conservarse al paginar)
         [BindProperty(SupportsGet = true)]
         public string? BusquedaCuenta { get; set; }
 
@@ -62,22 +40,27 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int Pagina { get; set; } = 1;
 
-        // ---------- Datos para la vista ----------
+        // Para los combos, la tabla y el aviso
         public List<SelectListItem> Roles { get; set; } = new();
         public List<SelectListItem> Estatus { get; set; } = new();
-        public List<DataRow> Registros { get; set; } = new();
+        public List<DataRow> Usuarios { get; set; } = new();
         public int TotalRegistros { get; set; }
         public int TotalPaginas { get; set; }
-
-        public string? Mensaje { get; set; }
-        public string? TipoMensaje { get; set; }
+        public string Mensaje { get; set; } = "";
+        public string TipoMensaje { get; set; } = "";
 
         #region Utilidades
 
+        // Muestra el mensaje del SP
+        private void MostrarRespuesta(bdRespuesta r)
+        {
+            Mensaje = r.Mensaje;
+            TipoMensaje = r.TipoMensaje;
+        }
+
         private void MostrarMensaje(string mensaje, string tipo)
         {
-            Mensaje = mensaje;
-            TipoMensaje = tipo;
+            MostrarRespuesta(new bdRespuesta { Mensaje = mensaje, TipoMensaje = tipo });
         }
 
         // Guarda el mensaje en TempData para mostrarlo después del redirect y regresa a la búsqueda actual
@@ -105,103 +88,69 @@ namespace PIA_Gimnasio.Pages
             return ruta;
         }
 
-        private DataTable EjecutarSP(int accion, int? idUsuario = null, string? cuenta = null, string? contrasenia = null, int? idRol = null, int? idEstatus = null)
-        {
-            SqlParameter[] parametros =
-            {
-                new SqlParameter("@Accion", SqlDbType.Int)               { Value = accion },
-                new SqlParameter("@IdUsuario", SqlDbType.Int)            { Value = (object?)idUsuario ?? DBNull.Value },
-                new SqlParameter("@Cuenta", SqlDbType.NVarChar, 50)      { Value = (object?)cuenta ?? DBNull.Value },
-                new SqlParameter("@Contrasenia", SqlDbType.NVarChar, 50) { Value = (object?)contrasenia ?? DBNull.Value },
-                new SqlParameter("@IdRol", SqlDbType.Int)                { Value = (object?)idRol ?? DBNull.Value },
-                new SqlParameter("@IdEstatus", SqlDbType.Int)            { Value = (object?)idEstatus ?? DBNull.Value },
-                new SqlParameter("@UsuarioSesion", SqlDbType.Int)        { Value = IdUsuarioSesion() }
-            };
-            return _bd.EjecutarStoredProcedure("spUsuario", parametros);
-        }
-
         #endregion
 
         #region Carga inicial
-
-        private void CargarCombos()
-        {
-            Roles = EjecutarSP(8).AsEnumerable()
-                .Select(r => new SelectListItem(r["Descripcion"].ToString(), r["IdRol"].ToString()))
-                .ToList();
-
-            Estatus = EjecutarSP(9).AsEnumerable()
-                .Select(r => new SelectListItem(r["Descripcion"].ToString(), r["IdEstatus"].ToString()))
-                .ToList();
-        }
-
-        private DataTable ConsultarUsuarios()
-        {
-            string? cuenta = string.IsNullOrWhiteSpace(BusquedaCuenta) ? null : BusquedaCuenta.Trim();
-            return EjecutarSP(3, cuenta: cuenta, idRol: BusquedaIdRol, idEstatus: BusquedaIdEstatus);
-        }
 
         // Llena combos y tabla (con paginación)
         private void CargarPantalla()
         {
             try
             {
-                CargarCombos();
+                Roles = _logica.ConsultarRoles().AsEnumerable()
+                    .Select(r => new SelectListItem(r["Descripcion"].ToString(), r["IdRol"].ToString()))
+                    .ToList();
 
-                var filas = ConsultarUsuarios().AsEnumerable().ToList();
+                Estatus = _logica.ConsultarEstatus().AsEnumerable()
+                    .Select(r => new SelectListItem(r["Descripcion"].ToString(), r["IdEstatus"].ToString()))
+                    .ToList();
+
+                var filas = _logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus).AsEnumerable().ToList();
                 TotalRegistros = filas.Count;
                 TotalPaginas = Math.Max(1, (int)Math.Ceiling(TotalRegistros / (double)TamanioPagina));
                 Pagina = Math.Clamp(Pagina, 1, TotalPaginas);
-                Registros = filas.Skip((Pagina - 1) * TamanioPagina).Take(TamanioPagina).ToList();
+                Usuarios = filas.Skip((Pagina - 1) * TamanioPagina).Take(TamanioPagina).ToList();
             }
             catch (SqlException)
             {
-                MostrarMensaje("No se pudo conectar con la base de datos. Intenta más tarde.", "error");
+                MostrarMensaje("No se pudo conectar con la base de datos. Intenta más tarde.", "danger");
             }
         }
 
         #endregion
 
-        // Carga la pantalla; si viene "editar" en la URL, llena el formulario con ese usuario
-        public void OnGet(int? editar)
+        // Al abrir la página o al buscar
+        public void OnGet()
         {
             // Mensaje que dejó un guardar/eliminar antes del redirect
-            Mensaje = TempData["Mensaje"] as string;
-            TipoMensaje = TempData["TipoMensaje"] as string;
+            Mensaje = TempData["Mensaje"] as string ?? "";
+            TipoMensaje = TempData["TipoMensaje"] as string ?? "";
 
             CargarPantalla();
-
-            if (editar.HasValue)
-            {
-                DataTable dt = EjecutarSP(4, idUsuario: editar.Value);
-                if (dt.Rows.Count > 0)
-                {
-                    DataRow fila = dt.Rows[0];
-                    Input = new UsuarioInput
-                    {
-                        IdUsuario = Convert.ToInt32(fila["IdUsuario"]),
-                        Cuenta = fila["Cuenta"].ToString()!,
-                        IdRol = Convert.ToInt32(fila["IdRol"]),
-                        IdEstatus = Convert.ToInt32(fila["IdEstatus"])
-                    };
-                }
-                else
-                {
-                    MostrarMensaje("No se encontró el usuario seleccionado.", "warning");
-                }
-            }
         }
 
-        // Guardar y editar
+        // Botón Editar: carga el usuario en el formulario
+        public void OnGetEditar(int id)
+        {
+            CargarPantalla();
+
+            bdUsuario? usuario = _logica.Obtener(id);
+            if (usuario != null)
+                Usuario = usuario;
+            else
+                MostrarMensaje("No se encontró el usuario seleccionado.", "warning");
+        }
+
+        // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
-            bool esNuevo = Input.IdUsuario == 0;
+            bool esNuevo = Usuario.IdUsuario == 0;
 
-            if (esNuevo && string.IsNullOrWhiteSpace(Input.Contrasenia))
-                ModelState.AddModelError("Input.Contrasenia", "Ingresa la contraseña.");
+            if (esNuevo && string.IsNullOrWhiteSpace(Usuario.Contrasenia))
+                ModelState.AddModelError("Usuario.Contrasenia", "Ingresa la contraseña.");
 
             // Evita que el administrador se quite el acceso a sí mismo
-            if (!esNuevo && Input.IdUsuario == IdUsuarioSesion() && (Input.IdEstatus != 1 || Input.IdRol != 1))
+            if (!esNuevo && Usuario.IdUsuario == IdUsuarioSesion() && (Usuario.IdEstatus != 1 || Usuario.IdRol != 1))
                 ModelState.AddModelError(string.Empty, "No puedes cambiar tu propio rol ni desactivar tu propio usuario.");
 
             if (!ModelState.IsValid)
@@ -213,27 +162,16 @@ namespace PIA_Gimnasio.Pages
 
             try
             {
-                DataTable dt = EjecutarSP(esNuevo ? 5 : 6,
-                    idUsuario: esNuevo ? null : Input.IdUsuario,
-                    cuenta: Input.Cuenta.Trim(),
-                    contrasenia: string.IsNullOrWhiteSpace(Input.Contrasenia) ? null : Input.Contrasenia,
-                    idRol: Input.IdRol,
-                    idEstatus: Input.IdEstatus);
-
-                string mensaje = dt.Rows[0]["Mensaje"].ToString()!;
-                string tipo = dt.Rows[0]["Tipo"].ToString()!;
-                MostrarMensaje(mensaje, tipo);
-
-                // Si no se guardó, se queda el formulario lleno para corregir
-                if (tipo != "success")
-                {
-                    CargarPantalla();
-                    return Page();
-                }
+                MostrarRespuesta(_logica.Guardar(Usuario, IdUsuarioSesion()));
             }
             catch (SqlException)
             {
-                MostrarMensaje("Ocurrió un error al guardar el usuario.", "error");
+                MostrarMensaje("Ocurrió un error al guardar el usuario.", "danger");
+            }
+
+            // Si no se guardó (por ejemplo, cuenta repetida), se conservan los datos para corregirlos
+            if (TipoMensaje != "success")
+            {
                 CargarPantalla();
                 return Page();
             }
@@ -241,7 +179,7 @@ namespace PIA_Gimnasio.Pages
             return Redirigir();
         }
 
-        // Eliminar (baja lógica)
+        // Botón Eliminar (baja lógica)
         public IActionResult OnPostEliminar(int id)
         {
             if (id == IdUsuarioSesion())
@@ -252,12 +190,11 @@ namespace PIA_Gimnasio.Pages
 
             try
             {
-                DataTable dt = EjecutarSP(7, idUsuario: id);
-                MostrarMensaje(dt.Rows[0]["Mensaje"].ToString()!, dt.Rows[0]["Tipo"].ToString()!);
+                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
             }
             catch (SqlException)
             {
-                MostrarMensaje("Ocurrió un error al eliminar el usuario.", "error");
+                MostrarMensaje("Ocurrió un error al eliminar el usuario.", "danger");
             }
 
             return Redirigir();
@@ -266,7 +203,7 @@ namespace PIA_Gimnasio.Pages
         // Exportar a Excel (CSV, se abre directo en Excel sin instalar paquetes)
         public IActionResult OnGetExportar()
         {
-            DataTable dt = ConsultarUsuarios();
+            DataTable dt = _logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus);
 
             var csv = new StringBuilder();
             csv.AppendLine("Cuenta,Empleado,Rol,Estatus,Fecha de registro");

@@ -528,6 +528,6 @@ abbr.asterisco {
     }
 
 .toast-success { background: #34c759; }
-.toast-error   { background: #ff3b30; }
+.toast-danger  { background: #ff3b30; }
 .toast-warning { background: var(--naranja); }
 .toast-info    { background: var(--menu-bg); }

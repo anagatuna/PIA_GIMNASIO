@@ -1,10 +1,9 @@
-﻿@page
+@page
 @model PIA_Gimnasio.Pages.UsuarioModel
-@using System.Data
 @{
     ViewData["Title"] = "Gestión de usuarios";
     ViewData["AnchoCompleto"] = true;
-    bool esEdicion = Model.Input.IdUsuario > 0;
+    bool esEdicion = Model.Usuario.IdUsuario > 0;
 }
 
 <!-- Contenedor Principal -->
@@ -19,20 +18,20 @@
                 </h4>
 
                 <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
-                    <input type="hidden" asp-for="Input.IdUsuario" />
+                    <input type="hidden" asp-for="Usuario.IdUsuario" />
 
                     <!-- Datos de acceso -->
                     <h6 class="subtitulo-seccion">Datos de acceso</h6>
                     <div class="form-floating mb-3">
-                        <input asp-for="Input.Cuenta" class="form-control" placeholder="Cuenta" maxlength="50" autocomplete="off" />
-                        <label asp-for="Input.Cuenta">Cuenta<span class="asterisco"> *</span></label>
-                        <span asp-validation-for="Input.Cuenta" class="text-validacion"></span>
+                        <input asp-for="Usuario.Cuenta" class="form-control" placeholder="Cuenta" maxlength="50" autocomplete="off" />
+                        <label asp-for="Usuario.Cuenta">Cuenta<span class="asterisco"> *</span></label>
+                        <span asp-validation-for="Usuario.Cuenta" class="text-validacion"></span>
                     </div>
 
                     <div class="form-floating mb-1">
-                        <input asp-for="Input.Contrasenia" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="new-password" />
-                        <label asp-for="Input.Contrasenia">Contraseña<span class="asterisco @(esEdicion ? "d-none" : "")"> *</span></label>
-                        <span asp-validation-for="Input.Contrasenia" class="text-validacion"></span>
+                        <input asp-for="Usuario.Contrasenia" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="new-password" />
+                        <label asp-for="Usuario.Contrasenia">Contraseña<span class="asterisco @(esEdicion ? "d-none" : "")"> *</span></label>
+                        <span asp-validation-for="Usuario.Contrasenia" class="text-validacion"></span>
                     </div>
                     @if (esEdicion)
                     {
@@ -46,21 +45,21 @@
                     <div class="row">
                         <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
                             <div class="form-floating">
-                                <select asp-for="Input.IdRol" asp-items="Model.Roles" class="form-select">
+                                <select asp-for="Usuario.IdRol" asp-items="Model.Roles" class="form-select">
                                     <option value="">Selecciona...</option>
                                 </select>
-                                <label asp-for="Input.IdRol">Rol<span class="asterisco"> *</span></label>
+                                <label asp-for="Usuario.IdRol">Rol<span class="asterisco"> *</span></label>
                             </div>
-                            <span asp-validation-for="Input.IdRol" class="text-validacion"></span>
+                            <span asp-validation-for="Usuario.IdRol" class="text-validacion"></span>
                         </div>
                         <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
                             <div class="form-floating">
-                                <select asp-for="Input.IdEstatus" asp-items="Model.Estatus" class="form-select">
+                                <select asp-for="Usuario.IdEstatus" asp-items="Model.Estatus" class="form-select">
                                     <option value="">Selecciona...</option>
                                 </select>
-                                <label asp-for="Input.IdEstatus">Estatus<span class="asterisco"> *</span></label>
+                                <label asp-for="Usuario.IdEstatus">Estatus<span class="asterisco"> *</span></label>
                             </div>
-                            <span asp-validation-for="Input.IdEstatus" class="text-validacion"></span>
+                            <span asp-validation-for="Usuario.IdEstatus" class="text-validacion"></span>
                         </div>
                     </div>
 
@@ -142,7 +141,7 @@
                 <!-- Fin Filtros -->
 
                 <!-- Tabla para mostrar la información -->
-                @if (Model.Registros.Count > 0)
+                @if (Model.Usuarios.Count > 0)
                 {
                     <div class="table-responsive tabla-gestion">
                         <table class="table table-hover align-middle mb-0">
@@ -158,18 +157,18 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (DataRow fila in Model.Registros)
+                                @foreach (DataRow fila in Model.Usuarios)
                                 {
                                     var id = fila["IdUsuario"];
                                     var empleado = fila["Empleado"]?.ToString();
                                     bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
                                     var rutaEditar = Model.RutaFiltros();
-                                    rutaEditar["editar"] = id.ToString()!;
+                                    rutaEditar["id"] = id.ToString()!;
 
-                                    <tr class="@(Model.Input.IdUsuario.ToString() == id.ToString() ? "fila-seleccionada" : "")">
+                                    <tr class="@(Model.Usuario.IdUsuario.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
-                                               asp-page="/Usuario" asp-all-route-data="rutaEditar">
+                                               asp-page="/Usuario" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                         </td>
@@ -252,7 +251,7 @@
     var icono = Model.TipoMensaje switch
     {
         "success" => "bi-check-circle-fill",
-        "error" => "bi-x-circle-fill",
+        "danger" => "bi-x-circle-fill",
         "warning" => "bi-exclamation-triangle-fill",
         _ => "bi-info-circle-fill"
     };

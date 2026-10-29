@@ -7,18 +7,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
-using PIA_Gimnasio.Datos;
+using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly bdConexion _bd;
+        private readonly logicaUsuario _logica;
 
-        public LoginModel(bdConexion bd)
+        public LoginModel(logicaUsuario logica)
         {
-            _bd = bd;
+            _logica = logica;
         }
 
         [BindProperty]
@@ -55,17 +55,10 @@ namespace PIA_Gimnasio.Pages
             if (!ModelState.IsValid)
                 return Page();
 
-            SqlParameter[] parametros =
-            {
-                new SqlParameter("@Accion", SqlDbType.Int)               { Value = 1 },   // 1 = Login
-                new SqlParameter("@Cuenta", SqlDbType.NVarChar, 50)      { Value = Input.Cuenta.Trim() },
-                new SqlParameter("@Contrasenia", SqlDbType.NVarChar, 50) { Value = Input.Contrasenia }
-            };
-
-            DataTable dt;
+            DataRow? fila;
             try
             {
-                dt = _bd.EjecutarStoredProcedure("spUsuario", parametros);
+                fila = _logica.IniciarSesion(Input.Cuenta, Input.Contrasenia);
             }
             catch (SqlException)
             {
@@ -73,13 +66,11 @@ namespace PIA_Gimnasio.Pages
                 return Page();
             }
 
-            if (dt.Rows.Count == 0)
+            if (fila == null)
             {
                 MensajeError = "Cuenta o contraseña incorrectas.";
                 return Page();
             }
-
-            DataRow fila = dt.Rows[0];
 
             // IdEstatus 1 = Activo
             if (Convert.ToInt32(fila["IdEstatus"]) != 1)
