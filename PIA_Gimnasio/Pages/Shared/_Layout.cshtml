@@ -3,6 +3,9 @@
     var paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
     string Activo(string ruta) => paginaActual.StartsWith(ruta, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     bool GrupoAbierto(params string[] rutas) => rutas.Any(r => paginaActual.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+
+    // Las pantallas de gestión usan todo el ancho (ViewData["AnchoCompleto"] = true)
+    var contenedor = ViewData["AnchoCompleto"] is true ? "container-fluid px-3 px-lg-4" : "container";
 }
 
 <!DOCTYPE html>
@@ -19,7 +22,7 @@
 </head>
 <body>
     <header class="topbar mb-4">
-        <div class="container d-flex align-items-center justify-content-between">
+        <div class="@contenedor d-flex align-items-center justify-content-between">
             <a class="marca" asp-area="" asp-page="/Index">
                 <img src="~/img/logo-claro.png" alt="Chispi Fit" />
             </a>
@@ -132,7 +135,7 @@
                 <a class="menu-link @Activo("/Empleados")" asp-page="/Empleados/Index">
                     <i class="bi bi-person-workspace"></i> Empleados
                 </a>
-                <a class="menu-link @Activo("/Usuarios")" asp-page="/Usuarios/Index">
+                <a class="menu-link @Activo("/Usuario")" asp-page="/Usuario">
                     <i class="bi bi-shield-lock"></i> Usuarios
                 </a>
 
@@ -145,14 +148,14 @@
         </div>
     }
 
-    <div class="container">
+    <div class="@contenedor">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
     <footer class="border-top footer text-muted">
-        <div class="container">
+        <div class="@contenedor">
             &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-area="" asp-page="/Privacy">Privacidad</a>
         </div>
     </footer>

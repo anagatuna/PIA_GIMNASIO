@@ -214,3 +214,320 @@ body {
 footer.footer {
     font-size: .85rem;
 }
+/* =====================================================
+   Pantallas de gestión (formulario + consulta)
+   ===================================================== */
+.card-gestion {
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .04);
+}
+
+/* En pantallas grandes las dos tarjetas llenan el alto de la ventana
+   (se resta la barra superior y el pie de página) */
+@media (min-width: 992px) {
+    .gestion .card-gestion {
+        min-height: calc(100vh - 160px);
+    }
+}
+
+.titulo-card {
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: #1c1c1e;
+    margin-bottom: 22px;
+}
+
+    .titulo-card i {
+        color: var(--naranja);
+    }
+
+.resaltado {
+    color: var(--naranja);
+}
+
+.subtitulo-seccion {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #d97a00;
+    margin-bottom: 12px;
+}
+
+.gestion .form-control,
+.gestion .form-select {
+    border-radius: 12px;
+    border: 1px solid #e5e5ea;
+    background-color: #fafafa;
+}
+
+    .gestion .form-control:focus,
+    .gestion .form-select:focus {
+        background-color: #fff;
+        border-color: var(--naranja);
+        box-shadow: 0 0 0 4px rgba(255, 149, 0, .18);
+    }
+
+.gestion .form-floating > label {
+    color: #6e6e73;
+}
+
+.asterisco,
+abbr.asterisco {
+    color: #ff3b30;
+    text-decoration: none;
+    cursor: help;
+}
+
+.ayuda {
+    display: block;
+    color: #8e8e93;
+    font-size: .8rem;
+    margin: 0 0 12px 4px;
+}
+
+.text-validacion {
+    display: block;
+    color: #ff3b30;
+    font-size: .8rem;
+    margin: 4px 0 0 4px;
+}
+
+.gestion hr {
+    border: 0;
+    border-top: 1px solid #e5e5ea;
+    opacity: 1;
+    margin: 20px 0;
+}
+
+.nota {
+    background: #f5f5f7;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: .88rem;
+    color: #3a3a3c;
+}
+
+.info {
+    background: rgba(255, 149, 0, .08);
+    border-left: 4px solid var(--naranja);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: .9rem;
+    color: #3a3a3c;
+    text-align: justify;
+}
+
+/* ---------- Botones ---------- */
+.btn-naranja, .btn-oscuro, .btn-verde, .btn-rojo, .btn-amarillo {
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 10px 22px;
+    transition: background .15s, transform .1s;
+}
+
+    .btn-naranja:active, .btn-oscuro:active, .btn-verde:active, .btn-rojo:active, .btn-amarillo:active {
+        transform: scale(.96);
+    }
+
+.btn-naranja {
+    background: var(--naranja);
+    box-shadow: 0 6px 18px rgba(255, 149, 0, .3);
+}
+
+    .btn-naranja:hover, .btn-naranja:focus {
+        background: var(--naranja-hover);
+        color: #fff;
+    }
+
+.btn-oscuro {
+    background: var(--menu-bg);
+}
+
+    .btn-oscuro:hover, .btn-oscuro:focus {
+        background: #000;
+        color: #fff;
+    }
+
+.btn-verde {
+    background: #34c759;
+}
+
+    .btn-verde:hover, .btn-verde:focus {
+        background: #2fb350;
+        color: #fff;
+    }
+
+.btn-rojo {
+    background: #ff3b30;
+}
+
+    .btn-rojo:hover, .btn-rojo:focus {
+        background: #e5352b;
+        color: #fff;
+    }
+
+.btn-amarillo {
+    background: #ffcc00;
+    color: #1c1c1e;
+}
+
+    .btn-amarillo:hover, .btn-amarillo:focus {
+        background: #f0bf00;
+        color: #1c1c1e;
+    }
+
+/* Botón redondo solo con ícono */
+.btn-circulo {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-size: 1.05rem;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+}
+
+    .btn-circulo.btn-sm-circulo {
+        width: 32px;
+        height: 32px;
+        font-size: .85rem;
+    }
+
+/* ---------- Tabla ---------- */
+.tabla-gestion {
+    border: 1px solid #e5e5ea;
+    border-radius: 16px;
+}
+
+    .tabla-gestion thead th {
+        background: var(--menu-bg);
+        color: #fff;
+        font-size: .78rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        border: none;
+        padding: 12px;
+        white-space: nowrap;
+    }
+
+    .tabla-gestion tbody td {
+        padding: 10px 12px;
+        border-color: #f0f0f2;
+        font-size: .92rem;
+    }
+
+    .tabla-gestion tbody tr:hover td {
+        background: rgba(255, 149, 0, .05);
+    }
+
+    .tabla-gestion .fila-seleccionada td {
+        background: rgba(255, 149, 0, .12);
+    }
+
+    .tabla-gestion .col-accion {
+        width: 70px;
+        text-align: center;
+    }
+
+.etiqueta {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.etiqueta-rol {
+    background: rgba(255, 149, 0, .14);
+    color: #c46e00;
+}
+
+.etiqueta-activo {
+    background: rgba(52, 199, 89, .14);
+    color: #248a3d;
+}
+
+.etiqueta-inactivo {
+    background: #f2f2f7;
+    color: #8e8e93;
+}
+
+.sin-registros {
+    text-align: center;
+    color: #8e8e93;
+    padding: 40px 0;
+}
+
+    .sin-registros i {
+        display: block;
+        font-size: 2.2rem;
+        margin-bottom: 8px;
+    }
+
+/* ---------- Paginación ---------- */
+.paginacion .page-link {
+    border: none;
+    color: #1c1c1e;
+    border-radius: 10px !important;
+    margin: 0 2px;
+    box-shadow: none;
+}
+
+    .paginacion .page-link:hover {
+        background: rgba(255, 149, 0, .12);
+        color: var(--naranja);
+    }
+
+.paginacion .page-item.disabled .page-link {
+    background: none;
+    color: #8e8e93;
+    font-size: .85rem;
+}
+
+/* ---------- Modal y mensajes ---------- */
+.modal-gestion {
+    border: none;
+    border-radius: 22px;
+}
+
+.icono-alerta {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: rgba(255, 59, 48, .12);
+    color: #ff3b30;
+    font-size: 1.8rem;
+    display: grid;
+    place-items: center;
+}
+
+.contenedor-toast {
+    top: 60px; /* debajo de la barra superior */
+}
+
+.toast-gestion {
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+}
+
+    .toast-gestion .btn-close {
+        filter: invert(1);
+    }
+
+.toast-success { background: #34c759; }
+.toast-error   { background: #ff3b30; }
+.toast-warning { background: var(--naranja); }
+.toast-info    { background: var(--menu-bg); }

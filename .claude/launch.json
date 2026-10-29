@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "PIA_Gimnasio",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "PIA_Gimnasio/PIA_Gimnasio.csproj", "--launch-profile", "http"],
+      "port": 5165
+    },
+    {
+      "name": "PIA_Gimnasio_copia",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["C:/Users/Admin/AppData/Local/Temp/claude/C--Users-Admin-Documents-ANA-7mo-Programaci-n-distribuida-PIA-Gimnasio/d1e7b40f-f4d9-466f-8133-487d4ded2014/scratchpad/out/PIA_Gimnasio.dll", "--urls", "http://localhost:5177", "--environment", "Development", "--contentRoot", "C:/Users/Admin/Documents/ANA/7mo/Programación distribuida/PIA_Gimnasio/PIA_Gimnasio"],
+      "port": 5177,
+      "autoPort": false
+    }
+  ]
+}

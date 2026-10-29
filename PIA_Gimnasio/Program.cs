@@ -10,6 +10,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(options =>
     {
         options.LoginPath = "/Login";
+        options.AccessDeniedPath = "/Index";   // Si el rol no tiene permiso, regresa al inicio
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
     });
 
