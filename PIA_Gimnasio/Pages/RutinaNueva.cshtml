@@ -1,0 +1,323 @@
+@page
+@model PIA_Gimnasio.Pages.RutinaNuevaModel
+@using System.Text.Json
+@using PIA_Gimnasio.Logica.Validacion
+@{
+    ViewData["Title"] = "Diseñador de rutinas";
+    ViewData["AnchoCompleto"] = true;
+
+    // Datos que usa el JavaScript del diseñador
+    var ejerciciosJson = JsonSerializer.Serialize(Model.Ejercicios.ToDictionary(
+        e => e["IdEjercicio"].ToString()!,
+        e => new
+        {
+            nombre = e["Nombre"].ToString(),
+            grupo = e["GrupoMuscular"].ToString(),
+            nivel = e["NivelDificultad"].ToString(),
+            contra = e["ContraIndicacion"].ToString()
+        }));
+    var detallesJson = JsonSerializer.Serialize(Model.Rutina.Detalles);
+    var alertasJson = JsonSerializer.Serialize(Model.AlertasPorEjercicio);
+    var conExpedienteJson = JsonSerializer.Serialize(Model.SociosConExpediente);
+    var diasJson = JsonSerializer.Serialize(validacionRutina.DiasSemana);
+}
+
+<form method="post" id="formRutina">
+    <section class="gestion">
+        <div class="row g-4">
+
+            <!-- Cabecera de la rutina -->
+            <div class="col-lg-4">
+                <div class="card-gestion h-100">
+                    <h4 class="titulo-card text-center"><i class="bi bi-clipboard2-pulse"></i>&nbsp;Nueva rutina</h4>
+
+                    <h6 class="subtitulo-seccion">Asignación</h6>
+                    <div class="form-floating mb-3">
+                        <select asp-for="Rutina.IdCliente" asp-items="Model.Socios" class="form-select" id="selSocio" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Rutina.IdCliente">Socio<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="form-floating mb-1">
+                        @if (Model.EsEntrenador)
+                        {
+                            <input type="hidden" asp-for="Rutina.IdEmpleado" />
+                            <select asp-for="Rutina.IdEmpleado" asp-items="Model.Entrenadores" class="form-select" disabled>
+                                <option value="">Sin empleado ligado</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <select asp-for="Rutina.IdEmpleado" asp-items="Model.Entrenadores" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                            </select>
+                        }
+                        <label asp-for="Rutina.IdEmpleado">Entrenador<span class="asterisco"> *</span></label>
+                    </div>
+                    <small class="ayuda">@(Model.EsEntrenador ? "Las rutinas que diseñas quedan a tu nombre." : "Solo aparecen empleados activos con puesto Entrenador.")</small>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="Rutina.Nombre" class="form-control" placeholder="Nombre de la rutina" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Rutina.Nombre">Nombre de la rutina<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Rutina.Objetivo" asp-items="Model.Objetivos" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Rutina.Objetivo">Objetivo<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Rutina.FechaAsignacion" asp-format="{0:yyyy-MM-dd}" class="form-control" type="date" required />
+                                <label asp-for="Rutina.FechaAsignacion">Fecha de asignación<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Expediente médico -->
+                    <h6 class="subtitulo-seccion"><i class="bi bi-heart-pulse"></i> Expediente médico</h6>
+                    <partial name="_ExpedienteMedico" model="Model.Expediente" />
+
+                    <hr />
+                    <div class="info">
+                        Arma la semana del socio agregando ejercicios a cada día. Si un ejercicio está contraindicado
+                        para lo que registra su expediente médico, verás una <b>alerta</b> y tendrás que confirmarla para guardar.
+                    </div>
+                </div>
+            </div>
+            <!-- Fin Cabecera -->
+
+            <!-- Matriz semanal -->
+            <div class="col-lg-8">
+                <div class="card-gestion h-100 d-flex flex-column">
+                    <h4 class="titulo-card"><i class="bi bi-calendar-week"></i>&nbsp;Asignación semanal</h4>
+
+                    <!-- Agregar ejercicio -->
+                    <p class="mb-2"><strong><i class="bi bi-plus-circle"></i>&nbsp;Agregar ejercicio</strong></p>
+                    <div class="row g-2 align-items-start mb-2">
+                        <div class="col-6 col-md-2">
+                            <div class="form-floating">
+                                <select class="form-select" id="nuevoDia">
+                                    @foreach (var dia in validacionRutina.DiasSemana)
+                                    {
+                                        <option value="@dia">@dia</option>
+                                    }
+                                </select>
+                                <label for="nuevoDia">Día</label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="form-floating">
+                                <select class="form-select" id="nuevoEjercicio">
+                                    <option value="">Selecciona...</option>
+                                    @foreach (var grupo in Model.Ejercicios.GroupBy(e => e["GrupoMuscular"].ToString()))
+                                    {
+                                        <optgroup label="@grupo.Key">
+                                            @foreach (var e in grupo)
+                                            {
+                                                <option value="@e["IdEjercicio"]">@e["Nombre"] · @e["NivelDificultad"]</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                </select>
+                                <label for="nuevoEjercicio">Ejercicio</label>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="nuevoSeries" min="1" step="1" value="3" placeholder="Series" />
+                                <label for="nuevoSeries">Series</label>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="nuevoRepeticiones" min="1" value="12" placeholder="Repeticiones" />
+                                <label for="nuevoRepeticiones">Reps</label>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="nuevoDescanso" min="0" value="60" placeholder="Descanso" />
+                                <label for="nuevoDescanso">Descanso (s)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <button type="button" class="btn btn-naranja btn-sm-pill" id="btnAgregar">
+                            <i class="bi bi-plus-lg me-1"></i>Agregar al día
+                        </button>
+                        <span id="errorAgregar" class="text-validacion m-0"></span>
+                        <span id="alertaPrevia" class="alerta-previa d-none"></span>
+                    </div>
+
+                    <!-- Matriz Lunes a Domingo -->
+                    <div class="matriz-semanal" id="matriz"></div>
+
+                    <!-- Alertas médicas -->
+                    <div id="panelAlertas" class="panel-alertas d-none">
+                        <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Alertas médicas</div>
+                        <ul id="listaAlertas" class="mb-2"></ul>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" asp-for="ConfirmarAlertas" />
+                            <label class="form-check-label" asp-for="ConfirmarAlertas">
+                                Revisé las alertas y confirmo que el socio puede realizar estos ejercicios.
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="detallesOcultos"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-auto pt-4">
+                        <a class="btn btn-oscuro" asp-page="/Rutina">Cancelar</a>
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>Guardar rutina
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Fin Matriz semanal -->
+
+        </div>
+    </section>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const ejercicios = @Html.Raw(ejerciciosJson);
+            const dias = @Html.Raw(diasJson);
+            const conExpediente = new Set(@Html.Raw(conExpedienteJson));
+            let alertas = @Html.Raw(alertasJson);
+            let detalles = @Html.Raw(detallesJson);
+
+            const $ = id => document.getElementById(id);
+            const escapar = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+            // Dibuja la matriz de Lunes a Domingo con los ejercicios de cada día
+            function dibujar() {
+                $('matriz').innerHTML = dias.map(dia => {
+                    const delDia = detalles.map((d, i) => ({ ...d, i })).filter(d => d.DiaSemana === dia);
+                    const items = delDia.map(d => {
+                        const e = ejercicios[d.IdEjercicio] || { nombre: 'Ejercicio inactivo', grupo: '' };
+                        const alerta = alertas[d.IdEjercicio];
+                        return `<div class="ejercicio-dia ${alerta ? 'con-alerta' : ''}" title="${escapar(alerta || '')}">
+                                    <button type="button" class="quitar" data-i="${d.i}" aria-label="Quitar"><i class="bi bi-x"></i></button>
+                                    <div class="nombre">${alerta ? '<i class="bi bi-exclamation-triangle-fill"></i> ' : ''}${escapar(e.nombre)}</div>
+                                    <div class="grupo">${escapar(e.grupo)}</div>
+                                    <div class="metricas">${d.Series}×${d.Repeticiones} · ${d.TiempoDescanso}s</div>
+                                </div>`;
+                    }).join('');
+                    return `<div class="dia-col">
+                                <div class="dia-titulo">${dia}<span>${delDia.length}</span></div>
+                                <div class="dia-items">${items || '<div class="dia-vacio">Descanso</div>'}</div>
+                            </div>`;
+                }).join('');
+
+                // Alertas de los ejercicios que ya están en la rutina
+                const lista = [...new Set(detalles.map(d => alertas[d.IdEjercicio]).filter(Boolean))];
+                $('listaAlertas').innerHTML = lista.map(a => `<li>${escapar(a)}</li>`).join('');
+                $('panelAlertas').classList.toggle('d-none', lista.length === 0);
+
+                // Marca en el combo los ejercicios contraindicados
+                for (const op of $('nuevoEjercicio').options) {
+                    if (!op.value) continue;
+                    const base = op.textContent.replace(/^⚠ /, '');
+                    op.textContent = alertas[op.value] ? '⚠ ' + base : base;
+                }
+                mostrarAlertaPrevia();
+            }
+
+            function mostrarAlertaPrevia() {
+                const alerta = alertas[$('nuevoEjercicio').value];
+                $('alertaPrevia').textContent = alerta ? '⚠ ' + alerta : '';
+                $('alertaPrevia').classList.toggle('d-none', !alerta);
+            }
+
+            // Agregar ejercicio al día con validación de métricas
+            $('btnAgregar').addEventListener('click', function () {
+                const d = {
+                    IdEjercicio: parseInt($('nuevoEjercicio').value),
+                    DiaSemana: $('nuevoDia').value,
+                    Series: parseInt($('nuevoSeries').value),
+                    Repeticiones: parseInt($('nuevoRepeticiones').value),
+                    TiempoDescanso: parseInt($('nuevoDescanso').value)
+                };
+                let error = '';
+                if (!d.IdEjercicio) error = 'Selecciona un ejercicio.';
+                else if (!(d.Series > 0)) error = 'Las series deben ser mayores a 0.';
+                else if (!(d.Repeticiones > 0)) error = 'Las repeticiones deben ser mayores a 0.';
+                else if (!(d.TiempoDescanso >= 0)) error = 'El descanso no puede ser negativo.';
+                $('errorAgregar').textContent = error;
+                if (error) return;
+
+                detalles.push(d);
+                dibujar();
+            });
+
+            $('matriz').addEventListener('click', function (e) {
+                const btn = e.target.closest('.quitar');
+                if (!btn) return;
+                detalles.splice(parseInt(btn.dataset.i), 1);
+                dibujar();
+            });
+
+            $('nuevoEjercicio').addEventListener('change', mostrarAlertaPrevia);
+
+            // Al cambiar de socio se trae su expediente y se recalculan las alertas
+            $('selSocio').addEventListener('change', async function () {
+                const id = this.value;
+                const vacio = $('expedienteVacio'), datos = $('expedienteDatos');
+                alertas = {};
+                if (!id) {
+                    $('expedienteVacioTexto').textContent = 'Selecciona un socio para ver su expediente médico.';
+                    vacio.classList.remove('d-none', 'sin-expediente'); datos.classList.add('d-none');
+                    return dibujar();
+                }
+                const r = await fetch(`?handler=Expediente&idCliente=${id}`).then(r => r.json());
+                alertas = r.alertas;
+                if (r.tieneExpediente) {
+                    const ex = r.expediente, v = t => t && t.trim() ? t : '—';
+                    $('expTipoSangre').textContent = v(ex.tipoSangre);
+                    $('expPadecimientos').textContent = v(ex.padecimientos);
+                    $('expLesiones').textContent = v(ex.lesiones);
+                    $('expAlergias').textContent = v(ex.alergias);
+                    $('expCondicion').textContent = v(ex.condicion);
+                    vacio.classList.add('d-none'); datos.classList.remove('d-none');
+                } else {
+                    $('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
+                    vacio.classList.remove('d-none'); vacio.classList.add('sin-expediente'); datos.classList.add('d-none');
+                }
+                dibujar();
+            });
+
+            // Antes de enviar, convierte la matriz en campos Rutina.Detalles[i].*
+            $('formRutina').addEventListener('submit', function (e) {
+                if (detalles.length === 0) {
+                    e.preventDefault();
+                    $('errorAgregar').textContent = 'Agrega al menos un ejercicio a la rutina.';
+                    return;
+                }
+                $('detallesOcultos').innerHTML = detalles.map((d, i) =>
+                    ['IdEjercicio', 'DiaSemana', 'Series', 'Repeticiones', 'TiempoDescanso']
+                        .map(c => `<input type="hidden" name="Rutina.Detalles[${i}].${c}" value="${escapar(d[c])}" />`).join('')
+                ).join('');
+            });
+
+            // Socio elegido sin expediente (al regresar del servidor)
+            const socio = $('selSocio').value;
+            if (socio && !conExpediente.has(parseInt(socio))) {
+                $('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
+                $('expedienteVacio').classList.add('sin-expediente');
+            }
+
+            dibujar();
+        })();
+    </script>
+}

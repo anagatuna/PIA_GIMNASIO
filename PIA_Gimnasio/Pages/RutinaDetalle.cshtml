@@ -1,0 +1,100 @@
+@page
+@model PIA_Gimnasio.Pages.RutinaDetalleModel
+@using PIA_Gimnasio.Logica.Validacion
+@using PIA_Gimnasio.Logica
+@{
+    ViewData["Title"] = "Detalle de rutina";
+    ViewData["AnchoCompleto"] = true;
+    var r = Model.Rutina;
+}
+
+<section class="gestion">
+    @if (r != null)
+    {
+        <div class="row g-4">
+
+            <!-- Datos de la rutina -->
+            <div class="col-lg-4">
+                <div class="card-gestion h-100">
+                    <h4 class="titulo-card text-center"><i class="bi bi-clipboard2-check"></i>&nbsp;@r["Nombre"]</h4>
+
+                    <h6 class="subtitulo-seccion">Asignación</h6>
+                    <dl class="perfil-datos">
+                        <dt><i class="bi bi-person"></i> Socio</dt>
+                        <dd>@r["Socio"] <span class="text-secondary">· Folio @r["Folio"]</span></dd>
+                        <dt><i class="bi bi-person-video3"></i> Entrenador</dt>
+                        <dd>@r["Entrenador"]</dd>
+                        <dt><i class="bi bi-bullseye"></i> Objetivo</dt>
+                        <dd><span class="etiqueta etiqueta-rol">@r["Objetivo"]</span></dd>
+                        <dt><i class="bi bi-calendar-event"></i> Fecha de asignación</dt>
+                        <dd>@Convert.ToDateTime(r["FechaAsignacion"]).ToString("dd/MM/yyyy")</dd>
+                        <dt><i class="bi bi-list-check"></i> Ejercicios</dt>
+                        <dd>@Model.Detalle.Count en @Model.Detalle.Select(d => d["DiaSemana"]).Distinct().Count() días</dd>
+                    </dl>
+
+                    <hr />
+
+                    <h6 class="subtitulo-seccion"><i class="bi bi-heart-pulse"></i> Expediente médico</h6>
+                    <partial name="_ExpedienteMedico" model="Model.Expediente" />
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <a class="btn btn-oscuro" asp-page="/Rutina"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+                        <a class="btn btn-naranja" asp-page="/RutinaNueva" asp-route-idCliente="@r["IdCliente"]"><i class="bi bi-plus-lg me-1"></i>Otra rutina al socio</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matriz semanal -->
+            <div class="col-lg-8">
+                <div class="card-gestion h-100">
+                    <h4 class="titulo-card"><i class="bi bi-calendar-week"></i>&nbsp;Asignación semanal</h4>
+
+                    @if (Model.Alertas.Count > 0)
+                    {
+                        <div class="panel-alertas mb-3">
+                            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Alertas médicas</div>
+                            <ul class="mb-0">
+                                @foreach (var a in Model.Alertas)
+                                {
+                                    <li>@a</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="matriz-semanal">
+                        @foreach (var dia in validacionRutina.DiasSemana)
+                        {
+                            var delDia = Model.Detalle.Where(d => d["DiaSemana"].ToString() == dia).ToList();
+                            <div class="dia-col">
+                                <div class="dia-titulo">@dia<span>@delDia.Count</span></div>
+                                <div class="dia-items">
+                                    @if (delDia.Count == 0)
+                                    {
+                                        <div class="dia-vacio">Descanso</div>
+                                    }
+                                    @foreach (var d in delDia)
+                                    {
+                                        var alerta = logicaRutina.RevisarContraindicacion(Model.Expediente, d["Ejercicio"].ToString()!, d["ContraIndicacion"].ToString());
+                                        <div class="ejercicio-dia @(alerta != null ? "con-alerta" : "")" title="@alerta">
+                                            <div class="nombre">
+                                                @if (alerta != null)
+                                                {
+                                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                                }
+                                                @d["Ejercicio"]
+                                            </div>
+                                            <div class="grupo">@d["GrupoMuscular"] · @d["NivelDificultad"]</div>
+                                            <div class="metricas">@d["Series"]×@d["Repeticiones"] · @d["TiempoDescanso"]s</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+</section>

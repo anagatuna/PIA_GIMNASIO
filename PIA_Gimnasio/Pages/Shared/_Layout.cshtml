@@ -1,11 +1,26 @@
-﻿@{
+﻿@using PIA_Gimnasio.Seguridad
+@{
     // Página actual para marcar el link activo en el menú
     var paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
     string Activo(string ruta) => paginaActual.StartsWith(ruta, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-    bool GrupoAbierto(params string[] rutas) => rutas.Any(r => paginaActual.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+
+    // Un módulo está activo si la página actual le pertenece (ej. /RutinaNueva pertenece a /Rutina)
+    bool ModuloActivo(Modulo m) => Modulos.ModuloDe(paginaActual) == m;
 
     // Las pantallas de gestión usan todo el ancho (ViewData["AnchoCompleto"] = true)
     var contenedor = ViewData["AnchoCompleto"] is true ? "container-fluid px-3 px-lg-4" : "container";
+
+    // Confirmación para eliminar: la página pone ViewData["EliminarTitulo"] y ViewData["EliminarDescripcion"].
+    // El formulario regresa a la misma página y búsqueda, con handler=Eliminar.
+    string? accionEliminar = null;
+    if (ViewData["EliminarTitulo"] != null)
+    {
+        var parametros = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Context.Request.QueryString.Value)
+            .Where(p => p.Key != "handler" && p.Key != "id")
+            .ToDictionary(p => p.Key, p => (string?)p.Value.ToString());
+        parametros["handler"] = "Eliminar";
+        accionEliminar = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Context.Request.Path, parametros);
+    }
 }
 
 <!DOCTYPE html>
@@ -23,7 +38,7 @@
 <body>
     <header class="topbar mb-4">
         <div class="@contenedor d-flex align-items-center justify-content-between">
-            <a class="marca" asp-area="" asp-page="/Index">
+            <a class="marca" asp-area="" asp-page="/Inicio">
                 <img src="~/img/logo-claro.png" alt="Chispi Fit" />
             </a>
 
@@ -58,85 +73,60 @@
                     <div class="avatar">@inicial</div>
                     <div>
                         @nombre
-                        <small>Sesión activa</small>
+                        <small>@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</small>
                     </div>
                 </div>
 
-                <a class="menu-link @Activo("/Index")" asp-page="/Index">
+                <a class="menu-link @(paginaActual == "/Inicio" ? "active" : "")" asp-page="/Inicio">
                     <i class="bi bi-house"></i> Inicio
                 </a>
 
-                <!-- Socios -->
-                <div class="menu-seccion">Socios</div>
-                <a class="menu-link @Activo("/Socios")" asp-page="/Socios/Index">
-                    <i class="bi bi-people"></i> Socios
-                </a>
-                <a class="menu-link @Activo("/Asistencias")" asp-page="/Asistencias/Index">
-                    <i class="bi bi-calendar-check"></i> Asistencias
-                </a>
+                <!-- Módulos permitidos para el rol (Seguridad/Modulos.cs) -->
+                @foreach (var seccion in Modulos.PermitidosPara(User).GroupBy(m => m.Seccion))
+                {
+                    var abierto = seccion.Any(ModuloActivo);
+                    var idGrupo = "grupo" + seccion.Key.Replace(" ", "").Replace("ó", "o").Replace("á", "a");
+                    bool desplegable = seccion.Count() > 3;
 
-                <!-- Membresías (desplegable) -->
-                @{
-                    var membresiasAbierto = GrupoAbierto("/Membresias", "/TiposMembresia", "/Pagos");
+                    @if (desplegable)
+                    {
+                        <button class="menu-seccion boton-seccion" type="button" data-bs-toggle="collapse" data-bs-target="#@idGrupo"
+                                aria-expanded="@(abierto ? "true" : "false")" aria-controls="@idGrupo">
+                            @seccion.Key <span class="cantidad">@seccion.Count()</span><i class="bi bi-chevron-down flecha"></i>
+                        </button>
+                        @:<div class="collapse @(abierto ? "show" : "")" id="@idGrupo"><div class="submenu">
+                    }
+                    else
+                    {
+                        <div class="menu-seccion">@seccion.Key</div>
+                    }
+                    @foreach (var m in seccion)
+                    {
+                        // Si la pantalla todavía no existe en el proyecto, se muestra deshabilitada
+                        var url = Url.Page(m.Pagina);
+                        if (url != null)
+                        {
+                            <a class="menu-link @(ModuloActivo(m) ? "active" : "")" href="@url">
+                                <i class="bi @m.Icono"></i> @m.Titulo
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="menu-link pendiente" title="Pantalla en desarrollo">
+                                <i class="bi @m.Icono"></i> @m.Titulo
+                            </span>
+                        }
+                    }
+                    @if (desplegable)
+                    {
+                        @:</div></div>
+                    }
                 }
-                <button class="menu-link" type="button" data-bs-toggle="collapse" data-bs-target="#grupoMembresias"
-                        aria-expanded="@(membresiasAbierto ? "true" : "false")" aria-controls="grupoMembresias">
-                    <i class="bi bi-credit-card-2-front"></i> Membresías
-                    <i class="bi bi-chevron-down flecha"></i>
-                </button>
-                <div class="collapse @(membresiasAbierto ? "show" : "")" id="grupoMembresias">
-                    <div class="submenu">
-                        <a class="menu-link @Activo("/Membresias")" asp-page="/Membresias/Index">
-                            <i class="bi bi-person-badge"></i> Membresías de socios
-                        </a>
-                        <a class="menu-link @Activo("/TiposMembresia")" asp-page="/TiposMembresia/Index">
-                            <i class="bi bi-tags"></i> Tipos de membresía
-                        </a>
-                        <a class="menu-link @Activo("/Pagos")" asp-page="/Pagos/Index">
-                            <i class="bi bi-cash-coin"></i> Pagos
-                        </a>
-                    </div>
-                </div>
 
-                <!-- Operación -->
-                <div class="menu-seccion">Operación</div>
-
-                @{
-                    var clasesAbierto = GrupoAbierto("/Clases", "/Horarios", "/Instructores");
-                }
-                <button class="menu-link" type="button" data-bs-toggle="collapse" data-bs-target="#grupoClases"
-                        aria-expanded="@(clasesAbierto ? "true" : "false")" aria-controls="grupoClases">
-                    <i class="bi bi-lightning-charge"></i> Clases
-                    <i class="bi bi-chevron-down flecha"></i>
-                </button>
-                <div class="collapse @(clasesAbierto ? "show" : "")" id="grupoClases">
-                    <div class="submenu">
-                        <a class="menu-link @Activo("/Clases")" asp-page="/Clases/Index">
-                            <i class="bi bi-bicycle"></i> Clases
-                        </a>
-                        <a class="menu-link @Activo("/Horarios")" asp-page="/Horarios/Index">
-                            <i class="bi bi-clock"></i> Horarios
-                        </a>
-                        <a class="menu-link @Activo("/Instructores")" asp-page="/Instructores/Index">
-                            <i class="bi bi-person-video3"></i> Instructores
-                        </a>
-                    </div>
-                </div>
-
-                <a class="menu-link @Activo("/Equipos")" asp-page="/Equipos/Index">
-                    <i class="bi bi-gear-wide-connected"></i> Equipo y aparatos
-                </a>
-
-                <!-- Administración -->
-                <div class="menu-seccion">Administración</div>
-                <a class="menu-link @Activo("/Sucursales")" asp-page="/Sucursales/Index">
-                    <i class="bi bi-building"></i> Sucursales
-                </a>
-                <a class="menu-link @Activo("/Empleados")" asp-page="/Empleados/Index">
-                    <i class="bi bi-person-workspace"></i> Empleados
-                </a>
-                <a class="menu-link @Activo("/Usuario")" asp-page="/Usuario">
-                    <i class="bi bi-shield-lock"></i> Usuarios
+                <!-- Cuenta -->
+                <div class="menu-seccion">Mi cuenta</div>
+                <a class="menu-link @Activo("/Perfil")" asp-page="/Perfil">
+                    <i class="bi bi-person-badge"></i> Mi perfil
                 </a>
 
                 <form method="post" asp-page="/Login" asp-page-handler="Logout" class="mt-4">
@@ -154,9 +144,18 @@
         </main>
     </div>
 
+    <!-- Mensaje del SP (la página lo pasa con [ViewData] Mensaje / TipoMensaje) -->
+    <partial name="_Mensaje" model='((string?)ViewData["Mensaje"], (string?)ViewData["TipoMensaje"])' />
+
+    <!-- Confirmación para eliminar (solo en las páginas que la piden) -->
+    @if (accionEliminar != null)
+    {
+        <partial name="_ModalEliminar" model='((string)ViewData["EliminarTitulo"]!, (string?)ViewData["EliminarDescripcion"] ?? "", accionEliminar)' />
+    }
+
     <footer class="border-top footer text-muted">
         <div class="@contenedor">
-            &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-area="" asp-page="/Privacy">Privacidad</a>
+            &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-area="" asp-page="/Privacidad">Privacidad</a>
         </div>
     </footer>
 

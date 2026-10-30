@@ -531,3 +531,287 @@ abbr.asterisco {
 .toast-danger  { background: #ff3b30; }
 .toast-warning { background: var(--naranja); }
 .toast-info    { background: var(--menu-bg); }
+
+.etiqueta-avanzado {
+    background: rgba(255, 59, 48, .12);
+    color: #d70015;
+}
+
+/* =====================================================
+   Perfil de usuario y expediente médico
+   ===================================================== */
+.perfil-encabezado {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.perfil-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ffcc00 0%, #ff9500 100%);
+    color: #1c1c1e;
+    font-size: 1.6rem;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.perfil-nombre {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1c1c1e;
+    margin-bottom: 4px;
+}
+
+.perfil-datos {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 16px;
+    margin-bottom: 18px;
+    font-size: .92rem;
+}
+
+    .perfil-datos dt {
+        font-weight: 500;
+        color: #6e6e73;
+        white-space: nowrap;
+    }
+
+        .perfil-datos dt i {
+            color: var(--naranja);
+            margin-right: 4px;
+        }
+
+    .perfil-datos dd {
+        margin: 0;
+        color: #1c1c1e;
+    }
+
+.expediente-vacio {
+    background: #f5f5f7;
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #8e8e93;
+    font-size: .9rem;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+    .expediente-vacio i {
+        font-size: 1.3rem;
+    }
+
+    .expediente-vacio.sin-expediente {
+        background: rgba(255, 59, 48, .08);
+        color: #d70015;
+    }
+
+/* =====================================================
+   Diseñador de rutinas: matriz semanal
+   ===================================================== */
+.btn-sm-pill {
+    padding: 7px 16px;
+    font-size: .9rem;
+}
+
+.matriz-semanal {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 1399.98px) {
+    .matriz-semanal {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .matriz-semanal {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.dia-col {
+    background: #f5f5f7;
+    border-radius: 14px;
+    padding: 8px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+}
+
+.dia-titulo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--menu-bg);
+    color: #fff;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 8px;
+}
+
+    .dia-titulo span {
+        background: var(--naranja);
+        color: #fff;
+        border-radius: 999px;
+        min-width: 22px;
+        text-align: center;
+        font-size: .72rem;
+        padding: 1px 6px;
+    }
+
+.dia-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.dia-vacio {
+    margin: auto;
+    color: #aeaeb2;
+    font-size: .8rem;
+    font-style: italic;
+}
+
+.ejercicio-dia {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-left: 4px solid var(--naranja);
+    border-radius: 10px;
+    padding: 7px 26px 7px 9px;
+    font-size: .8rem;
+    line-height: 1.3;
+}
+
+    .ejercicio-dia .nombre {
+        font-weight: 600;
+        color: #1c1c1e;
+    }
+
+    .ejercicio-dia .grupo {
+        color: #8e8e93;
+        font-size: .74rem;
+    }
+
+    .ejercicio-dia .metricas {
+        color: #c46e00;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    .ejercicio-dia .quitar {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        border: none;
+        background: none;
+        color: #aeaeb2;
+        padding: 0 4px;
+        line-height: 1;
+    }
+
+        .ejercicio-dia .quitar:hover {
+            color: #ff3b30;
+        }
+
+    .ejercicio-dia.con-alerta {
+        border-left-color: #ff3b30;
+        background: rgba(255, 59, 48, .05);
+    }
+
+        .ejercicio-dia.con-alerta .nombre i {
+            color: #ff3b30;
+        }
+
+.panel-alertas {
+    background: rgba(255, 59, 48, .07);
+    border-left: 4px solid #ff3b30;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    color: #a1000f;
+    font-size: .9rem;
+}
+
+    .panel-alertas .form-check-label {
+        color: #1c1c1e;
+    }
+
+.alerta-previa {
+    color: #d70015;
+    font-size: .85rem;
+    font-weight: 500;
+}
+
+/* Opción del menú cuya pantalla todavía no existe */
+.menu-link.pendiente {
+    opacity: .45;
+    cursor: default;
+}
+
+    .menu-link.pendiente:hover {
+        background: none;
+        color: var(--menu-texto);
+    }
+
+/* Título de sección que despliega sus opciones (secciones largas) */
+.boton-seccion {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+}
+
+    .boton-seccion:hover {
+        color: rgba(255, 255, 255, .7);
+    }
+
+    .boton-seccion .cantidad {
+        background: rgba(255, 255, 255, .1);
+        border-radius: 999px;
+        padding: 0 7px;
+        font-size: .65rem;
+    }
+
+    .boton-seccion .flecha {
+        margin-left: auto;
+        transition: transform .2s;
+    }
+
+    .boton-seccion[aria-expanded="true"] .flecha {
+        transform: rotate(180deg);
+    }
+
+/* =====================================================
+   Panel de inicio
+   ===================================================== */
+.gestion .card-gestion.bienvenida {
+    min-height: 0;  /* no ocupa el alto de la ventana como las tarjetas de gestión */
+}
+
+.bienvenida {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+    .bienvenida h3 {
+        font-weight: 700;
+        letter-spacing: -.02em;
+        color: #1c1c1e;
+    }

@@ -1,0 +1,21 @@
+@page
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Acceso denegado";
+}
+
+<section class="gestion">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card-gestion text-center p-5">
+                <div class="icono-alerta"><i class="bi bi-shield-lock-fill"></i></div>
+                <h4 class="fw-bold">No tienes acceso a esta pantalla</h4>
+                <p class="text-secondary">
+                    Tu rol <b>@User.FindFirst(ClaimTypes.Role)?.Value</b> no tiene permiso para entrar aquí.
+                    Si crees que es un error, contacta al administrador del sistema.
+                </p>
+                <a class="btn btn-naranja mt-2" asp-page="/Inicio"><i class="bi bi-house me-1"></i>Ir al inicio</a>
+            </div>
+        </div>
+    </div>
+</section>

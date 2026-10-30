@@ -1,0 +1,119 @@
+@page
+@model PIA_Gimnasio.Pages.RutinaModel
+@{
+    ViewData["Title"] = "Rutinas";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Eliminar rutina?";          // El Layout pinta la confirmación
+    ViewData["EliminarDescripcion"] = "dejará de estar asignada al socio.";
+}
+
+<section class="gestion">
+    <div class="card-gestion">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <h4 class="titulo-card mb-0"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Rutinas</span></h4>
+            <a class="btn btn-naranja" asp-page="/RutinaNueva"><i class="bi bi-plus-lg me-1"></i>Nueva rutina</a>
+        </div>
+
+        <!-- Filtros o Búsqueda -->
+        <p class="mb-2 mt-3"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+        <form method="get">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="BusquedaIdCliente" asp-items="Model.Socios" class="form-select">
+                            <option value="">Todos</option>
+                        </select>
+                        <label asp-for="BusquedaIdCliente">Socio</label>
+                    </div>
+                </div>
+                @if (!Model.EsEntrenador)
+                {
+                    <div class="col-md-4 mb-3">
+                        <div class="form-floating">
+                            <select asp-for="BusquedaIdEmpleado" asp-items="Model.Entrenadores" class="form-select">
+                                <option value="">Todos</option>
+                            </select>
+                            <label asp-for="BusquedaIdEmpleado">Entrenador</label>
+                        </div>
+                    </div>
+                }
+                <div class="col-md-4 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="BusquedaObjetivo" asp-items="Model.Objetivos" class="form-select">
+                            <option value="">Todos</option>
+                        </select>
+                        <label asp-for="BusquedaObjetivo">Objetivo</label>
+                    </div>
+                </div>
+
+                <div class="col-12 mb-4">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn-circulo btn-naranja" title="Buscar">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <a class="btn-circulo btn-oscuro" asp-page="/Rutina" title="Limpiar">
+                            <i class="bi bi-stars"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <!-- Fin Filtros -->
+
+        @if (Model.Rutinas.Count > 0)
+        {
+            <div class="table-responsive tabla-gestion">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="col-accion">Ver</th>
+                            <th class="col-accion">Eliminar</th>
+                            <th>Rutina</th>
+                            <th>Socio</th>
+                            <th>Entrenador</th>
+                            <th>Objetivo</th>
+                            <th>Ejercicios</th>
+                            <th>Asignación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow fila in Model.Rutinas)
+                        {
+                            var id = fila["IdRutina"];
+                            <tr>
+                                <td class="col-accion">
+                                    <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Ver detalles"
+                                       asp-page="/RutinaDetalle" asp-route-id="@id">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                                <td class="col-accion">
+                                    <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
+                                            data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                            data-id="@id" data-nombre="@fila["Nombre"]">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </td>
+                                <td class="fw-semibold">@fila["Nombre"]</td>
+                                <td>@fila["Socio"] <small class="text-secondary d-block">Folio @fila["Folio"]</small></td>
+                                <td>@fila["Entrenador"]</td>
+                                <td><span class="etiqueta etiqueta-rol">@fila["Objetivo"]</span></td>
+                                <td class="text-nowrap">@fila["TotalEjercicios"] en @fila["TotalDias"] días</td>
+                                <td class="text-nowrap">@Convert.ToDateTime(fila["FechaAsignacion"]).ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <partial name="_Paginacion" model="Model" />
+        }
+        else
+        {
+            <div class="sin-registros">
+                <i class="bi bi-inbox"></i>
+                No se encontraron rutinas con los parámetros solicitados.
+            </div>
+        }
+    </div>
+</section>

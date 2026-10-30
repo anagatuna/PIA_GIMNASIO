@@ -1,0 +1,27 @@
+@* Muestra el mensaje del SP como aviso flotante. Uso: <partial name="_Mensaje" model="(Model.Mensaje, Model.TipoMensaje)" /> *@
+@model (string? Mensaje, string? TipoMensaje)
+
+@if (!string.IsNullOrEmpty(Model.Mensaje))
+{
+    var icono = Model.TipoMensaje switch
+    {
+        "success" => "bi-check-circle-fill",
+        "danger" => "bi-x-circle-fill",
+        "warning" => "bi-exclamation-triangle-fill",
+        _ => "bi-info-circle-fill"
+    };
+    <div class="toast-container position-fixed end-0 p-3 contenedor-toast">
+        <div id="toastMensaje" class="toast toast-gestion toast-@Model.TipoMensaje" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="d-flex align-items-center">
+                <div class="toast-body"><i class="bi @icono me-2"></i>@Model.Mensaje</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Se muestra cuando ya cargó Bootstrap (va al final del Layout)
+        document.addEventListener('DOMContentLoaded', function () {
+            bootstrap.Toast.getOrCreateInstance(document.getElementById('toastMensaje')).show();
+        });
+    </script>
+}

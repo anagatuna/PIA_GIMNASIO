@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Gestión de usuarios";
     ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Eliminar usuario?";          // El Layout pinta la confirmación
+    ViewData["EliminarDescripcion"] = "ya no podrá iniciar sesión y su empleado quedará libre para otra cuenta.";
     bool esEdicion = Model.Usuario.IdUsuario > 0;
 }
 
@@ -20,18 +22,39 @@
                 <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
                     <input type="hidden" asp-for="Usuario.IdUsuario" />
 
+                    <!-- Empleado (relación 1:1) -->
+                    <h6 class="subtitulo-seccion">Empleado</h6>
+                    <div class="form-floating mb-1">
+                        @if (esEdicion)
+                        {
+                            <select asp-for="Usuario.IdEmpleado" asp-items="Model.Empleados" class="form-select" disabled>
+                                <option value="">Sin empleado ligado</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <select asp-for="Usuario.IdEmpleado" asp-items="Model.Empleados" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                            </select>
+                        }
+                        <label asp-for="Usuario.IdEmpleado">Empleado<span class="asterisco @(esEdicion ? "d-none" : "")"> *</span></label>
+                    </div>
+                    <small class="ayuda">
+                        @(esEdicion ? "El empleado de una cuenta no se puede cambiar." : "Solo aparecen empleados activos que todavía no tienen cuenta.")
+                    </small>
+
+                    <hr />
+
                     <!-- Datos de acceso -->
                     <h6 class="subtitulo-seccion">Datos de acceso</h6>
                     <div class="form-floating mb-3">
-                        <input asp-for="Usuario.Cuenta" class="form-control" placeholder="Cuenta" maxlength="50" autocomplete="off" />
+                        <input asp-for="Usuario.Cuenta" class="form-control" placeholder="Cuenta" maxlength="50" autocomplete="off" required pattern="\S+" title="La cuenta no puede llevar espacios." />
                         <label asp-for="Usuario.Cuenta">Cuenta<span class="asterisco"> *</span></label>
-                        <span asp-validation-for="Usuario.Cuenta" class="text-validacion"></span>
                     </div>
 
                     <div class="form-floating mb-1">
-                        <input asp-for="Usuario.Contrasenia" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="new-password" />
+                        <input asp-for="Usuario.Contrasenia" type="password" class="form-control" placeholder="Contraseña" minlength="6" maxlength="50" autocomplete="new-password" required="@(!esEdicion)" />
                         <label asp-for="Usuario.Contrasenia">Contraseña<span class="asterisco @(esEdicion ? "d-none" : "")"> *</span></label>
-                        <span asp-validation-for="Usuario.Contrasenia" class="text-validacion"></span>
                     </div>
                     @if (esEdicion)
                     {
@@ -45,21 +68,19 @@
                     <div class="row">
                         <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
                             <div class="form-floating">
-                                <select asp-for="Usuario.IdRol" asp-items="Model.Roles" class="form-select">
+                                <select asp-for="Usuario.IdRol" asp-items="Model.Roles" class="form-select" required>
                                     <option value="">Selecciona...</option>
                                 </select>
                                 <label asp-for="Usuario.IdRol">Rol<span class="asterisco"> *</span></label>
                             </div>
-                            <span asp-validation-for="Usuario.IdRol" class="text-validacion"></span>
                         </div>
                         <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
                             <div class="form-floating">
-                                <select asp-for="Usuario.IdEstatus" asp-items="Model.Estatus" class="form-select">
+                                <select asp-for="Usuario.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
                                     <option value="">Selecciona...</option>
                                 </select>
                                 <label asp-for="Usuario.IdEstatus">Estatus<span class="asterisco"> *</span></label>
                             </div>
-                            <span asp-validation-for="Usuario.IdEstatus" class="text-validacion"></span>
                         </div>
                     </div>
 
@@ -81,6 +102,7 @@
                 <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Información</h5>
                 <div class="info">
                     Este módulo permite las altas, bajas y modificaciones de los usuarios que tienen acceso al sistema.
+                    Cada cuenta pertenece a <b>un solo empleado</b> y cada empleado puede tener solo una cuenta.
                     El rol determina las opciones que verá cada usuario y solo los usuarios con estatus
                     <b>Activo</b> pueden iniciar sesión.
                 </div>
@@ -149,8 +171,8 @@
                                 <tr>
                                     <th class="col-accion">Editar</th>
                                     <th class="col-accion">Eliminar</th>
-                                    <th>Cuenta</th>
                                     <th>Empleado</th>
+                                    <th>Cuenta</th>
                                     <th>Rol</th>
                                     <th>Estatus</th>
                                     <th>Registro</th>
@@ -175,12 +197,12 @@
                                         <td class="col-accion">
                                             <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
                                                     data-bs-toggle="modal" data-bs-target="#modalEliminar"
-                                                    data-id="@id" data-cuenta="@fila["Cuenta"]">
+                                                    data-id="@id" data-nombre="@fila["Cuenta"]">
                                                 <i class="bi bi-x-lg"></i>
                                             </button>
                                         </td>
-                                        <td class="fw-semibold">@fila["Cuenta"]</td>
-                                        <td>@(string.IsNullOrWhiteSpace(empleado) ? "Sin empleado ligado" : empleado)</td>
+                                        <td class="fw-semibold">@(string.IsNullOrWhiteSpace(empleado) ? "Sin empleado ligado" : empleado)</td>
+                                        <td>@fila["Cuenta"]</td>
                                         <td><span class="etiqueta etiqueta-rol">@fila["Rol"]</span></td>
                                         <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
                                         <td class="text-nowrap">@Convert.ToDateTime(fila["FechaRegistro"]).ToString("dd/MM/yyyy")</td>
@@ -190,24 +212,7 @@
                         </table>
                     </div>
 
-                    <!-- Paginación -->
-                    <ul class="pagination paginacion justify-content-center my-3">
-                        <li class="page-item @(Model.Pagina == 1 ? "disabled" : "")">
-                            <a class="page-link" title="Primera" asp-page="/Usuario" asp-all-route-data="Model.RutaFiltros(1)"><i class="bi bi-chevron-bar-left"></i></a>
-                        </li>
-                        <li class="page-item @(Model.Pagina == 1 ? "disabled" : "")">
-                            <a class="page-link" title="Anterior" asp-page="/Usuario" asp-all-route-data="Model.RutaFiltros(Model.Pagina - 1)"><i class="bi bi-chevron-left"></i></a>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link">Página @Model.Pagina de @Model.TotalPaginas · @Model.TotalRegistros registros</span>
-                        </li>
-                        <li class="page-item @(Model.Pagina == Model.TotalPaginas ? "disabled" : "")">
-                            <a class="page-link" title="Siguiente" asp-page="/Usuario" asp-all-route-data="Model.RutaFiltros(Model.Pagina + 1)"><i class="bi bi-chevron-right"></i></a>
-                        </li>
-                        <li class="page-item @(Model.Pagina == Model.TotalPaginas ? "disabled" : "")">
-                            <a class="page-link" title="Última" asp-page="/Usuario" asp-all-route-data="Model.RutaFiltros(Model.TotalPaginas)"><i class="bi bi-chevron-bar-right"></i></a>
-                        </li>
-                    </ul>
+                    <partial name="_Paginacion" model="Model" />
                 }
                 else
                 {
@@ -224,59 +229,3 @@
     </div>
 </section>
 <!-- Fin Contenedor Principal -->
-
-<!-- Confirmación para eliminar -->
-<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="post" asp-page-handler="Eliminar" asp-all-route-data="Model.RutaFiltros()" class="modal-content modal-gestion">
-            <div class="modal-body text-center p-4">
-                <div class="icono-alerta"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                <h5 id="modalEliminarLabel" class="fw-bold">¿Eliminar usuario?</h5>
-                <p class="text-secondary mb-0">
-                    La cuenta <b id="cuentaEliminar"></b> ya no podrá iniciar sesión en el sistema.
-                </p>
-                <input type="hidden" name="id" id="idEliminar" />
-            </div>
-            <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
-                <button type="button" class="btn btn-oscuro" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-rojo">Sí, eliminar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Mensajes -->
-@if (!string.IsNullOrEmpty(Model.Mensaje))
-{
-    var icono = Model.TipoMensaje switch
-    {
-        "success" => "bi-check-circle-fill",
-        "danger" => "bi-x-circle-fill",
-        "warning" => "bi-exclamation-triangle-fill",
-        _ => "bi-info-circle-fill"
-    };
-    <div class="toast-container position-fixed end-0 p-3 contenedor-toast">
-        <div id="toastMensaje" class="toast toast-gestion toast-@Model.TipoMensaje" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4500">
-            <div class="d-flex align-items-center">
-                <div class="toast-body"><i class="bi @icono me-2"></i>@Model.Mensaje</div>
-                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-            </div>
-        </div>
-    </div>
-}
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        // Pasa el id y la cuenta del renglón al modal de eliminar
-        document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (e) {
-            const btn = e.relatedTarget;
-            document.getElementById('idEliminar').value = btn.dataset.id;
-            document.getElementById('cuentaEliminar').textContent = btn.dataset.cuenta;
-        });
-
-        // Muestra el mensaje del servidor
-        const toast = document.getElementById('toastMensaje');
-        if (toast) bootstrap.Toast.getOrCreateInstance(toast).show();
-    </script>
-}

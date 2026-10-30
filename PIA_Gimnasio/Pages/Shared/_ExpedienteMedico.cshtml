@@ -1,0 +1,24 @@
+@* Datos del expediente médico del socio. En el diseñador de rutinas el JavaScript los actualiza por id. *@
+@model DataRow?
+@{
+    string Dato(string columna) => Model == null || Model[columna] == DBNull.Value || string.IsNullOrWhiteSpace(Model[columna].ToString())
+        ? "—" : Model[columna].ToString()!;
+}
+
+<div id="expedienteVacio" class="expediente-vacio @(Model == null ? "" : "d-none")">
+    <i class="bi bi-clipboard2-x"></i>
+    <span id="expedienteVacioTexto">Selecciona un socio para ver su expediente médico.</span>
+</div>
+
+<dl id="expedienteDatos" class="perfil-datos expediente @(Model == null ? "d-none" : "")">
+    <dt><i class="bi bi-droplet"></i> Tipo de sangre</dt>
+    <dd id="expTipoSangre">@Dato("TipoSangre")</dd>
+    <dt><i class="bi bi-heart-pulse"></i> Padecimientos crónicos</dt>
+    <dd id="expPadecimientos">@Dato("PadecimientosCronicos")</dd>
+    <dt><i class="bi bi-bandaid"></i> Lesiones previas</dt>
+    <dd id="expLesiones">@Dato("LesionesPrevias")</dd>
+    <dt><i class="bi bi-capsule"></i> Alergias</dt>
+    <dd id="expAlergias">@Dato("Alergias")</dd>
+    <dt><i class="bi bi-exclamation-octagon"></i> Condición de riesgo</dt>
+    <dd id="expCondicion">@Dato("CondicionRiesgo")</dd>
+</dl>

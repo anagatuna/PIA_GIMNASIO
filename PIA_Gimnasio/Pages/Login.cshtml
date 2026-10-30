@@ -43,17 +43,15 @@
 
                     <div class="mb-3">
                         <label asp-for="Input.Cuenta" class="form-label">Cuenta</label>
-                        <input asp-for="Input.Cuenta" class="form-control" placeholder="Usuario" autocomplete="username" autofocus />
-                        <span asp-validation-for="Input.Cuenta" class="text-validacion"></span>
+                        <input asp-for="Input.Cuenta" class="form-control" placeholder="Usuario" maxlength="50" autocomplete="username" autofocus required />
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="Input.Contrasenia" class="form-label">Contraseña</label>
                         <div class="campo-pass">
-                            <input asp-for="Input.Contrasenia" class="form-control" placeholder="Contraseña" autocomplete="current-password" />
+                            <input asp-for="Input.Contrasenia" type="password" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="current-password" required />
                             <button type="button" class="btn-ver" id="btnVer">Mostrar</button>
                         </div>
-                        <span asp-validation-for="Input.Contrasenia" class="text-validacion"></span>
                     </div>
 
                     <button type="submit" class="btn btn-entrar w-100">Entrar</button>
@@ -64,9 +62,6 @@
         </div>
     </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     <script>
             // Mostrar / ocultar contraseña
             (function() {

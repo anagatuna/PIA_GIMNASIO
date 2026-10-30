@@ -1,0 +1,91 @@
+@page
+@model PIA_Gimnasio.Pages.PerfilModel
+@{
+    ViewData["Title"] = "Mi perfil";
+    ViewData["AnchoCompleto"] = true;
+
+    var p = Model.Perfil;
+    string Dato(string columna) => p == null || p[columna] == DBNull.Value || string.IsNullOrWhiteSpace(p[columna].ToString())
+        ? "Sin asignar" : p[columna].ToString()!;
+    var nombre = p == null ? "" : Dato("NombreEmpleado");
+    var inicial = string.IsNullOrEmpty(nombre) || nombre == "Sin asignar" ? "U" : nombre.Substring(0, 1).ToUpper();
+}
+
+<section class="gestion">
+    <div class="row g-4 justify-content-center">
+
+        <!-- Datos del usuario -->
+        <div class="col-lg-5">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center"><i class="bi bi-person-badge"></i>&nbsp;Mi perfil</h4>
+
+                @if (p != null)
+                {
+                    <div class="perfil-encabezado">
+                        <div class="perfil-avatar">@inicial</div>
+                        <div>
+                            <div class="perfil-nombre">@Dato("NombreEmpleado")</div>
+                            <span class="etiqueta etiqueta-rol">@Dato("RolNombre")</span>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h6 class="subtitulo-seccion">Datos de acceso</h6>
+                    <dl class="perfil-datos">
+                        <dt><i class="bi bi-person"></i> Cuenta</dt>
+                        <dd>@Dato("Cuenta")</dd>
+                        <dt><i class="bi bi-shield-check"></i> Rol</dt>
+                        <dd>@Dato("RolNombre")</dd>
+                        <dt><i class="bi bi-toggle-on"></i> Estatus</dt>
+                        <dd>@Dato("EstatusDescripcion")</dd>
+                    </dl>
+
+                    <h6 class="subtitulo-seccion">Datos laborales</h6>
+                    <dl class="perfil-datos">
+                        <dt><i class="bi bi-building"></i> Sucursal</dt>
+                        <dd>@Dato("NombreSucursal")</dd>
+                        <dt><i class="bi bi-envelope"></i> Correo</dt>
+                        <dd>@Dato("Correo")</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+
+        <!-- Cambio de contraseña -->
+        <div class="col-lg-5">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center"><i class="bi bi-key"></i>&nbsp;Cambiar contraseña</h4>
+
+                <form method="post">
+                    <div class="form-floating mb-3">
+                        <input asp-for="Cambio.Actual" type="password" class="form-control" placeholder="Contraseña actual" maxlength="50" autocomplete="current-password" required />
+                        <label asp-for="Cambio.Actual">Contraseña actual<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <hr />
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="Cambio.Nueva" type="password" class="form-control" placeholder="Nueva contraseña" minlength="6" maxlength="50" autocomplete="new-password" required />
+                        <label asp-for="Cambio.Nueva">Nueva contraseña<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Cambio.Confirmacion" type="password" class="form-control" placeholder="Confirmar contraseña" minlength="6" maxlength="50" autocomplete="new-password" required />
+                        <label asp-for="Cambio.Confirmacion">Confirmar nueva contraseña<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="nota">
+                        <strong>Nota:</strong> La contraseña distingue mayúsculas y minúsculas y debe tener al menos 6 caracteres.
+                    </div>
+
+                    <div class="d-flex justify-content-center mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>Cambiar contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</section>

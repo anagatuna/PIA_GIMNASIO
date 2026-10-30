@@ -1,0 +1,226 @@
+@page
+@model PIA_Gimnasio.Pages.EjercicioModel
+@{
+    ViewData["Title"] = "Catálogo de ejercicios";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Eliminar ejercicio?";          // El Layout pinta la confirmación
+    ViewData["EliminarDescripcion"] = "ya no aparecerá en el diseñador de rutinas. Las rutinas que ya lo tienen lo conservan.";
+    bool esEdicion = Model.Ejercicio.IdEjercicio > 0;
+
+    string ClaseNivel(string nivel) => nivel switch
+    {
+        "Principiante" => "etiqueta-activo",
+        "Intermedio" => "etiqueta-rol",
+        _ => "etiqueta-avanzado"
+    };
+}
+
+<!-- Contenedor Principal -->
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Gestión de información -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center">
+                    <i class="bi bi-activity"></i>&nbsp;@(esEdicion ? "Editar ejercicio" : "Nuevo ejercicio")
+                </h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <input type="hidden" asp-for="Ejercicio.IdEjercicio" />
+
+                    <!-- Datos del ejercicio -->
+                    <h6 class="subtitulo-seccion">Información del ejercicio</h6>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Ejercicio.Nombre" class="form-control" placeholder="Nombre" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Ejercicio.Nombre">Nombre<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Ejercicio.GrupoMuscular" asp-items="Model.Grupos" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Ejercicio.GrupoMuscular">Grupo muscular<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Ejercicio.NivelDificultad" asp-items="Model.Niveles" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Ejercicio.NivelDificultad">Nivel de dificultad<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Seguridad -->
+                    <h6 class="subtitulo-seccion">Seguridad</h6>
+                    <div class="form-floating mb-1">
+                        <input asp-for="Ejercicio.ContraIndicacion" class="form-control" placeholder="Contraindicación" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Ejercicio.ContraIndicacion">Contraindicación<span class="asterisco"> *</span></label>
+                    </div>
+                    <small class="ayuda">Separa con comas (ej. <i>Lesión de rodilla, Hipertensión</i>) o escribe <i>Ninguna</i>. Se compara contra el expediente médico al asignar rutinas.</small>
+
+                    <div class="form-floating mb-3">
+                        <select asp-for="Ejercicio.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Ejercicio.IdEstatus">Estatus<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="nota">
+                        <strong>Nota:</strong> Los campos obligatorios están marcados con
+                        <abbr title="obligatorio" class="asterisco">*</abbr>.
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
+                        </button>
+                        <a class="btn btn-oscuro" asp-page="/Ejercicio" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                    </div>
+                </form>
+
+                <!-- Área de información -->
+                <hr />
+                <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Información</h5>
+                <div class="info">
+                    Este módulo es la biblioteca de ejercicios que usan los entrenadores para diseñar rutinas.
+                    Solo los ejercicios con estatus <b>Activo</b> aparecen en el diseñador.
+                    La <b>contraindicación</b> sirve para alertar al entrenador cuando un ejercicio no es adecuado
+                    para el expediente médico del socio.
+                </div>
+                <!-- Fin Área de información -->
+            </div>
+        </div>
+        <!-- Fin Gestión de información -->
+
+        <!-- Consulta de registros -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Ejercicios</span></h4>
+
+                <!-- Filtros o Búsqueda -->
+                <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="BusquedaNombre" class="form-control" placeholder="Búsqueda por nombre" maxlength="50" />
+                                <label asp-for="BusquedaNombre">Búsqueda por nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaGrupo" asp-items="Model.Grupos" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaGrupo">Grupo muscular</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaNivel" asp-items="Model.Niveles" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaNivel">Nivel de dificultad</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEstatus">Estatus</label>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="col-12 mb-4">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-circulo btn-naranja" title="Buscar">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                                <a class="btn-circulo btn-oscuro" asp-page="/Ejercicio" title="Limpiar">
+                                    <i class="bi bi-stars"></i>
+                                </a>
+                                <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Fin Botones -->
+                    </div>
+                </form>
+                <!-- Fin Filtros -->
+
+                <!-- Tabla para mostrar la información -->
+                @if (Model.Ejercicios.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Editar</th>
+                                    <th class="col-accion">Eliminar</th>
+                                    <th>Ejercicio</th>
+                                    <th>Grupo muscular</th>
+                                    <th>Nivel</th>
+                                    <th>Contraindicación</th>
+                                    <th>Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Ejercicios)
+                                {
+                                    var id = fila["IdEjercicio"];
+                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
+                                    var rutaEditar = Model.RutaFiltros();
+                                    rutaEditar["id"] = id.ToString()!;
+
+                                    <tr class="@(Model.Ejercicio.IdEjercicio.ToString() == id.ToString() ? "fila-seleccionada" : "")">
+                                        <td class="col-accion">
+                                            <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
+                                               asp-page="/Ejercicio" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </td>
+                                        <td class="col-accion">
+                                            <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                    data-id="@id" data-nombre="@fila["Nombre"]">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </td>
+                                        <td class="fw-semibold">@fila["Nombre"]</td>
+                                        <td>@fila["GrupoMuscular"]</td>
+                                        <td><span class="etiqueta @ClaseNivel(fila["NivelDificultad"].ToString()!)">@fila["NivelDificultad"]</span></td>
+                                        <td>@fila["ContraIndicacion"]</td>
+                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+                <!-- Fin Tabla para mostrar la información -->
+            </div>
+        </div>
+        <!-- Fin Consulta de registros -->
+
+    </div>
+</section>
+<!-- Fin Contenedor Principal -->

@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Logica;
+using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
@@ -31,34 +31,33 @@ namespace PIA_Gimnasio.Pages
 
         public class LoginInput
         {
-            [Required(ErrorMessage = "Ingresa tu cuenta.")]
-            [StringLength(50)]
-            public string Cuenta { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Ingresa tu contraseña.")]
-            [StringLength(50)]
-            [DataType(DataType.Password)]
-            public string Contrasenia { get; set; } = string.Empty;
+            public string? Cuenta { get; set; }
+            public string? Contrasenia { get; set; }
         }
 
         public IActionResult OnGet()
         {
             // Si ya inició sesión no tiene caso mostrar el login
             if (User.Identity?.IsAuthenticated == true)
-                return RedirectToPage("/Index");
+                return RedirectToPage("/Inicio");
 
             return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
+            // Reglas de captura (Logica/Validacion/validacionUsuario.cs)
+            List<string> errores = validacionUsuario.ValidarLogin(Input.Cuenta, Input.Contrasenia);
+            if (errores.Count > 0)
+            {
+                MensajeError = errores[0];
                 return Page();
+            }
 
             DataRow? fila;
             try
             {
-                fila = _logica.IniciarSesion(Input.Cuenta, Input.Contrasenia);
+                fila = _logica.IniciarSesion(Input.Cuenta!, Input.Contrasenia!);
             }
             catch (SqlException)
             {
@@ -107,7 +106,7 @@ namespace PIA_Gimnasio.Pages
             if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
                 return LocalRedirect(ReturnUrl);
 
-            return RedirectToPage("/Index");
+            return RedirectToPage("/Inicio");
         }
 
         // Convierte DBNull a "" (el empleado puede venir NULL por el LEFT JOIN)

@@ -1,0 +1,29 @@
+@* Confirmación para eliminar. La pinta el Layout cuando la página pone ViewData["EliminarTitulo"] y ViewData["EliminarDescripcion"].
+   El botón que la abre lleva data-bs-toggle="modal" data-bs-target="#modalEliminar" data-id y data-nombre. *@
+@model (string Titulo, string Descripcion, string Accion)
+
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" action="@Model.Accion" asp-antiforgery="true" class="modal-content modal-gestion">
+            <div class="modal-body text-center p-4">
+                <div class="icono-alerta"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <h5 id="modalEliminarLabel" class="fw-bold">@Model.Titulo</h5>
+                <p class="text-secondary mb-0">
+                    <b id="nombreEliminar"></b> @Model.Descripcion
+                </p>
+                <input type="hidden" name="id" id="idEliminar" />
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                <button type="button" class="btn btn-oscuro" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-rojo">Sí, eliminar</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    // Pasa el id y el nombre del renglón al modal
+    document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (e) {
+        document.getElementById('idEliminar').value = e.relatedTarget.dataset.id;
+        document.getElementById('nombreEliminar').textContent = e.relatedTarget.dataset.nombre;
+    });
+</script>

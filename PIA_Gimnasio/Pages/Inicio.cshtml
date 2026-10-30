@@ -1,0 +1,20 @@
+﻿@page
+@model PIA_Gimnasio.Pages.InicioModel
+@{
+    ViewData["Title"] = "Inicio";
+    ViewData["AnchoCompleto"] = true;
+    var inicial = string.IsNullOrEmpty(Model.Nombre) ? "U" : Model.Nombre.Substring(0, 1).ToUpper();
+}
+
+<section class="gestion">
+    <!-- Bienvenida -->
+    <div class="card-gestion bienvenida mb-4">
+        <div class="perfil-avatar">@inicial</div>
+        <div class="flex-grow-1">
+            <h3 class="mb-1">Hola, @Model.Nombre</h3>
+            <span class="etiqueta etiqueta-rol">@Model.Rol</span>
+            <p class="mb-0 mt-2 text-secondary">@Model.DescripcionRol</p>
+        </div>
+        <a class="btn btn-oscuro d-none d-md-inline-block" asp-page="/Perfil"><i class="bi bi-person-badge me-1"></i>Mi perfil</a>
+    </div>
+</section>
