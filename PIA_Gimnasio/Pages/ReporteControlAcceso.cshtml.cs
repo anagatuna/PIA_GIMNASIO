@@ -47,10 +47,15 @@ namespace PIA_Gimnasio.Pages
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
 
+                // Sin consulta si el rango de fechas está invertido
+                if (!RangoFechasValido(Desde, Hasta))
+                    return;
+
                 DataTable tabla = Consultar();
                 var filas = tabla.AsEnumerable().ToList();
                 Dentro = filas.Count(r => r["FechaSalida"] == DBNull.Value);
-                var minutos = filas.Where(r => r["Minutos"] != DBNull.Value).Select(r => Convert.ToInt32(r["Minutos"])).ToList();
+                // El promedio solo considera visitas terminadas (las que siguen en curso aún no tienen permanencia final)
+                var minutos = filas.Where(r => Convert.ToInt32(r["EnCurso"]) == 0).Select(r => Convert.ToInt32(r["Minutos"])).ToList();
                 PromedioMinutos = minutos.Count == 0 ? 0 : minutos.Average();
                 SociosDistintos = filas.Select(r => r["Folio"]).Distinct().Count();
                 Filas = Paginar(tabla);
@@ -63,9 +68,12 @@ namespace PIA_Gimnasio.Pages
 
         public IActionResult OnGetExportar()
         {
+            if (!RangoFechasValido(Desde, Hasta))
+                return Redirigir();
+
             return ExportarCsv(Consultar(), "ControlAcceso",
                 ("Folio", "Folio"), ("Socio", "Socio"), ("Sucursal", "Sucursal"),
-                ("Entrada", "FechaEntrada"), ("Salida", "FechaSalida"), ("Minutos de permanencia", "Minutos"));
+                ("Entrada", "FechaEntrada"), ("Salida", "FechaSalida"), ("Minutos de permanencia", "Minutos"), ("En curso (1=Sí)", "EnCurso"));
         }
     }
 }

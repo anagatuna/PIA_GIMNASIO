@@ -93,7 +93,9 @@ namespace PIA_Gimnasio.Logica.Validacion
             List<string> errores = new List<string>();
             validacionFormato.NombreCompleto(errores, e.Nombre, e.PrimerApellido, e.SegundoApellido);
 
-            // CURP y RFC son opcionales en la tabla, pero si se capturan deben tener formato válido
+            // Identificación oficial: al menos CURP o RFC (ambos son NULL en la tabla); si se capturan, con formato válido
+            if (string.IsNullOrWhiteSpace(e.CURP) && string.IsNullOrWhiteSpace(e.RFC))
+                errores.Add("Captura al menos la CURP o el RFC del empleado.");
             if (!string.IsNullOrWhiteSpace(e.CURP) && !validacionFormato.CURP(e.CURP))
                 errores.Add("La CURP no tiene un formato válido (18 caracteres).");
             if (!string.IsNullOrWhiteSpace(e.RFC) && !validacionFormato.RFC(e.RFC))

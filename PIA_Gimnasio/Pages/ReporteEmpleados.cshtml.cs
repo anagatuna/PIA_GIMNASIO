@@ -48,6 +48,10 @@ namespace PIA_Gimnasio.Pages
                 Puestos = CargarCombo(_logicaEmpleado.ConsultarPuestos(), "IdPuesto", "Nombre");
                 Especialidades = CargarCombo(_logicaEmpleado.ConsultarEspecialidades(), "IdEspecialidad", "Nombre");
 
+                // Sin consulta si el rango de fechas está invertido
+                if (!RangoFechasValido(Desde, Hasta))
+                    return;
+
                 DataTable tabla = Consultar();
                 PorSede = tabla.AsEnumerable().GroupBy(r => r["Sucursal"].ToString()!)
                     .Select(g => (g.Key, g.Count())).ToList();
@@ -61,6 +65,9 @@ namespace PIA_Gimnasio.Pages
 
         public IActionResult OnGetExportar()
         {
+            if (!RangoFechasValido(Desde, Hasta))
+                return Redirigir();
+
             return ExportarCsv(Consultar(), "Empleados",
                 ("Sucursal", "Sucursal"), ("Empleado", "Empleado"), ("Puesto", "Puesto"), ("Especialidades", "Especialidades"),
                 ("Correo", "Correo"), ("Teléfono", "Telefono"), ("Fecha de contratación", "FechaContratacion"), ("Estatus", "Estatus"));

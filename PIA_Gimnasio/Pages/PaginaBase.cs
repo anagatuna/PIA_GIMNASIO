@@ -137,6 +137,17 @@ namespace PIA_Gimnasio.Pages
             return valores.Select(v => new SelectListItem(v, v)).ToList();
         }
 
+        // Filtros de fecha de los reportes: "Desde" no puede ser posterior a "Hasta"
+        protected bool RangoFechasValido(DateTime? desde, DateTime? hasta)
+        {
+            if (desde.HasValue && hasta.HasValue && desde.Value.Date > hasta.Value.Date)
+            {
+                MostrarMensaje("La fecha inicial no puede ser posterior a la fecha final.", "warning");
+                return false;
+            }
+            return true;
+        }
+
         // Exporta una consulta a CSV para abrir en Excel: ExportarCsv(tabla, "Usuarios", ("Cuenta", "Cuenta"), ...)
         protected FileContentResult ExportarCsv(DataTable tabla, string nombre, params (string Encabezado, string Columna)[] columnas)
         {

@@ -26,6 +26,11 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Rutina = _logica.Obtener(id);
+
+                // El entrenador solo puede ver las rutinas que él diseñó (igual que en la lista de Rutinas)
+                if (Rutina != null && EsEntrenador && Convert.ToInt32(Rutina["IdEmpleado"]) != IdEmpleadoSesion())
+                    Rutina = null;
+
                 if (Rutina == null)
                 {
                     MostrarMensaje("No se encontró la rutina seleccionada.", "warning");

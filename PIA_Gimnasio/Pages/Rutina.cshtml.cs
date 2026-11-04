@@ -64,7 +64,12 @@ namespace PIA_Gimnasio.Pages
         {
             try
             {
-                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
+                // El entrenador solo puede eliminar las rutinas que él diseñó
+                DataRow? rutina = _logica.Obtener(id);
+                if (rutina != null && EsEntrenador && Convert.ToInt32(rutina["IdEmpleado"]) != IdEmpleadoSesion())
+                    MostrarMensaje("Solo puedes eliminar las rutinas que tú diseñaste.", "warning");
+                else
+                    MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
             }
             catch (SqlException)
             {

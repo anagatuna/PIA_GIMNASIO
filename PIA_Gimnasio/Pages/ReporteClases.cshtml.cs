@@ -59,6 +59,10 @@ namespace PIA_Gimnasio.Pages
                 if (!EsEntrenador)
                     Entrenadores = CargarCombo(_logicaEmpleado.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
 
+                // Sin consulta si el rango de fechas está invertido
+                if (!RangoFechasValido(Desde, Hasta))
+                    return;
+
                 DataTable tabla = Consultar();
                 var filas = tabla.AsEnumerable().ToList();
                 TotalReservas = filas.Sum(r => Convert.ToInt32(r["Reservas"]));
@@ -76,6 +80,9 @@ namespace PIA_Gimnasio.Pages
 
         public IActionResult OnGetExportar()
         {
+            if (!RangoFechasValido(Desde, Hasta))
+                return Redirigir();
+
             return ExportarCsv(Consultar(), "Clases",
                 ("Clase", "Clase"), ("Fecha", "Fecha"), ("Hora", "HoraInicio"), ("Salón", "Salon"), ("Sucursal", "Sucursal"),
                 ("Entrenador", "Entrenador"), ("Cupo", "CupoMaximo"), ("Reservas", "Reservas"), ("Ocupación %", "Ocupacion"),

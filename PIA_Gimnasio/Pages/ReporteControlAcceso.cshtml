@@ -46,7 +46,7 @@
         <div class="tarjetas-resumen mb-3">
             <div class="tarjeta"><span>Visitas</span><b>@Model.TotalRegistros</b></div>
             <div class="tarjeta"><span>Socios distintos</span><b>@Model.SociosDistintos</b></div>
-            <div class="tarjeta"><span>Permanencia promedio</span><b>@Math.Round(Model.PromedioMinutos) <small>min</small></b></div>
+            <div class="tarjeta"><span>Permanencia promedio (terminadas)</span><b>@Math.Round(Model.PromedioMinutos) <small>min</small></b></div>
             <div class="tarjeta verde"><span>Sin salida registrada</span><b>@Model.Dentro</b></div>
         </div>
 
@@ -75,7 +75,13 @@
                                         @Convert.ToDateTime(f["FechaSalida"]).ToString("dd/MM/yyyy HH:mm")
                                     }
                                 </td>
-                                <td class="text-end fw-semibold">@(f["Minutos"] == DBNull.Value ? "—" : f["Minutos"] + " min")</td>
+                                <td class="text-end fw-semibold text-nowrap">
+                                    @f["Minutos"] min
+                                    @if (Convert.ToInt32(f["EnCurso"]) == 1)
+                                    {
+                                        <div class="small text-secondary fw-normal">en curso</div>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
