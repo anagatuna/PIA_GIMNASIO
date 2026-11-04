@@ -21,6 +21,8 @@ builder.Services.AddScoped<logicaSuscripcion>();
 builder.Services.AddScoped<logicaControlAcceso>();
 builder.Services.AddScoped<logicaClase>();
 builder.Services.AddScoped<logicaReserva>();
+builder.Services.AddScoped<logicaPaseLista>();
+builder.Services.AddScoped<logicaReporte>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

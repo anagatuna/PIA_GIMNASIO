@@ -1,0 +1,145 @@
+@page
+@model PIA_Gimnasio.Pages.PaseListaModel
+@using PIA_Gimnasio.Logica
+@{
+    ViewData["Title"] = "Pase de lista";
+    ViewData["AnchoCompleto"] = true;
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    var cultura = new System.Globalization.CultureInfo("es-MX");
+    var clase = Model.ClaseActual;
+    bool puedePasarLista = clase != null && Convert.ToInt32(clase["PuedePasarLista"]) == 1;
+    var opciones = new[]
+    {
+        (Valor: logicaPaseLista.Confirmado, Texto: "Confirmado", Icono: "bi-hourglass-split", Clase: "confirmado"),
+        (Valor: logicaPaseLista.Asistio, Texto: "Asistió", Icono: "bi-check-lg", Clase: "asistio"),
+        (Valor: logicaPaseLista.Falta, Texto: "Falta", Icono: "bi-x-lg", Clase: "falta")
+    };
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Clases del día -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center"><i class="bi bi-calendar-day"></i>&nbsp;@(Model.EsEntrenador ? "Mis clases" : "Clases del día")</h4>
+
+                <form method="get" class="d-flex align-items-center gap-2 mb-3">
+                    <a class="btn-circulo btn-oscuro" title="Día anterior" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(-1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-left"></i></a>
+                    <div class="form-floating flex-grow-1">
+                        <input id="Fecha" name="Fecha" type="date" class="form-control" value="@Model.Dia.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+                        <label for="Fecha">@Model.Dia.ToString("dddd", cultura)</label>
+                    </div>
+                    <a class="btn-circulo btn-oscuro" title="Día siguiente" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-right"></i></a>
+                </form>
+
+                @if (Model.Clases.Count == 0)
+                {
+                    <div class="sin-registros"><i class="bi bi-calendar-x"></i>No hay clases programadas este día.</div>
+                }
+                <div class="d-flex flex-column gap-2">
+                    @foreach (DataRow c in Model.Clases)
+                    {
+                        var id = Convert.ToInt32(c["IdClase"]);
+                        int pendientes = Convert.ToInt32(c["Pendientes"]);
+                        <a class="agenda-clase tarjeta-clase @(id == Model.IdClase ? "seleccionada" : "")"
+                           asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.ToString("yyyy-MM-dd")" asp-route-IdClase="@id">
+                            <div class="d-flex justify-content-between">
+                                <span class="nombre">@c["Nombre"]</span>
+                                <span class="hora">@Hora(c["HoraInicio"]) - @Hora(c["HoraFin"])</span>
+                            </div>
+                            <div class="detalle">@c["Salon"] · @c["Sucursal"]@(Model.EsEntrenador ? "" : " · " + c["Entrenador"])</div>
+                            <div class="cupo">
+                                <i class="bi bi-people"></i> @c["Reservadas"] / @c["CupoMaximo"]
+                                <span class="text-success ms-2"><i class="bi bi-check-lg"></i> @c["Asistieron"]</span>
+                                <span class="text-danger ms-2"><i class="bi bi-x-lg"></i> @c["Faltas"]</span>
+                                @if (pendientes > 0 && Convert.ToInt32(c["PuedePasarLista"]) == 1)
+                                {
+                                    <span class="etiqueta etiqueta-rol ms-1">@pendientes por pasar</span>
+                                }
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de participantes -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                @if (clase == null)
+                {
+                    <div class="sin-registros"><i class="bi bi-list-check"></i>Selecciona una clase para pasar lista.</div>
+                }
+                else
+                {
+                    <h4 class="titulo-card"><i class="bi bi-list-check"></i>&nbsp;Pase de lista: <span class="resaltado">@clase["Nombre"]</span></h4>
+                    <p class="text-secondary small mb-3">
+                        @Model.Dia.ToString("dddd dd 'de' MMMM", cultura) · @Hora(clase["HoraInicio"]) - @Hora(clase["HoraFin"]) · @clase["Salon"] · @clase["Entrenador"]
+                    </p>
+
+                    @if (!puedePasarLista)
+                    {
+                        <div class="resumen-plan al-limite mb-3">
+                            <i class="bi bi-clock"></i> La clase todavía no comienza; podrás registrar la asistencia a partir de las @Hora(clase["HoraInicio"]).
+                        </div>
+                    }
+
+                    @if (Model.Participantes.Count == 0)
+                    {
+                        <div class="sin-registros"><i class="bi bi-person-x"></i>Esta clase no tiene reservas confirmadas.</div>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                            @if (puedePasarLista)
+                            {
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button type="button" class="btn btn-verde btn-sm-pill" id="todosAsistieron"><i class="bi bi-check2-all me-1"></i>Todos asistieron</button>
+                                </div>
+                            }
+
+                            <div class="lista-asistencia">
+                                @foreach (DataRow p in Model.Participantes)
+                                {
+                                    var idReserva = p["IdReserva"];
+                                    int estatus = Convert.ToInt32(p["IdEstatus"]);
+                                    <div class="fila-asistencia">
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">@p["Socio"]</div>
+                                            <div class="small text-secondary">Folio @p["Folio"]</div>
+                                        </div>
+                                        <div class="opciones-asistencia" role="radiogroup">
+                                            @foreach (var o in opciones)
+                                            {
+                                                <label class="opcion @o.Clase" title="@o.Texto">
+                                                    <input type="radio" name="Asistencia[@idReserva]" value="@o.Valor" checked="@(estatus == o.Valor)" disabled="@(!puedePasarLista)" />
+                                                    <span><i class="bi @o.Icono"></i> <span class="d-none d-sm-inline">@o.Texto</span></span>
+                                                </label>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (puedePasarLista)
+                            {
+                                <div class="d-flex justify-content-center mt-4">
+                                    <button type="submit" class="btn btn-naranja"><i class="bi bi-floppy me-1"></i>Guardar pase de lista</button>
+                                </div>
+                            }
+                        </form>
+                    }
+                }
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        document.getElementById('todosAsistieron')?.addEventListener('click', () =>
+            document.querySelectorAll('.opcion.asistio input').forEach(r => r.checked = true));
+    </script>
+}

@@ -992,3 +992,50 @@ abbr.asterisco {
 }
     .resumen-plan.al-limite { background: rgba(255, 149, 0, .14); color: #a35b00; }
     .resumen-plan.sin-plan { background: rgba(255, 59, 48, .12); color: #d70015; }
+
+/* =====================================================
+   Reportes y pase de lista
+   ===================================================== */
+.tarjetas-resumen { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tarjetas-resumen .tarjeta {
+        background: #f5f5f7;
+        border-radius: 12px;
+        padding: 10px 16px;
+        min-width: 140px;
+        border-left: 4px solid var(--menu-bg);
+    }
+        .tarjetas-resumen .tarjeta span { display: block; font-size: .75rem; color: #6e6e73; text-transform: uppercase; font-weight: 600; }
+        .tarjetas-resumen .tarjeta b { font-size: 1.5rem; }
+            .tarjetas-resumen .tarjeta b small { font-size: .85rem; color: #8e8e93; }
+        .tarjetas-resumen .tarjeta.verde { border-left-color: #34c759; }
+        .tarjetas-resumen .tarjeta.roja { border-left-color: #ff3b30; }
+
+.tarjeta-clase { display: block; text-decoration: none; color: inherit; }
+    .tarjeta-clase:hover { background: #fffaf2; }
+
+.lista-asistencia { display: flex; flex-direction: column; gap: 8px; }
+.fila-asistencia {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f5f5f7;
+    border-radius: 12px;
+    padding: 10px 14px;
+}
+.opciones-asistencia { display: flex; gap: 6px; }
+    .opciones-asistencia .opcion { margin: 0; cursor: pointer; }
+        .opciones-asistencia .opcion input { display: none; }
+        .opciones-asistencia .opcion > span {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid #d1d1d6;
+            background: #fff;
+            font-size: .85rem;
+            font-weight: 600;
+            user-select: none;
+        }
+        .opciones-asistencia .opcion input:disabled + span { opacity: .55; cursor: not-allowed; }
+        .opciones-asistencia .opcion.confirmado input:checked + span { background: var(--menu-bg); border-color: var(--menu-bg); color: #fff; }
+        .opciones-asistencia .opcion.asistio input:checked + span { background: #34c759; border-color: #34c759; color: #fff; }
+        .opciones-asistencia .opcion.falta input:checked + span { background: #ff3b30; border-color: #ff3b30; color: #fff; }

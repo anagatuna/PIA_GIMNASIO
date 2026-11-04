@@ -1,0 +1,91 @@
+@page
+@model PIA_Gimnasio.Pages.ReporteEmpleadosModel
+@{
+    ViewData["Title"] = "Reporte de empleados";
+    ViewData["AnchoCompleto"] = true;
+}
+
+<section class="gestion">
+    <div class="card-gestion">
+        <h4 class="titulo-card"><i class="bi bi-file-earmark-person"></i>&nbsp;Reporte: <span class="resaltado">Empleados y distribución</span></h4>
+
+        <form method="get">
+            <div class="row">
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
+                        <label asp-for="IdSucursal">Sucursal</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdPuesto" asp-items="Model.Puestos" class="form-select"><option value="">Todos</option></select>
+                        <label asp-for="IdPuesto">Puesto</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdEspecialidad" asp-items="Model.Especialidades" class="form-select"><option value="">Todas</option></select>
+                        <label asp-for="IdEspecialidad">Especialidad</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Desde" type="date" class="form-control" />
+                        <label asp-for="Desde">Contratado desde</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Hasta" type="date" class="form-control" />
+                        <label asp-for="Hasta">Contratado hasta</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3 d-flex align-items-center gap-2">
+                    <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                    <a class="btn-circulo btn-oscuro" asp-page="/ReporteEmpleados" title="Limpiar"><i class="bi bi-stars"></i></a>
+                    <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar"><i class="bi bi-file-earmark-spreadsheet"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Desglose por sede -->
+        <div class="tarjetas-resumen mb-3">
+            <div class="tarjeta"><span>Total de empleados</span><b>@Model.TotalRegistros</b></div>
+            @foreach (var s in Model.PorSede)
+            {
+                <div class="tarjeta"><span>@s.Sucursal</span><b>@s.Total</b></div>
+            }
+        </div>
+
+        @if (Model.Filas.Count > 0)
+        {
+            <div class="table-responsive tabla-gestion">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr><th>Sucursal</th><th>Empleado</th><th>Puesto</th><th>Especialidades</th><th>Contacto</th><th>Contratación</th><th>Estatus</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow f in Model.Filas)
+                        {
+                            <tr>
+                                <td>@f["Sucursal"]</td>
+                                <td class="fw-semibold">@f["Empleado"]</td>
+                                <td>@f["Puesto"]</td>
+                                <td class="small">@f["Especialidades"]</td>
+                                <td class="small">@f["Correo"]<br />@f["Telefono"]</td>
+                                <td>@Convert.ToDateTime(f["FechaContratacion"]).ToString("dd/MM/yyyy")</td>
+                                <td><span class="etiqueta @(f["Estatus"].ToString() == "Activo" ? "etiqueta-activo" : "etiqueta-inactivo")">@f["Estatus"]</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_Paginacion" model="Model" />
+        }
+        else
+        {
+            <div class="sin-registros"><i class="bi bi-inbox"></i>No se encontraron registros con los parámetros solicitados.</div>
+        }
+    </div>
+</section>

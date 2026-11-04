@@ -1,0 +1,88 @@
+@page
+@model PIA_Gimnasio.Pages.ReporteSociosModel
+@{
+    ViewData["Title"] = "Reporte de socios";
+    ViewData["AnchoCompleto"] = true;
+    int Conteo(int estatus) => Model.Conteo.TryGetValue(estatus, out int n) ? n : 0;
+}
+
+<section class="gestion">
+    <div class="card-gestion">
+        <h4 class="titulo-card"><i class="bi bi-file-earmark-text"></i>&nbsp;Reporte: <span class="resaltado">Socios y estado de membresías</span></h4>
+
+        <form method="get">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
+                        <label asp-for="IdSucursal">Sucursal</label>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdTipoMembresia" asp-items="Model.Membresias" class="form-select"><option value="">Todas</option></select>
+                        <label asp-for="IdTipoMembresia">Membresía</label>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdEstatus" asp-items="Model.Estatus" class="form-select"><option value="">Todos</option></select>
+                        <label asp-for="IdEstatus">Estatus de la membresía</label>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-center gap-2">
+                    <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                    <a class="btn-circulo btn-oscuro" asp-page="/ReporteSocios" title="Limpiar"><i class="bi bi-stars"></i></a>
+                    <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar"><i class="bi bi-file-earmark-spreadsheet"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <div class="tarjetas-resumen mb-3">
+            <div class="tarjeta"><span>Socios</span><b>@Model.TotalRegistros</b></div>
+            <div class="tarjeta verde"><span>Activas</span><b>@Conteo(1)</b></div>
+            <div class="tarjeta roja"><span>Vencidas</span><b>@Conteo(3)</b></div>
+            <div class="tarjeta"><span>Canceladas</span><b>@Conteo(4)</b></div>
+            <div class="tarjeta"><span>Sin membresía</span><b>@Conteo(0)</b></div>
+        </div>
+
+        @if (Model.Filas.Count > 0)
+        {
+            <div class="table-responsive tabla-gestion">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr><th>Folio</th><th>Socio</th><th>Contacto</th><th>Sucursal</th><th>Membresía</th><th>Vencimiento</th><th>Estatus</th><th class="text-center">Expediente</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow f in Model.Filas)
+                        {
+                            int estatus = Convert.ToInt32(f["IdEstatusMembresia"]);
+                            bool expediente = Convert.ToInt32(f["TieneExpediente"]) == 1;
+                            string clase = estatus switch { 1 => "etiqueta-activo", 3 => "etiqueta-avanzado", _ => "etiqueta-inactivo" };
+                            <tr>
+                                <td class="fw-bold">@f["Folio"]</td>
+                                <td class="fw-semibold">@f["Socio"]</td>
+                                <td class="small">@f["Correo"]<br />@f["Telefono"]</td>
+                                <td>@f["Sucursal"]</td>
+                                <td>@(f["Membresia"] == DBNull.Value ? "—" : f["Membresia"])</td>
+                                <td>@(f["FechaVencimiento"] == DBNull.Value ? "—" : Convert.ToDateTime(f["FechaVencimiento"]).ToString("dd/MM/yyyy"))</td>
+                                <td><span class="etiqueta @clase">@f["EstatusMembresia"]</span></td>
+                                <td class="text-center">
+                                    <a asp-page="/ExpedienteMedico" asp-route-IdCliente="@f["IdCliente"]" title="Ver expediente médico"
+                                       class="btn-circulo btn-sm-circulo @(expediente ? "btn-verde" : "btn-rojo")">
+                                        <i class="bi @(expediente ? "bi-heart-pulse" : "bi-exclamation-lg")"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_Paginacion" model="Model" />
+        }
+        else
+        {
+            <div class="sin-registros"><i class="bi bi-inbox"></i>No se encontraron registros con los parámetros solicitados.</div>
+        }
+    </div>
+</section>

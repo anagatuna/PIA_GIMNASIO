@@ -1,0 +1,98 @@
+@page
+@model PIA_Gimnasio.Pages.ReporteClasesModel
+@{
+    ViewData["Title"] = "Reporte de clases";
+    ViewData["AnchoCompleto"] = true;
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+}
+
+<section class="gestion">
+    <div class="card-gestion">
+        <h4 class="titulo-card"><i class="bi bi-file-earmark-check"></i>&nbsp;Reporte: <span class="resaltado">Clases grupales y asistencia</span></h4>
+
+        <form method="get">
+            <div class="row">
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Clase" class="form-control" placeholder="Clase" maxlength="50" />
+                        <label asp-for="Clase">Clase</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
+                        <label asp-for="IdSucursal">Sucursal</label>
+                    </div>
+                </div>
+                @if (!Model.EsEntrenador)
+                {
+                    <div class="col-md-4 col-xl-2 mb-3">
+                        <div class="form-floating">
+                            <select asp-for="IdEmpleado" asp-items="Model.Entrenadores" class="form-select"><option value="">Todos</option></select>
+                            <label asp-for="IdEmpleado">Entrenador</label>
+                        </div>
+                    </div>
+                }
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Desde" type="date" class="form-control" />
+                        <label asp-for="Desde">Desde</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Hasta" type="date" class="form-control" />
+                        <label asp-for="Hasta">Hasta</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3 d-flex align-items-center gap-2">
+                    <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                    <a class="btn-circulo btn-oscuro" asp-page="/ReporteClases" title="Limpiar"><i class="bi bi-stars"></i></a>
+                    <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar"><i class="bi bi-file-earmark-spreadsheet"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <div class="tarjetas-resumen mb-3">
+            <div class="tarjeta"><span>Clases</span><b>@Model.TotalRegistros</b></div>
+            <div class="tarjeta"><span>Reservas</span><b>@Model.TotalReservas</b></div>
+            <div class="tarjeta"><span>Ocupación promedio</span><b>@Model.OcupacionPromedio.ToString("0.#")<small>%</small></b></div>
+            <div class="tarjeta verde"><span>Efectividad de asistencia</span><b>@(Model.Efectividad.HasValue ? Model.Efectividad.Value.ToString("0.#") : "—")<small>%</small></b></div>
+        </div>
+
+        @if (Model.Filas.Count > 0)
+        {
+            <div class="table-responsive tabla-gestion">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr><th>Clase</th><th>Fecha</th><th>Sucursal / salón</th><th>Entrenador</th><th>Ocupación</th><th class="text-center">Asistieron</th><th class="text-center">Faltas</th><th class="text-end">Efectividad</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow f in Model.Filas)
+                        {
+                            double ocupacion = Convert.ToDouble(f["Ocupacion"]);
+                            <tr>
+                                <td class="fw-semibold">@f["Clase"]</td>
+                                <td class="text-nowrap">@Convert.ToDateTime(f["Fecha"]).ToString("dd/MM/yyyy") @Hora(f["HoraInicio"])</td>
+                                <td>@f["Sucursal"] · @f["Salon"]</td>
+                                <td>@f["Entrenador"]</td>
+                                <td style="min-width: 140px">
+                                    <div class="small"><b>@f["Reservas"]</b> / @f["CupoMaximo"] (@ocupacion.ToString("0.#")%)</div>
+                                    <div class="barra-aforo"><span class="@(ocupacion >= 100 ? "lleno" : ocupacion >= 80 ? "alto" : "")" style="width: @Math.Min(100, ocupacion).ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                                </td>
+                                <td class="text-center text-success fw-semibold">@f["Asistieron"]</td>
+                                <td class="text-center text-danger fw-semibold">@f["Faltas"]</td>
+                                <td class="text-end">@(f["Efectividad"] == DBNull.Value ? "—" : Convert.ToDouble(f["Efectividad"]).ToString("0.#") + "%")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_Paginacion" model="Model" />
+        }
+        else
+        {
+            <div class="sin-registros"><i class="bi bi-inbox"></i>No se encontraron registros con los parámetros solicitados.</div>
+        }
+    </div>
+</section>

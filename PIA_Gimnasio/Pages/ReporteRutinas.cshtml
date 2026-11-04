@@ -1,0 +1,98 @@
+@page
+@model PIA_Gimnasio.Pages.ReporteRutinasModel
+@{
+    ViewData["Title"] = "Reporte de rutinas";
+    ViewData["AnchoCompleto"] = true;
+}
+
+<section class="gestion">
+    <div class="card-gestion">
+        <h4 class="titulo-card"><i class="bi bi-file-earmark-medical"></i>&nbsp;Reporte: <span class="resaltado">Rutinas asignadas</span></h4>
+
+        <form method="get">
+            <div class="row">
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <input asp-for="Socio" class="form-control" placeholder="Socio" maxlength="50" />
+                        <label asp-for="Socio">Socio (folio o nombre)</label>
+                    </div>
+                </div>
+                @if (!Model.EsEntrenador)
+                {
+                    <div class="col-md-4 col-xl-2 mb-3">
+                        <div class="form-floating">
+                            <select asp-for="IdEmpleado" asp-items="Model.Entrenadores" class="form-select"><option value="">Todos</option></select>
+                            <label asp-for="IdEmpleado">Entrenador</label>
+                        </div>
+                    </div>
+                }
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="Objetivo" asp-items="Model.Objetivos" class="form-select"><option value="">Todos</option></select>
+                        <label asp-for="Objetivo">Objetivo</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="GrupoMuscular" asp-items="Model.Grupos" class="form-select"><option value="">Todos</option></select>
+                        <label asp-for="GrupoMuscular">Grupo muscular</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3">
+                    <div class="form-floating">
+                        <select asp-for="NivelDificultad" asp-items="Model.Niveles" class="form-select"><option value="">Todos</option></select>
+                        <label asp-for="NivelDificultad">Dificultad</label>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-2 mb-3 d-flex align-items-center gap-2">
+                    <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                    <a class="btn-circulo btn-oscuro" asp-page="/ReporteRutinas" title="Limpiar"><i class="bi bi-stars"></i></a>
+                    <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar"><i class="bi bi-file-earmark-spreadsheet"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <div class="tarjetas-resumen mb-3">
+            <div class="tarjeta"><span>Rutinas</span><b>@Model.TotalRegistros</b></div>
+            <div class="tarjeta"><span>Socios</span><b>@Model.SociosDistintos</b></div>
+            <div class="tarjeta"><span>@(Model.FiltraEjercicios ? "Ejercicios que coinciden" : "Ejercicios prescritos")</span><b>@Model.TotalEjercicios</b></div>
+        </div>
+
+        @if (Model.Filas.Count > 0)
+        {
+            <div class="table-responsive tabla-gestion">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr><th>Asignación</th><th>Socio</th><th>Rutina</th><th>Entrenador</th><th class="text-center">Días</th><th>@(Model.FiltraEjercicios ? "Ejercicios que coinciden" : "Ejercicios")</th><th class="col-accion">Ver</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow f in Model.Filas)
+                        {
+                            <tr>
+                                <td>@Convert.ToDateTime(f["FechaAsignacion"]).ToString("dd/MM/yyyy")</td>
+                                <td><span class="fw-bold">@f["Folio"]</span> · @f["Socio"]</td>
+                                <td>
+                                    <div class="fw-semibold">@f["Rutina"]</div>
+                                    <span class="etiqueta etiqueta-rol">@f["Objetivo"]</span>
+                                </td>
+                                <td>@f["Entrenador"]</td>
+                                <td class="text-center">@f["TotalDias"]</td>
+                                <td class="small"><b>@f["TotalEjercicios"]:</b> @f["Ejercicios"]</td>
+                                <td class="col-accion">
+                                    <a class="btn-circulo btn-sm-circulo btn-oscuro" title="Ver rutina" asp-page="/RutinaDetalle" asp-route-id="@f["IdRutina"]">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_Paginacion" model="Model" />
+        }
+        else
+        {
+            <div class="sin-registros"><i class="bi bi-inbox"></i>No se encontraron registros con los parámetros solicitados.</div>
+        }
+    </div>
+</section>
