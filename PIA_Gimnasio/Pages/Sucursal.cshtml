@@ -1,0 +1,238 @@
+@page
+@model PIA_Gimnasio.Pages.SucursalModel
+@{
+    ViewData["Title"] = "Sucursales";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Eliminar sucursal?";
+    ViewData["EliminarDescripcion"] = "se dará de baja. Solo es posible si no tiene empleados ni socios registrados.";
+    bool esEdicion = Model.Sucursal.IdSucursal > 0;
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Gestión de información -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center">
+                    <i class="bi bi-building"></i>&nbsp;@(esEdicion ? "Editar sucursal" : "Nueva sucursal")
+                </h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <input type="hidden" asp-for="Sucursal.IdSucursal" />
+
+                    <h6 class="subtitulo-seccion">Datos generales</h6>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Sucursal.Nombre" class="form-control" placeholder="Nombre" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Sucursal.Nombre">Nombre de la sucursal<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Sucursal.Telefono" class="form-control" placeholder="Teléfono" maxlength="10" pattern="\d{10}" title="10 dígitos" inputmode="numeric" required />
+                        <label asp-for="Sucursal.Telefono">Teléfono de contacto<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <!-- Campo crítico -->
+                    <div class="form-floating mb-1">
+                        <input asp-for="Sucursal.AforoMaximo" type="number" min="1" max="5000" class="form-control campo-critico" placeholder="Aforo" required />
+                        <label asp-for="Sucursal.AforoMaximo"><i class="bi bi-people-fill"></i> Aforo máximo permitido<span class="asterisco"> *</span></label>
+                    </div>
+                    <small class="ayuda">Al alcanzarlo, Control de acceso bloquea automáticamente nuevas entradas.</small>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.HoraApertura" type="time" class="form-control" required />
+                                <label asp-for="Sucursal.HoraApertura">Apertura<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.HoraCierre" type="time" class="form-control" required />
+                                <label asp-for="Sucursal.HoraCierre">Cierre<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h6 class="subtitulo-seccion">Dirección</h6>
+                    <div class="row">
+                        <div class="col-8 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.Calle" class="form-control" placeholder="Calle" maxlength="50" required />
+                                <label asp-for="Sucursal.Calle">Calle<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.NumeroInt" class="form-control" placeholder="Número" maxlength="50" required />
+                                <label asp-for="Sucursal.NumeroInt">Núm. ext/int<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.Colonia" class="form-control" placeholder="Colonia" maxlength="50" required />
+                                <label asp-for="Sucursal.Colonia">Colonia<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Sucursal.CodigoPostal" class="form-control" placeholder="C.P." maxlength="5" pattern="\d{5}" title="5 dígitos" inputmode="numeric" required />
+                                <label asp-for="Sucursal.CodigoPostal">C.P.<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Sucursal.Municipio" class="form-control" placeholder="Ciudad" maxlength="50" required />
+                        <label asp-for="Sucursal.Municipio">Ciudad / municipio<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Sucursal.IdEstado" asp-items="Model.Estados" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Sucursal.IdEstado">Estado<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Sucursal.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Sucursal.IdEstatus">Estatus<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nota">
+                        <strong>Nota:</strong> Los campos obligatorios están marcados con
+                        <abbr title="obligatorio" class="asterisco">*</abbr>.
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
+                        </button>
+                        <a class="btn btn-oscuro" asp-page="/Sucursal" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Consulta de registros -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Sucursales</span></h4>
+
+                <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="BusquedaNombre" class="form-control" placeholder="Búsqueda por nombre" maxlength="50" />
+                                <label asp-for="BusquedaNombre">Búsqueda por nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEstado" asp-items="Model.Estados" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEstado">Estado</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEstatus">Estatus</label>
+                            </div>
+                        </div>
+                        <div class="col-12 mb-4">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                                <a class="btn-circulo btn-oscuro" asp-page="/Sucursal" title="Limpiar"><i class="bi bi-stars"></i></a>
+                                <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.Sucursales.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Editar</th>
+                                    <th class="col-accion">Eliminar</th>
+                                    <th>Sucursal</th>
+                                    <th>Horario</th>
+                                    <th>Aforo</th>
+                                    <th class="text-center">Empleados</th>
+                                    <th>Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Sucursales)
+                                {
+                                    var id = fila["IdSucursal"];
+                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
+                                    int aforo = Convert.ToInt32(fila["AforoMaximo"]);
+                                    int ocupacion = Convert.ToInt32(fila["Ocupacion"]);
+                                    int porcentaje = aforo == 0 ? 0 : Math.Min(100, ocupacion * 100 / aforo);
+                                    var rutaEditar = Model.RutaFiltros();
+                                    rutaEditar["id"] = id.ToString()!;
+
+                                    <tr class="@(Model.Sucursal.IdSucursal.ToString() == id.ToString() ? "fila-seleccionada" : "")">
+                                        <td class="col-accion">
+                                            <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
+                                               asp-page="/Sucursal" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </td>
+                                        <td class="col-accion">
+                                            <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                    data-id="@id" data-nombre="@fila["Nombre"]">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@fila["Nombre"]</div>
+                                            <div class="small text-secondary">@fila["Direccion"] · <i class="bi bi-telephone"></i> @fila["Telefono"]</div>
+                                        </td>
+                                        <td class="text-nowrap">@Hora(fila["HoraApertura"]) - @Hora(fila["HoraCierre"])</td>
+                                        <td style="min-width: 130px">
+                                            <div class="small"><b>@ocupacion</b> / @aforo</div>
+                                            <div class="barra-aforo"><span class="@(porcentaje >= 100 ? "lleno" : porcentaje >= 80 ? "alto" : "")" style="width: @porcentaje%"></span></div>
+                                        </td>
+                                        <td class="text-center">@fila["TotalEmpleados"]</td>
+                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</section>

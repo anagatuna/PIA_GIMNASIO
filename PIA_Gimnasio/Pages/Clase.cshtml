@@ -1,0 +1,185 @@
+@page
+@model PIA_Gimnasio.Pages.ClaseModel
+@{
+    ViewData["Title"] = "Clases grupales";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Cancelar clase?";
+    ViewData["EliminarDescripcion"] = "se quitará de la agenda y sus reservas confirmadas se cancelarán.";
+    bool esEdicion = Model.Clase.IdClase > 0;
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+
+    var rutaAnterior = Model.RutaFiltros(); rutaAnterior["Semana"] = Model.Lunes.AddDays(-7).ToString("yyyy-MM-dd");
+    var rutaSiguiente = Model.RutaFiltros(); rutaSiguiente["Semana"] = Model.Lunes.AddDays(7).ToString("yyyy-MM-dd");
+    var rutaHoy = Model.RutaFiltros(); rutaHoy.Remove("Semana");
+    var cultura = new System.Globalization.CultureInfo("es-MX");
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Programar clase -->
+        <div class="col-xl-3 col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center">
+                    <i class="bi bi-calendar-plus"></i>&nbsp;@(esEdicion ? "Editar clase" : "Programar clase")
+                </h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <input type="hidden" asp-for="Clase.IdClase" />
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="Clase.Nombre" class="form-control" placeholder="Nombre" maxlength="50" autocomplete="off" required list="sugerenciasClase" />
+                        <label asp-for="Clase.Nombre">Nombre de la clase<span class="asterisco"> *</span></label>
+                        <datalist id="sugerenciasClase">
+                            <option value="Yoga"></option><option value="Spinning"></option><option value="Zumba"></option>
+                            <option value="Pilates"></option><option value="CrossFit"></option><option value="Funcional"></option>
+                        </datalist>
+                    </div>
+                    <div class="form-floating mb-1">
+                        <input asp-for="Clase.Fecha" type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        <label asp-for="Clase.Fecha">Fecha (lunes a viernes)<span class="asterisco"> *</span></label>
+                    </div>
+                    <small class="ayuda">Las clases grupales solo se programan de lunes a viernes.</small>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Clase.HoraInicio" type="time" class="form-control" required />
+                                <label asp-for="Clase.HoraInicio">Inicio<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Clase.HoraFin" type="time" class="form-control" required />
+                                <label asp-for="Clase.HoraFin">Fin<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <select asp-for="Clase.IdSucursal" asp-items="Model.Sucursales" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Clase.IdSucursal">Sucursal<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="row">
+                        <div class="col-7 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Clase.Salon" class="form-control" placeholder="Salón" maxlength="50" required />
+                                <label asp-for="Clase.Salon">Salón<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-5 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Clase.CupoMaximo" type="number" min="1" max="500" class="form-control" placeholder="Cupo" required />
+                                <label asp-for="Clase.CupoMaximo">Cupo<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <select asp-for="Clase.IdEmpleado" asp-items="Model.Entrenadores" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Clase.IdEmpleado">Entrenador asignado<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Programar")
+                        </button>
+                        <a class="btn btn-oscuro" asp-page="/Clase" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                    </div>
+                </form>
+
+                <hr />
+                <div class="info">
+                    El sistema rechaza clases fuera del horario de la sucursal, con el salón o el entrenador ocupados,
+                    o con un cupo mayor al aforo de la sucursal.
+                </div>
+            </div>
+        </div>
+
+        <!-- Agenda semanal -->
+        <div class="col-xl-9 col-lg-8">
+            <div class="card-gestion h-100">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h4 class="titulo-card mb-0">
+                        <i class="bi bi-calendar-week"></i>&nbsp;Agenda:
+                        <span class="resaltado">@Model.Lunes.ToString("dd MMM", cultura) – @Model.Lunes.AddDays(4).ToString("dd MMM yyyy", cultura)</span>
+                    </h4>
+                    <div class="d-flex gap-2">
+                        <a class="btn-circulo btn-oscuro" title="Semana anterior" asp-page="/Clase" asp-all-route-data="rutaAnterior"><i class="bi bi-chevron-left"></i></a>
+                        <a class="btn btn-oscuro btn-sm-pill" asp-page="/Clase" asp-all-route-data="rutaHoy">Hoy</a>
+                        <a class="btn-circulo btn-oscuro" title="Semana siguiente" asp-page="/Clase" asp-all-route-data="rutaSiguiente"><i class="bi bi-chevron-right"></i></a>
+                    </div>
+                </div>
+
+                <form method="get">
+                    <input type="hidden" name="Semana" value="@Model.Lunes.ToString("yyyy-MM-dd")" />
+                    <div class="row">
+                        <div class="col-md-5 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdSucursal" asp-items="Model.Sucursales" class="form-select" onchange="this.form.submit()">
+                                    <option value="">Todas</option>
+                                </select>
+                                <label asp-for="BusquedaIdSucursal">Sucursal</label>
+                            </div>
+                        </div>
+                        <div class="col-md-5 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEmpleado" asp-items="Model.Entrenadores" class="form-select" onchange="this.form.submit()">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEmpleado">Entrenador</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3 d-flex align-items-center">
+                            <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="agenda-semanal">
+                    @for (int d = 0; d < 5; d++)
+                    {
+                        var dia = Model.Lunes.AddDays(d);
+                        var clasesDia = Model.Clases.Where(c => Convert.ToInt32(c["DiaSemana"]) == d).ToList();
+
+                        <div class="agenda-dia @(dia == DateTime.Today ? "hoy" : "")">
+                            <div class="agenda-titulo">@ClaseModel.Dias[d] <span>@dia.ToString("dd/MM")</span></div>
+
+                            @if (clasesDia.Count == 0)
+                            {
+                                <div class="dia-vacio">Sin clases</div>
+                            }
+                            @foreach (var c in clasesDia)
+                            {
+                                int cupo = Convert.ToInt32(c["CupoMaximo"]);
+                                int reservadas = Convert.ToInt32(c["Reservadas"]);
+                                bool lleno = reservadas >= cupo;
+                                var rutaEditar = Model.RutaFiltros();
+                                rutaEditar["id"] = c["IdClase"].ToString()!;
+
+                                <div class="agenda-clase @(lleno ? "llena" : "") @(Model.Clase.IdClase.ToString() == c["IdClase"].ToString() ? "seleccionada" : "")">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <a class="nombre" asp-page="/Clase" asp-page-handler="Editar" asp-all-route-data="rutaEditar" title="Editar">@c["Nombre"]</a>
+                                        <button type="button" class="quitar" title="Cancelar clase"
+                                                data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                data-id="@c["IdClase"]" data-nombre="@c["Nombre"] (@dia.ToString("dd/MM") @Hora(c["HoraInicio"]))">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                    <div class="hora"><i class="bi bi-clock"></i> @Hora(c["HoraInicio"]) - @Hora(c["HoraFin"])</div>
+                                    <div class="detalle">@c["Salon"] · @c["Sucursal"]</div>
+                                    <div class="detalle"><i class="bi bi-person"></i> @c["Entrenador"]</div>
+                                    <div class="cupo"><i class="bi bi-people"></i> @reservadas / @cupo @(lleno ? "· Lleno" : "")</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>

@@ -30,16 +30,18 @@ namespace PIA_Gimnasio.Seguridad
             new("Operación", "Pase de lista", "/PaseLista", "bi-list-check", "Clases del día y registro de asistencia.", A, E),
 
             // Entrenamiento
-            new("Entrenamiento", "Catálogo de ejercicios", "/Ejercicio", "bi-activity", "Ejercicios por grupo muscular, nivel y contraindicación.", A, E),
             new("Entrenamiento", "Rutinas", "/Rutina", "bi-clipboard2-pulse", "Diseño y asignación semanal de rutinas.", A, E),
 
-            // Administración
+            // Administración (Módulos 2 y 3: exclusivos del Administrador)
+            new("Administración", "Usuarios", "/Usuario", "bi-shield-lock", "Cuentas de acceso de los empleados.", A),
             new("Administración", "Sucursales", "/Sucursal", "bi-building", "Sedes, horario y aforo máximo.", A),
             new("Administración", "Empleados", "/Empleado", "bi-person-workspace", "Personal, puesto y especialidades.", A),
-            new("Administración", "Puestos", "/Puesto", "bi-briefcase", "Catálogo de puestos.", A),
-            new("Administración", "Especialidades", "/Especialidad", "bi-award", "Disciplinas de los entrenadores.", A),
-            new("Administración", "Tipos de membresía", "/Membresia", "bi-tags", "Planes Bronce, Plata y Oro.", A),
-            new("Administración", "Usuarios", "/Usuario", "bi-shield-lock", "Cuentas de acceso de los empleados.", A),
+
+            // Catálogos base (el de ejercicios es un catálogo simple más; el diseñador de rutinas solo lo consulta)
+            new("Catálogos base", "Puestos", "/Puesto", "bi-briefcase", "Catálogo de puestos.", A),
+            new("Catálogos base", "Especialidades", "/Especialidad", "bi-award", "Disciplinas de los entrenadores.", A),
+            new("Catálogos base", "Tipos de membresía", "/Membresia", "bi-tags", "Planes Bronce, Plata y Oro.", A),
+            new("Catálogos base", "Ejercicios", "/Ejercicio", "bi-activity", "Ejercicios por grupo muscular, nivel y contraindicación.", A),
 
             // Reportes
             new("Reportes", "Empleados por sucursal", "/ReporteEmpleados", "bi-file-earmark-person", "Distribución del personal.", A),

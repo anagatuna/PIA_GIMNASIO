@@ -10,6 +10,17 @@ builder.Services.AddScoped<bdConexion>();
 builder.Services.AddScoped<logicaUsuario>();
 builder.Services.AddScoped<logicaEjercicio>();
 builder.Services.AddScoped<logicaRutina>();
+builder.Services.AddScoped<logicaPuesto>();
+builder.Services.AddScoped<logicaEspecialidad>();
+builder.Services.AddScoped<logicaMembresia>();
+builder.Services.AddScoped<logicaSucursal>();
+builder.Services.AddScoped<logicaEmpleado>();
+builder.Services.AddScoped<logicaSocio>();
+builder.Services.AddScoped<logicaExpediente>();
+builder.Services.AddScoped<logicaSuscripcion>();
+builder.Services.AddScoped<logicaControlAcceso>();
+builder.Services.AddScoped<logicaClase>();
+builder.Services.AddScoped<logicaReserva>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

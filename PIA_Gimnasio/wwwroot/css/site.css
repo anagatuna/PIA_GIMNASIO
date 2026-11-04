@@ -815,3 +815,180 @@ abbr.asterisco {
         letter-spacing: -.02em;
         color: #1c1c1e;
     }
+
+/* =====================================================
+   Módulos 2 a 6: catálogos, personal, socios y operación
+   ===================================================== */
+
+/* Etiquetas de los planes */
+.etiqueta-oro { background: rgba(255, 204, 0, .2); color: #a07800; }
+.etiqueta-plata { background: #e5e5ea; color: #48484a; }
+.etiqueta-bronce { background: rgba(176, 108, 48, .15); color: #8a5320; }
+
+/* Campo crítico (aforo máximo) */
+.campo-critico { border-color: var(--naranja); font-weight: 700; }
+
+/* Barra de ocupación */
+.barra-aforo {
+    height: 6px;
+    background: #e5e5ea;
+    border-radius: 999px;
+    overflow: hidden;
+}
+    .barra-aforo.grande { height: 14px; }
+    .barra-aforo span {
+        display: block;
+        height: 100%;
+        background: #34c759;
+        border-radius: 999px;
+        transition: width .4s ease, background .4s ease;
+    }
+        .barra-aforo span.alto { background: var(--naranja); }
+        .barra-aforo span.lleno { background: #ff3b30; }
+
+/* Especialidades del empleado (solo puesto Entrenador) */
+.especialidades {
+    border: 1px dashed #d1d1d6;
+    border-radius: 12px;
+    padding: 10px 12px;
+    transition: opacity .2s ease;
+}
+    .especialidades.deshabilitada { opacity: .45; }
+.lista-especialidades { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.chip-check { cursor: pointer; margin: 0; }
+    .chip-check input { display: none; }
+    .chip-check span {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        border: 1px solid #d1d1d6;
+        font-size: .85rem;
+        user-select: none;
+    }
+    .chip-check input:checked + span { background: var(--naranja); border-color: var(--naranja); color: #fff; }
+
+/* Folio del socio */
+.folio-socio {
+    background: var(--menu-bg);
+    color: #fff;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+}
+    .folio-socio span { font-size: .75rem; text-transform: uppercase; opacity: .7; }
+    .folio-socio b { font-size: 1.4rem; letter-spacing: 2px; color: var(--naranja); }
+    .folio-socio small { width: 100%; opacity: .6; font-size: .75rem; }
+
+/* Control de acceso */
+.campo-folio { font-size: 1.6rem; font-weight: 700; letter-spacing: 3px; text-align: center; }
+.control-acceso .form-floating > .campo-folio ~ label { left: 0; right: 0; text-align: center; }
+
+.semaforo {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    border-radius: 18px;
+    padding: 18px;
+    background: #f2f2f7;
+    transition: background .25s ease;
+}
+    .semaforo .luz {
+        flex: 0 0 auto;
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 2.6rem;
+        color: #fff;
+        background: #c7c7cc;
+    }
+    .semaforo.verde { background: rgba(52, 199, 89, .14); }
+        .semaforo.verde .luz { background: #34c759; box-shadow: 0 0 28px rgba(52, 199, 89, .7); }
+    .semaforo.rojo { background: rgba(255, 59, 48, .12); }
+        .semaforo.rojo .luz { background: #ff3b30; box-shadow: 0 0 28px rgba(255, 59, 48, .7); animation: parpadeo .35s 3; }
+    .semaforo.salida { background: rgba(28, 29, 33, .07); }
+        .semaforo.salida .luz { background: var(--menu-bg); }
+.semaforo-titulo { font-weight: 800; font-size: 1.15rem; letter-spacing: .5px; }
+.semaforo.verde .semaforo-titulo { color: #248a3d; }
+.semaforo.rojo .semaforo-titulo { color: #d70015; }
+.semaforo-socio { margin-top: 6px; font-size: .9rem; color: #48484a; }
+
+@keyframes parpadeo { 50% { opacity: .35; } }
+
+.aforo-tiempo-real {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #f5f5f7;
+    border-radius: 14px;
+    padding: 14px 18px;
+}
+.aforo-cifra { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+    .aforo-cifra small { font-size: 1.1rem; color: #8e8e93; font-weight: 600; }
+.en-vivo { font-size: .75rem; font-weight: 700; color: #ff3b30; white-space: nowrap; }
+    .en-vivo i { animation: parpadeo 1.5s infinite; }
+.tabla-movimientos { max-height: 420px; overflow-y: auto; }
+    .tabla-movimientos tr.dentro td { font-weight: 600; }
+
+/* Agenda semanal de clases (lunes a viernes) */
+.agenda-semanal {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 991.98px) {
+    .agenda-semanal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.agenda-dia {
+    background: #f5f5f7;
+    border-radius: 14px;
+    padding: 8px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+    .agenda-dia.hoy { outline: 2px solid var(--naranja); }
+.agenda-titulo { font-weight: 700; text-align: center; padding: 4px 0; }
+    .agenda-titulo span { display: block; font-size: .75rem; color: #8e8e93; font-weight: 600; }
+.agenda-clase {
+    background: #fff;
+    border-radius: 10px;
+    padding: 8px 10px;
+    border-left: 4px solid var(--naranja);
+    font-size: .8rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+}
+    .agenda-clase.llena { border-left-color: #ff3b30; }
+    .agenda-clase.seleccionada { outline: 2px solid var(--naranja); }
+    .agenda-clase .nombre { font-weight: 700; color: inherit; text-decoration: none; font-size: .9rem; }
+        .agenda-clase .nombre:hover { color: var(--naranja); }
+    .agenda-clase .hora { font-weight: 600; margin: 2px 0; }
+    .agenda-clase .detalle { color: #6e6e73; }
+    .agenda-clase .cupo { margin-top: 4px; font-weight: 600; }
+    .agenda-clase.llena .cupo { color: #d70015; }
+    .agenda-clase .quitar {
+        border: 0;
+        background: transparent;
+        color: #aeaeb2;
+        padding: 0 2px;
+        line-height: 1;
+    }
+        .agenda-clase .quitar:hover { color: #ff3b30; }
+
+/* Resumen del plan al capturar reservas */
+.resumen-plan {
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: .88rem;
+    background: rgba(52, 199, 89, .12);
+    color: #1d6b31;
+}
+    .resumen-plan.al-limite { background: rgba(255, 149, 0, .14); color: #a35b00; }
+    .resumen-plan.sin-plan { background: rgba(255, 59, 48, .12); color: #d70015; }

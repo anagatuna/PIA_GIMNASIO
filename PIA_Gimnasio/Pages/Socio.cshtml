@@ -1,0 +1,277 @@
+@page
+@model PIA_Gimnasio.Pages.SocioModel
+@{
+    ViewData["Title"] = "Socios";
+    ViewData["AnchoCompleto"] = true;
+    if (Model.PuedeEliminar)
+    {
+        ViewData["EliminarTitulo"] = "¿Eliminar socio?";
+        ViewData["EliminarDescripcion"] = "se dará de baja. No es posible si tiene una suscripción activa.";
+    }
+    bool esEdicion = Model.Socio.IdCliente > 0;
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Gestión de información -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center">
+                    <i class="bi bi-person-plus"></i>&nbsp;@(esEdicion ? "Editar socio" : "Nuevo socio")
+                </h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <input type="hidden" asp-for="Socio.IdCliente" />
+
+                    <!-- Folio -->
+                    <div class="folio-socio mb-3">
+                        <span>Folio único</span>
+                        @if (esEdicion)
+                        {
+                            <b>@Model.Socio.Folio</b>
+                        }
+                        else
+                        {
+                            <b class="text-secondary">@DateTime.Now.Year····</b>
+                            <small>Se genera al guardar: año actual + consecutivo</small>
+                        }
+                    </div>
+
+                    <h6 class="subtitulo-seccion">Datos personales</h6>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Socio.Nombre" class="form-control" placeholder="Nombre" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Socio.Nombre">Nombre(s)<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Socio.PrimerApellido" class="form-control" placeholder="Primer apellido" maxlength="50" required />
+                                <label asp-for="Socio.PrimerApellido">Primer apellido<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Socio.SegundoApellido" class="form-control" placeholder="Segundo apellido" maxlength="50" />
+                                <label asp-for="Socio.SegundoApellido">Segundo apellido</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Socio.FechaNacimiento" type="date" class="form-control" required />
+                        <label asp-for="Socio.FechaNacimiento">Fecha de nacimiento<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="row">
+                        <div class="col-7 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Socio.Correo" type="email" class="form-control" placeholder="Correo" maxlength="50" required />
+                                <label asp-for="Socio.Correo">Correo<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-5 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Socio.Telefono" class="form-control" placeholder="Teléfono" maxlength="10" pattern="\d{10}" title="10 dígitos" inputmode="numeric" required />
+                                <label asp-for="Socio.Telefono">Teléfono<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Socio.IdSucursal" asp-items="Model.Sucursales" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Socio.IdSucursal">Sucursal<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="Socio.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Socio.IdEstatus">Estatus<span class="asterisco"> *</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Expediente médico obligatorio -->
+                    <h6 class="subtitulo-seccion"><i class="bi bi-heart-pulse"></i> Expediente médico</h6>
+                    @if (esEdicion)
+                    {
+                        <a class="btn btn-oscuro w-100" asp-page="/ExpedienteMedico" asp-route-idCliente="@Model.Socio.IdCliente">
+                            <i class="bi bi-clipboard2-pulse me-1"></i>Ver / editar expediente médico
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="form-floating mb-3">
+                            <select asp-for="Expediente.TipoSangre" asp-items="Model.TiposSangre" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                            </select>
+                            <label asp-for="Expediente.TipoSangre">Tipo de sangre<span class="asterisco"> *</span></label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input asp-for="Expediente.PadecimientosCronicos" class="form-control" placeholder="Padecimientos" maxlength="50" />
+                            <label asp-for="Expediente.PadecimientosCronicos">Padecimientos crónicos</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input asp-for="Expediente.LesionesPrevias" class="form-control" placeholder="Lesiones" maxlength="50" />
+                            <label asp-for="Expediente.LesionesPrevias">Lesiones previas</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input asp-for="Expediente.Alergias" class="form-control" placeholder="Alergias" maxlength="50" />
+                            <label asp-for="Expediente.Alergias">Alergias</label>
+                        </div>
+                        <div class="form-floating mb-1">
+                            <input asp-for="Expediente.CondicionRiesgo" class="form-control" placeholder="Condición de riesgo" maxlength="50" />
+                            <label asp-for="Expediente.CondicionRiesgo">Condición de riesgo</label>
+                        </div>
+                        <small class="ayuda">Deja vacío lo que no aplique. Separa con comas (ej. <i>Hipertensión, Asma</i>).</small>
+                    }
+
+                    <div class="nota">
+                        <strong>Nota:</strong> Los campos obligatorios están marcados con
+                        <abbr title="obligatorio" class="asterisco">*</abbr>.
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Registrar socio")
+                        </button>
+                        <a class="btn btn-oscuro" asp-page="/Socio" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Consulta de registros -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Socios</span></h4>
+
+                <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Busqueda" class="form-control" placeholder="Folio o nombre" maxlength="50" />
+                                <label asp-for="Busqueda">Folio o nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdSucursal" asp-items="Model.Sucursales" class="form-select">
+                                    <option value="">Todas</option>
+                                </select>
+                                <label asp-for="BusquedaIdSucursal">Sucursal</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEstatus">Estatus</label>
+                            </div>
+                        </div>
+                        <div class="col-12 mb-4">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                                <a class="btn-circulo btn-oscuro" asp-page="/Socio" title="Limpiar"><i class="bi bi-stars"></i></a>
+                                <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.Socios.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Editar</th>
+                                    @if (Model.PuedeEliminar)
+                                    {
+                                        <th class="col-accion">Eliminar</th>
+                                    }
+                                    <th>Folio</th>
+                                    <th>Socio</th>
+                                    <th>Membresía</th>
+                                    <th class="text-center">Expediente</th>
+                                    <th>Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Socios)
+                                {
+                                    var id = fila["IdCliente"];
+                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
+                                    bool tieneExpediente = Convert.ToInt32(fila["TieneExpediente"]) == 1;
+                                    var rutaEditar = Model.RutaFiltros();
+                                    rutaEditar["id"] = id.ToString()!;
+
+                                    <tr class="@(Model.Socio.IdCliente.ToString() == id.ToString() ? "fila-seleccionada" : "")">
+                                        <td class="col-accion">
+                                            <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
+                                               asp-page="/Socio" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </td>
+                                        @if (Model.PuedeEliminar)
+                                        {
+                                            <td class="col-accion">
+                                                <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
+                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                        data-id="@id" data-nombre="@fila["Socio"]">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </td>
+                                        }
+                                        <td class="fw-bold">@fila["Folio"]</td>
+                                        <td>
+                                            <div class="fw-semibold">@fila["Socio"]</div>
+                                            <div class="small text-secondary">@fila["Correo"] · @fila["Telefono"] · @fila["Sucursal"]</div>
+                                        </td>
+                                        <td>
+                                            @if (fila["Membresia"] != DBNull.Value)
+                                            {
+                                                <span class="etiqueta etiqueta-activo">@fila["Membresia"]</span>
+                                                <div class="small text-secondary">Vence @Convert.ToDateTime(fila["FechaVencimiento"]).ToString("dd/MM/yyyy")</div>
+                                            }
+                                            else
+                                            {
+                                                <a class="small" asp-page="/Suscripcion" asp-route-idCliente="@id">Sin membresía · Vender</a>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <a asp-page="/ExpedienteMedico" asp-route-idCliente="@id" title="Expediente médico"
+                                               class="btn-circulo btn-sm-circulo @(tieneExpediente ? "btn-verde" : "btn-rojo")">
+                                                <i class="bi @(tieneExpediente ? "bi-heart-pulse" : "bi-exclamation-lg")"></i>
+                                            </a>
+                                        </td>
+                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</section>

@@ -1,0 +1,189 @@
+@page
+@model PIA_Gimnasio.Pages.ReservaModel
+@{
+    ViewData["Title"] = "Reservas";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Cancelar reserva?";
+    ViewData["EliminarDescripcion"] = "liberará su lugar en la clase y dejará de contar en su límite semanal.";
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Captura -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center"><i class="bi bi-bookmark-plus"></i>&nbsp;Nueva reserva</h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <div class="form-floating mb-3">
+                        <select asp-for="Reserva.IdCliente" asp-items="Model.Socios" class="form-select" id="selSocio" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Reserva.IdCliente">Socio<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <!-- Plan del socio y uso semanal -->
+                    <div id="resumenSocio" class="resumen-plan d-none mb-3"></div>
+
+                    <div class="form-floating mb-1">
+                        <select asp-for="Reserva.IdClase" asp-items="Model.Clases" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                        </select>
+                        <label asp-for="Reserva.IdClase">Clase<span class="asterisco"> *</span></label>
+                    </div>
+                    <small class="ayuda">Solo aparecen clases futuras con lugares disponibles.</small>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja"><i class="bi bi-bookmark-check me-1"></i>Reservar</button>
+                        <a class="btn btn-oscuro" asp-page="/Reserva">Limpiar</a>
+                    </div>
+                </form>
+
+                <hr />
+                <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Validaciones automáticas</h5>
+                <div class="info">
+                    Al reservar se verifica que la clase tenga <b>cupo</b> en el salón, que el socio tenga una
+                    <b>membresía vigente</b> en la fecha de la clase y que no rebase su <b>límite semanal</b>
+                    (lunes a domingo): <b>Bronce 0</b>, <b>Plata 3</b>, <b>Oro 5</b>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Consulta de registros -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Reservas</span></h4>
+
+                <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Busqueda" class="form-control" placeholder="Folio o nombre" maxlength="50" />
+                                <label asp-for="Busqueda">Folio o nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="BusquedaFecha" type="date" class="form-control" />
+                                <label asp-for="BusquedaFecha">Fecha de la clase</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-floating">
+                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                                <label asp-for="BusquedaIdEstatus">Estatus</label>
+                            </div>
+                        </div>
+                        <div class="col-12 mb-4">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                                <a class="btn-circulo btn-oscuro" asp-page="/Reserva" title="Limpiar"><i class="bi bi-stars"></i></a>
+                                <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.Reservas.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Cancelar</th>
+                                    <th>Folio</th>
+                                    <th>Socio</th>
+                                    <th>Clase</th>
+                                    <th>Fecha</th>
+                                    <th>Estatus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Reservas)
+                                {
+                                    int estatus = Convert.ToInt32(fila["IdEstatus"]);
+                                    string clase = estatus switch { 5 => "etiqueta-activo", 6 => "etiqueta-rol", _ => "etiqueta-inactivo" };
+
+                                    <tr>
+                                        <td class="col-accion">
+                                            @if (Convert.ToInt32(fila["PuedeCancelar"]) == 1)
+                                            {
+                                                <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Cancelar"
+                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                        data-id="@fila["IdReserva"]" data-nombre="@fila["Socio"] – @fila["Clase"]">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                        <td class="fw-bold">@fila["Folio"]</td>
+                                        <td>@fila["Socio"]</td>
+                                        <td>
+                                            @fila["Clase"]
+                                            <div class="small text-secondary">@fila["Salon"] · @fila["Sucursal"]</div>
+                                        </td>
+                                        <td class="text-nowrap">@Convert.ToDateTime(fila["Fecha"]).ToString("dd/MM/yyyy") @Hora(fila["HoraInicio"])</td>
+                                        <td><span class="etiqueta @clase">@fila["Estatus"]</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Al elegir socio muestra su plan y cuántas clases lleva en la semana
+        (function () {
+            const socio = document.getElementById('selSocio');
+            const resumen = document.getElementById('resumenSocio');
+
+            async function mostrar() {
+                if (!socio.value) { resumen.classList.add('d-none'); return; }
+                try {
+                    const resp = await fetch(`?handler=Resumen&idCliente=${socio.value}`);
+                    const r = await resp.json();
+                    resumen.classList.remove('d-none', 'sin-plan', 'al-limite');
+
+                    if (!r.tienePlan) {
+                        resumen.classList.add('sin-plan');
+                        resumen.innerHTML = '<i class="bi bi-x-octagon"></i> Sin membresía vigente: no puede reservar.';
+                        return;
+                    }
+
+                    const disponibles = Math.max(0, r.maximo - r.usadas);
+                    if (disponibles === 0) resumen.classList.add('al-limite');
+                    const span = document.createElement('b');
+                    span.textContent = r.membresia;
+                    resumen.innerHTML = `<i class="bi bi-tags"></i> Plan ${span.outerHTML} (vence ${r.vence})<br>` +
+                        (r.maximo === 0
+                            ? 'Su plan no incluye clases grupales.'
+                            : `Esta semana: <b>${r.usadas} de ${r.maximo}</b> clases · le quedan <b>${disponibles}</b>`);
+                } catch { resumen.classList.add('d-none'); }
+            }
+
+            socio.addEventListener('change', mostrar);
+            mostrar();
+        })();
+    </script>
+}

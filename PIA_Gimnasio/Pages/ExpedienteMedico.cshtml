@@ -1,0 +1,170 @@
+@page
+@model PIA_Gimnasio.Pages.ExpedienteMedicoModel
+@{
+    ViewData["Title"] = "Expediente médico";
+    ViewData["AnchoCompleto"] = true;
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Expediente del socio seleccionado -->
+        <div class="col-lg-5">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center"><i class="bi bi-heart-pulse"></i>&nbsp;Expediente médico</h4>
+
+                @if (Model.Socio == null)
+                {
+                    <div class="expediente-vacio">
+                        <i class="bi bi-clipboard2-x"></i>
+                        <span>Selecciona un socio de la lista para ver su expediente.</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="perfil-encabezado mb-3">
+                        <div class="perfil-avatar">@Model.Socio["Socio"].ToString()!.Substring(0, 1)</div>
+                        <div>
+                            <div class="perfil-nombre">@Model.Socio["Socio"]</div>
+                            <span class="etiqueta etiqueta-rol">Folio @Model.Socio["Folio"]</span>
+                            <span class="small text-secondary ms-1">@Model.Socio["Edad"] años · @Model.Socio["Telefono"]</span>
+                        </div>
+                    </div>
+
+                    @if (!Model.TieneExpediente)
+                    {
+                        <div class="alerta-previa mb-3">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            Este socio no tiene expediente médico. Es obligatorio para asignarle rutinas.
+                        </div>
+                    }
+
+                    @if (Model.SoloLectura)
+                    {
+                        <!-- Entrenador: solo lectura -->
+                        <partial name="_ExpedienteMedico" model="Model.TieneExpediente ? Model.Socio : null" />
+                        <a class="btn btn-naranja w-100 mt-3" asp-page="/RutinaNueva" asp-route-idCliente="@Model.IdCliente">
+                            <i class="bi bi-clipboard2-plus me-1"></i>Diseñar rutina para este socio
+                        </a>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                            <div class="form-floating mb-3">
+                                <select asp-for="Expediente.TipoSangre" asp-items="Model.TiposSangre" class="form-select" required>
+                                    <option value="">Selecciona...</option>
+                                </select>
+                                <label asp-for="Expediente.TipoSangre">Tipo de sangre<span class="asterisco"> *</span></label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input asp-for="Expediente.PadecimientosCronicos" class="form-control" placeholder="Padecimientos" maxlength="50" />
+                                <label asp-for="Expediente.PadecimientosCronicos">Padecimientos crónicos</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input asp-for="Expediente.LesionesPrevias" class="form-control" placeholder="Lesiones" maxlength="50" />
+                                <label asp-for="Expediente.LesionesPrevias">Lesiones previas</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input asp-for="Expediente.Alergias" class="form-control" placeholder="Alergias" maxlength="50" />
+                                <label asp-for="Expediente.Alergias">Alergias</label>
+                            </div>
+                            <div class="form-floating mb-1">
+                                <input asp-for="Expediente.CondicionRiesgo" class="form-control" placeholder="Condición de riesgo" maxlength="50" />
+                                <label asp-for="Expediente.CondicionRiesgo">Evaluación de condición de riesgo</label>
+                            </div>
+                            <small class="ayuda">Separa con comas. Se compara contra las contraindicaciones de los ejercicios al diseñar rutinas.</small>
+
+                            <div class="d-flex justify-content-center gap-2 mt-4">
+                                <button type="submit" class="btn btn-naranja">
+                                    <i class="bi bi-floppy me-1"></i>@(Model.TieneExpediente ? "Actualizar expediente" : "Registrar expediente")
+                                </button>
+                                <a class="btn btn-oscuro" asp-page="/ExpedienteMedico" asp-route-Busqueda="@Model.Busqueda">Cerrar</a>
+                            </div>
+                        </form>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Lista de socios -->
+        <div class="col-lg-7">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Socios</span></h4>
+
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="Busqueda" class="form-control" placeholder="Folio o nombre" maxlength="50" />
+                                <label asp-for="Busqueda">Folio o nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4 d-flex align-items-center gap-2">
+                            <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                            <a class="btn-circulo btn-oscuro" asp-page="/ExpedienteMedico" title="Limpiar"><i class="bi bi-stars"></i></a>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.Socios.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Ver</th>
+                                    <th>Folio</th>
+                                    <th>Socio</th>
+                                    <th>Sangre</th>
+                                    <th>Padecimientos / lesiones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Socios)
+                                {
+                                    var id = fila["IdCliente"].ToString()!;
+                                    bool tiene = Convert.ToInt32(fila["TieneExpediente"]) == 1;
+                                    var ruta = Model.RutaFiltros();
+                                    ruta["IdCliente"] = id;
+
+                                    <tr class="@(Model.IdCliente?.ToString() == id ? "fila-seleccionada" : "")">
+                                        <td class="col-accion">
+                                            <a class="btn-circulo btn-sm-circulo @(tiene ? "btn-verde" : "btn-rojo")" title="Ver expediente"
+                                               asp-page="/ExpedienteMedico" asp-all-route-data="ruta">
+                                                <i class="bi @(tiene ? "bi-eye" : "bi-exclamation-lg")"></i>
+                                            </a>
+                                        </td>
+                                        <td class="fw-bold">@fila["Folio"]</td>
+                                        <td>@fila["Socio"]</td>
+                                        <td>@(tiene ? fila["TipoSangre"] : "—")</td>
+                                        <td class="small">
+                                            @if (!tiene)
+                                            {
+                                                <span class="etiqueta etiqueta-inactivo">Sin expediente</span>
+                                            }
+                                            else
+                                            {
+                                                @string.Join(" · ", new[] { fila["PadecimientosCronicos"], fila["LesionesPrevias"], fila["CondicionRiesgo"] }
+                                                    .Where(v => v != DBNull.Value && !string.IsNullOrWhiteSpace(v.ToString())))
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</section>

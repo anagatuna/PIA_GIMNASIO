@@ -1,0 +1,204 @@
+@page
+@model PIA_Gimnasio.Pages.ControlAccesoModel
+@{
+    ViewData["Title"] = "Control de acceso";
+    ViewData["AnchoCompleto"] = true;
+    int ocupacion = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["Ocupacion"]);
+    int aforo = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["AforoMaximo"]);
+    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+}
+
+<section class="gestion control-acceso">
+    @Html.AntiForgeryToken()
+
+    @if (Model.EsAdministrador)
+    {
+        <form method="get" class="d-flex align-items-center gap-2 mb-3">
+            <div class="form-floating flex-grow-1" style="max-width: 360px">
+                <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select" onchange="this.form.submit()"></select>
+                <label asp-for="IdSucursal">Sucursal</label>
+            </div>
+        </form>
+    }
+
+    @if (Model.Aforo != null)
+    {
+        <div class="row g-4">
+
+            <!-- Captura rápida + semáforo -->
+            <div class="col-lg-5">
+                <div class="card-gestion h-100">
+                    <h4 class="titulo-card text-center"><i class="bi bi-door-open"></i>&nbsp;@Model.Aforo["Nombre"]</h4>
+                    <p class="text-center text-secondary small mb-3">
+                        Horario @Hora(Model.Aforo["HoraApertura"]) - @Hora(Model.Aforo["HoraCierre"])
+                    </p>
+
+                    <form id="formAcceso" autocomplete="off">
+                        <div class="form-floating mb-3">
+                            <input id="folio" class="form-control campo-folio" placeholder="Folio" inputmode="numeric" maxlength="8" autofocus />
+                            <label for="folio"><i class="bi bi-upc-scan"></i> Folio del socio</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-verde flex-fill py-3" data-accion="Entrada">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Registrar entrada <small class="d-block opacity-75">Enter</small>
+                            </button>
+                            <button type="button" class="btn btn-oscuro flex-fill py-3" data-accion="Salida" id="btnSalida">
+                                <i class="bi bi-box-arrow-right me-1"></i>Registrar salida <small class="d-block opacity-75">Shift + Enter</small>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Semáforo -->
+                    <div id="semaforo" class="semaforo espera mt-4">
+                        <div class="luz"><i class="bi bi-hourglass"></i></div>
+                        <div class="semaforo-texto">
+                            <div class="semaforo-titulo" id="semaforoTitulo">Esperando folio</div>
+                            <div id="semaforoMensaje">Captura o escanea el folio del socio.</div>
+                            <div id="semaforoSocio" class="semaforo-socio"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aforo en tiempo real + movimientos -->
+            <div class="col-lg-7">
+                <div class="card-gestion h-100">
+                    <div class="aforo-tiempo-real mb-3">
+                        <div>
+                            <div class="text-secondary small text-uppercase fw-semibold">Aforo actual</div>
+                            <div class="aforo-cifra"><span id="ocupacion">@ocupacion</span><small> / <span id="aforoMaximo">@aforo</span></small></div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="barra-aforo grande"><span id="barraAforo" style="width: @(aforo == 0 ? 0 : Math.Min(100, ocupacion * 100 / aforo))%"></span></div>
+                            <div class="small text-secondary mt-1" id="aforoTexto"></div>
+                        </div>
+                        <span class="en-vivo" title="Se actualiza cada 5 segundos"><i class="bi bi-broadcast"></i> En vivo</span>
+                    </div>
+
+                    <h5 class="titulo-card"><i class="bi bi-clock-history"></i>&nbsp;Movimientos de hoy</h5>
+                    <div class="table-responsive tabla-gestion tabla-movimientos">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Folio</th>
+                                    <th>Socio</th>
+                                    <th>Entrada</th>
+                                    <th>Salida</th>
+                                    <th class="text-end">Permanencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimientos">
+                                <tr><td colspan="5" class="text-center text-secondary">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+</section>
+
+@section Scripts {
+@if (Model.Aforo != null)
+{
+    <script>
+        (function () {
+            const idSucursal = '@Model.IdSucursal';
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const campo = document.getElementById('folio');
+            const semaforo = document.getElementById('semaforo');
+
+            function pintarAforo(ocupacion, maximo) {
+                const pct = maximo === 0 ? 100 : Math.min(100, Math.round(ocupacion * 100 / maximo));
+                document.getElementById('ocupacion').textContent = ocupacion;
+                document.getElementById('aforoMaximo').textContent = maximo;
+                const barra = document.getElementById('barraAforo');
+                barra.style.width = pct + '%';
+                barra.className = pct >= 100 ? 'lleno' : pct >= 80 ? 'alto' : '';
+                document.getElementById('aforoTexto').textContent = pct >= 100
+                    ? 'Aforo máximo alcanzado: las entradas están bloqueadas.'
+                    : `${maximo - ocupacion} lugares disponibles (${pct}% de ocupación)`;
+            }
+
+            function pintarSemaforo(r) {
+                const estado = r.resultado === 'Permitido' ? 'verde' : r.resultado === 'Salida' ? 'salida' : 'rojo';
+                const iconos = { verde: 'bi-check-lg', rojo: 'bi-x-lg', salida: 'bi-box-arrow-right' };
+                const titulos = { verde: 'ACCESO PERMITIDO', rojo: 'ACCESO DENEGADO', salida: 'SALIDA REGISTRADA' };
+                semaforo.className = 'semaforo mt-4 ' + estado;
+                semaforo.querySelector('.luz').innerHTML = `<i class="bi ${iconos[estado]}"></i>`;
+                document.getElementById('semaforoTitulo').textContent = titulos[estado];
+                document.getElementById('semaforoMensaje').textContent = r.mensaje;
+
+                const datos = [];
+                if (r.socio) datos.push(`<b>${texto(r.socio)}</b> · Folio ${texto(r.folio)}`);
+                if (r.membresia) datos.push(`Membresía ${texto(r.membresia)} · vence ${texto(r.vence)}`);
+                if (r.minutos !== null && r.minutos !== undefined) datos.push(`Permanencia: <b>${r.minutos} min</b>`);
+                document.getElementById('semaforoSocio').innerHTML = datos.join('<br>');
+            }
+
+            function texto(valor) {
+                const span = document.createElement('span');
+                span.textContent = valor ?? '';
+                return span.innerHTML;
+            }
+
+            async function actualizarEstado() {
+                try {
+                    const resp = await fetch(`?handler=Estado&idSucursal=${idSucursal}`, { cache: 'no-store' });
+                    if (!resp.ok) return;
+                    const datos = await resp.json();
+                    pintarAforo(datos.ocupacion, datos.aforoMaximo);
+                    const filas = datos.movimientos.map(m => `
+                        <tr class="${m.salida ? '' : 'dentro'}">
+                            <td class="fw-bold">${texto(m.folio)}</td>
+                            <td>${texto(m.socio)}</td>
+                            <td>${m.entrada}</td>
+                            <td>${m.salida ?? '<span class="etiqueta etiqueta-activo">Dentro</span>'}</td>
+                            <td class="text-end">${m.minutos} min</td>
+                        </tr>`).join('');
+                    document.getElementById('movimientos').innerHTML = filas ||
+                        '<tr><td colspan="5" class="text-center text-secondary">Sin movimientos hoy.</td></tr>';
+                } catch { /* sin conexión: se reintenta en el siguiente ciclo */ }
+            }
+
+            async function registrar(accion) {
+                const folio = campo.value.trim();
+                if (!folio) { campo.focus(); return; }
+
+                const datos = new FormData();
+                datos.append('folio', folio);
+                datos.append('idSucursal', idSucursal);
+
+                try {
+                    const resp = await fetch(`?handler=${accion}`, {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: datos
+                    });
+                    const r = await resp.json();
+                    pintarSemaforo(r);
+                    if (r.aforoMaximo) pintarAforo(r.ocupacion, r.aforoMaximo);
+                    actualizarEstado();
+                } catch {
+                    pintarSemaforo({ resultado: 'Denegado', mensaje: 'No se pudo conectar con el servidor.' });
+                }
+
+                campo.value = '';
+                campo.focus();
+            }
+
+            // Enter = entrada, Shift + Enter = salida
+            document.getElementById('formAcceso').addEventListener('submit', e => { e.preventDefault(); registrar('Entrada'); });
+            document.getElementById('btnSalida').addEventListener('click', () => registrar('Salida'));
+            campo.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); registrar('Salida'); }
+            });
+
+            pintarAforo(@ocupacion, @aforo);
+            actualizarEstado();
+            setInterval(actualizarEstado, 5000);
+        })();
+    </script>
+}
+}

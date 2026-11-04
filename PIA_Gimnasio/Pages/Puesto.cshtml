@@ -1,0 +1,139 @@
+@page
+@model PIA_Gimnasio.Pages.PuestoModel
+@{
+    ViewData["Title"] = "Puestos";
+    ViewData["AnchoCompleto"] = true;
+    ViewData["EliminarTitulo"] = "¿Eliminar puesto?";
+    ViewData["EliminarDescripcion"] = "se quitará del catálogo. Solo se puede eliminar si ningún empleado lo tiene.";
+    bool esEdicion = Model.Puesto.IdPuesto > 0;
+}
+
+<section class="gestion">
+    <div class="row g-4">
+
+        <!-- Gestión de información -->
+        <div class="col-lg-4">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card text-center">
+                    <i class="bi bi-briefcase"></i>&nbsp;@(esEdicion ? "Editar puesto" : "Nuevo puesto")
+                </h4>
+
+                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                    <input type="hidden" asp-for="Puesto.IdPuesto" />
+
+                    <h6 class="subtitulo-seccion">Información del puesto</h6>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Puesto.Nombre" class="form-control" placeholder="Nombre" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Puesto.Nombre">Nombre<span class="asterisco"> *</span></label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Puesto.Descripcion" class="form-control" placeholder="Descripción" maxlength="50" autocomplete="off" required />
+                        <label asp-for="Puesto.Descripcion">Descripción<span class="asterisco"> *</span></label>
+                    </div>
+
+                    <div class="nota">
+                        <strong>Nota:</strong> Los campos obligatorios están marcados con
+                        <abbr title="obligatorio" class="asterisco">*</abbr>.
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <button type="submit" class="btn btn-naranja">
+                            <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
+                        </button>
+                        <a class="btn btn-oscuro" asp-page="/Puesto" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                    </div>
+                </form>
+
+                <hr />
+                <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Información</h5>
+                <div class="info">
+                    Catálogo de puestos laborales que se asignan a los empleados.
+                    El puesto <b>Entrenador</b> lo usa el sistema para habilitar especialidades, clases y rutinas,
+                    por eso no se puede renombrar ni eliminar.
+                </div>
+            </div>
+        </div>
+
+        <!-- Consulta de registros -->
+        <div class="col-lg-8">
+            <div class="card-gestion h-100">
+                <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Puestos</span></h4>
+
+                <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-floating">
+                                <input asp-for="BusquedaNombre" class="form-control" placeholder="Búsqueda por nombre" maxlength="50" />
+                                <label asp-for="BusquedaNombre">Búsqueda por nombre</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4 d-flex align-items-center">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-circulo btn-naranja" title="Buscar"><i class="bi bi-search"></i></button>
+                                <a class="btn-circulo btn-oscuro" asp-page="/Puesto" title="Limpiar"><i class="bi bi-stars"></i></a>
+                                <button type="submit" class="btn-circulo btn-verde" title="Exportar Excel" name="handler" value="Exportar">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.Puestos.Count > 0)
+                {
+                    <div class="table-responsive tabla-gestion">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="col-accion">Editar</th>
+                                    <th class="col-accion">Eliminar</th>
+                                    <th>Puesto</th>
+                                    <th>Descripción</th>
+                                    <th class="text-center">Empleados</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (DataRow fila in Model.Puestos)
+                                {
+                                    var id = fila["IdPuesto"];
+                                    var rutaEditar = Model.RutaFiltros();
+                                    rutaEditar["id"] = id.ToString()!;
+
+                                    <tr class="@(Model.Puesto.IdPuesto.ToString() == id.ToString() ? "fila-seleccionada" : "")">
+                                        <td class="col-accion">
+                                            <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
+                                               asp-page="/Puesto" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </td>
+                                        <td class="col-accion">
+                                            <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                    data-id="@id" data-nombre="@fila["Nombre"]">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </td>
+                                        <td class="fw-semibold">@fila["Nombre"]</td>
+                                        <td>@fila["Descripcion"]</td>
+                                        <td class="text-center">@fila["TotalEmpleados"]</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <partial name="_Paginacion" model="Model" />
+                }
+                else
+                {
+                    <div class="sin-registros">
+                        <i class="bi bi-inbox"></i>
+                        No se encontraron registros con los parámetros solicitados.
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</section>
