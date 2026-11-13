@@ -1,28 +1,27 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Permisos: Seguridad/Modulos.cs
-    public class UsuarioModel : PaginaBase
+    // Gestión de usuarios (solo Administrador)
+    public class UsuarioModel : PaginaProtegida
     {
         private readonly logicaUsuario _logica;
 
         public UsuarioModel(logicaUsuario logica)
         {
             _logica = logica;
+            RolesPermitidos = new string[] { "Administrador" };
         }
 
         // Datos del formulario
         [BindProperty]
         public bdUsuario Usuario { get; set; } = new bdUsuario();
 
-        // Filtros de búsqueda (vienen en la URL para conservarse al paginar)
+        // Filtros de búsqueda
         [BindProperty(SupportsGet = true)]
         public string? BusquedaCuenta { get; set; }
 
@@ -33,18 +32,98 @@ namespace PIA_Gimnasio.Pages
         public int? BusquedaIdEstatus { get; set; }
 
         // Para los combos y la tabla
-        public List<SelectListItem> Roles { get; set; } = new();
-        public List<SelectListItem> Estatus { get; set; } = new();
-        public List<SelectListItem> Empleados { get; set; } = new();
-        public List<DataRow> Usuarios { get; set; } = new();
+        public List<SelectListItem> Roles { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Empleados { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Usuarios { get; set; } = new List<DataRow>();
 
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        public void OnGet()
         {
-            return Filtros(pagina, ("BusquedaCuenta", BusquedaCuenta), ("BusquedaIdRol", BusquedaIdRol), ("BusquedaIdEstatus", BusquedaIdEstatus));
+            Cargar();
         }
 
-        // Llena combos y tabla (con paginación)
-        private void CargarPantalla()
+        // Botón Editar: carga el usuario en el formulario
+        public void OnGetEditar(int id)
+        {
+            try
+            {
+                Usuario = _logica.Obtener(id) ?? new bdUsuario();
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo cargar el usuario.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+        }
+
+        // Botón Guardar / Actualizar
+        public IActionResult OnPostGuardar()
+        {
+            Mensaje = Validar();
+            if (Mensaje != "")
+            {
+                TipoMensaje = "warning";
+                Cargar();
+                return Page();
+            }
+
+            try
+            {
+                // El SP revisa que la cuenta no se repita y que el empleado esté libre
+                bdRespuesta r = _logica.Guardar(Usuario, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+
+                if (r.TipoMensaje == "success")
+                    Limpiar();
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al guardar el usuario.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Eliminar (baja lógica)
+        public IActionResult OnPostEliminar(int id)
+        {
+            if (id == IdUsuarioSesion())
+            {
+                Mensaje = "No puedes eliminar tu propio usuario.";
+                TipoMensaje = "warning";
+                Cargar();
+                return Page();
+            }
+
+            try
+            {
+                bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al eliminar el usuario.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Exportar a Excel
+        public IActionResult OnGetExportar()
+        {
+            DataTable dt = _logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus);
+            return ExportarExcel(dt, "Usuarios",
+                new string[] { "Cuenta", "Empleado", "Rol", "Estatus", "Fecha de registro" },
+                new string[] { "Cuenta", "Empleado", "Rol", "Estatus", "FechaRegistro" });
+        }
+
+        // Llena combos y tabla
+        private void Cargar()
         {
             try
             {
@@ -56,110 +135,47 @@ namespace PIA_Gimnasio.Pages
 
                 Usuarios = Paginar(_logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus));
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
-        // Al abrir la página o al buscar
-        public void OnGet()
+        // Reglas de captura. Regresa el primer error o "" si todo está bien.
+        private string Validar()
         {
-            CargarPantalla();
+            bool esNuevo = Usuario.IdUsuario == 0;
+
+            if (esNuevo && Usuario.IdEmpleado == null)
+                return "Selecciona el empleado al que pertenece la cuenta.";
+            if (string.IsNullOrWhiteSpace(Usuario.Cuenta))
+                return "Ingresa la cuenta.";
+            if (Usuario.Cuenta.Trim().Contains(' '))
+                return "La cuenta no puede llevar espacios.";
+
+            // Contraseña: obligatoria al registrar; al editar, vacía = conservar la actual
+            if (esNuevo && string.IsNullOrEmpty(Usuario.Contrasenia))
+                return "Ingresa la contraseña.";
+            if (!string.IsNullOrEmpty(Usuario.Contrasenia) && (Usuario.Contrasenia.Length < 6 || Usuario.Contrasenia.Length > 50))
+                return "La contraseña debe tener entre 6 y 50 caracteres.";
+
+            if (Usuario.IdRol == null)
+                return "Selecciona el rol.";
+            if (Usuario.IdEstatus == null)
+                return "Selecciona el estatus.";
+
+            // Evita que el administrador se quite el acceso a sí mismo
+            if (!esNuevo && Usuario.IdUsuario == IdUsuarioSesion() && (Usuario.IdEstatus != 1 || Usuario.IdRol != 1))
+                return "No puedes cambiar tu propio rol ni desactivar tu propio usuario.";
+
+            return "";
         }
 
-        // Botón Editar: carga el usuario en el formulario
-        public void OnGetEditar(int id)
+        private void Limpiar()
         {
-            bdUsuario? usuario = _logica.Obtener(id);
-            if (usuario != null)
-                Usuario = usuario;
-            else
-                MostrarMensaje("No se encontró el usuario seleccionado.", "warning");
-
-            // Después de leer el usuario, para que el combo incluya a su empleado
-            CargarPantalla();
-        }
-
-        // Botón Guardar / Actualizar
-        public IActionResult OnPostGuardar()
-        {
-            // Reglas de captura (Logica/Validacion/validacionUsuario.cs)
-            List<string> errores = validacionUsuario.Validar(Usuario, IdUsuarioSesion());
-
-            if (errores.Count == 0)
-            {
-                try
-                {
-                    // Cuenta única: se revisa antes de mandar a registrar (la tabla ya no tiene UNIQUE)
-                    if (_logica.ExisteCuenta(Usuario.Cuenta!, Usuario.IdUsuario))
-                        errores.Add($"La cuenta \"{Usuario.Cuenta!.Trim()}\" ya está registrada.");
-
-                    // Relación 1:1: al registrar, el empleado debe estar activo y sin cuenta
-                    if (Usuario.IdUsuario == 0 && !_logica.ConsultarEmpleadosDisponibles(0).AsEnumerable()
-                            .Any(r => Convert.ToInt32(r["IdEmpleado"]) == Usuario.IdEmpleado))
-                        errores.Add("El empleado seleccionado no está activo o ya tiene una cuenta asignada.");
-                }
-                catch (SqlException)
-                {
-                    MostrarErrorConexion();
-                    CargarPantalla();
-                    return Page();
-                }
-            }
-
-            if (errores.Count > 0)
-            {
-                MostrarMensaje(errores[0], "warning");
-                CargarPantalla();
-                return Page();
-            }
-
-            try
-            {
-                MostrarRespuesta(_logica.Guardar(Usuario, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al guardar el usuario.", "danger");
-            }
-
-            // Si no se guardó (por ejemplo, cuenta repetida), se conservan los datos para corregirlos
-            if (TipoMensaje != "success")
-            {
-                CargarPantalla();
-                return Page();
-            }
-
-            return Redirigir();
-        }
-
-        // Botón Eliminar (baja lógica)
-        public IActionResult OnPostEliminar(int id)
-        {
-            if (id == IdUsuarioSesion())
-            {
-                MostrarMensaje("No puedes eliminar tu propio usuario.", "warning");
-                return Redirigir();
-            }
-
-            try
-            {
-                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al eliminar el usuario.", "danger");
-            }
-
-            return Redirigir();
-        }
-
-        // Exportar a Excel
-        public IActionResult OnGetExportar()
-        {
-            return ExportarCsv(_logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus), "Usuarios",
-                ("Cuenta", "Cuenta"), ("Empleado", "Empleado"), ("Rol", "Rol"), ("Estatus", "Estatus"), ("Fecha de registro", "FechaRegistro"));
+            ModelState.Clear();
+            Usuario = new bdUsuario();
         }
     }
 }

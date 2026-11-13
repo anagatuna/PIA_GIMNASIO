@@ -3,14 +3,20 @@
 @{
     ViewData["Title"] = "Reporte de clases";
     ViewData["AnchoCompleto"] = true;
-    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
 }
 
 <section class="gestion">
     <div class="card-gestion">
         <h4 class="titulo-card"><i class="bi bi-file-earmark-check"></i>&nbsp;Reporte: <span class="resaltado">Clases grupales y asistencia</span></h4>
 
-        <form method="get">
+        <form method="get" id="formBusqueda">
             <div class="row">
                 <div class="col-md-4 col-xl-2 mb-3">
                     <div class="form-floating">

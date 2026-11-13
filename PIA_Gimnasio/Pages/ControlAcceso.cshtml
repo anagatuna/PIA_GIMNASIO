@@ -5,7 +5,13 @@
     ViewData["AnchoCompleto"] = true;
     int ocupacion = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["Ocupacion"]);
     int aforo = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["AforoMaximo"]);
-    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
 }
 
 <section class="gestion control-acceso">
@@ -49,7 +55,7 @@
                     </form>
 
                     <!-- Semáforo -->
-                    <div id="semaforo" class="semaforo espera mt-4">
+                    <div id="semaforo" class="semaforo espera mt-3">
                         <div class="luz"><i class="bi bi-hourglass"></i></div>
                         <div class="semaforo-texto">
                             <div class="semaforo-titulo" id="semaforoTitulo">Esperando folio</div>
@@ -68,11 +74,6 @@
                             <div class="text-secondary small text-uppercase fw-semibold">Aforo actual</div>
                             <div class="aforo-cifra"><span id="ocupacion">@ocupacion</span><small> / <span id="aforoMaximo">@aforo</span></small></div>
                         </div>
-                        <div class="flex-grow-1">
-                            <div class="barra-aforo grande"><span id="barraAforo" style="width: @(aforo == 0 ? 0 : Math.Min(100, ocupacion * 100 / aforo))%"></span></div>
-                            <div class="small text-secondary mt-1" id="aforoTexto"></div>
-                        </div>
-                        <span class="en-vivo" title="Se actualiza cada 5 segundos"><i class="bi bi-broadcast"></i> En vivo</span>
                     </div>
 
                     <h5 class="titulo-card"><i class="bi bi-clock-history"></i>&nbsp;Movimientos de hoy</h5>
@@ -103,102 +104,148 @@
 @if (Model.Aforo != null)
 {
     <script>
-        (function () {
-            const idSucursal = '@Model.IdSucursal';
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-            const campo = document.getElementById('folio');
-            const semaforo = document.getElementById('semaforo');
+        var idSucursal = '@Model.IdSucursal';
 
-            function pintarAforo(ocupacion, maximo) {
-                const pct = maximo === 0 ? 100 : Math.min(100, Math.round(ocupacion * 100 / maximo));
-                document.getElementById('ocupacion').textContent = ocupacion;
-                document.getElementById('aforoMaximo').textContent = maximo;
-                const barra = document.getElementById('barraAforo');
-                barra.style.width = pct + '%';
-                barra.className = pct >= 100 ? 'lleno' : pct >= 80 ? 'alto' : '';
-                document.getElementById('aforoTexto').textContent = pct >= 100
-                    ? 'Aforo máximo alcanzado: las entradas están bloqueadas.'
-                    : `${maximo - ocupacion} lugares disponibles (${pct}% de ocupación)`;
+        // Convierte un texto para meterlo al HTML sin que se interprete como etiquetas
+        // (por si un nombre trae caracteres como < o >)
+        function escapar(valor) {
+            var span = document.createElement('span');
+            span.textContent = valor;
+            return span.innerHTML;
+        }
+
+        // Aforo actual: ocupación / máximo
+        function pintarAforo(ocupacion, maximo) {
+            document.getElementById('ocupacion').textContent = ocupacion;
+            document.getElementById('aforoMaximo').textContent = maximo;
+        }
+
+        // Semáforo: verde (permitido), rojo (denegado) o salida
+        function pintarSemaforo(r) {
+            var estado = 'rojo';
+            var icono = 'bi-x-lg';
+            var titulo = 'ACCESO DENEGADO';
+
+            if (r.resultado == 'Permitido') {
+                estado = 'verde';
+                icono = 'bi-check-lg';
+                titulo = 'ACCESO PERMITIDO';
+            } else if (r.resultado == 'Salida') {
+                estado = 'salida';
+                icono = 'bi-box-arrow-right';
+                titulo = 'SALIDA REGISTRADA';
             }
 
-            function pintarSemaforo(r) {
-                const estado = r.resultado === 'Permitido' ? 'verde' : r.resultado === 'Salida' ? 'salida' : 'rojo';
-                const iconos = { verde: 'bi-check-lg', rojo: 'bi-x-lg', salida: 'bi-box-arrow-right' };
-                const titulos = { verde: 'ACCESO PERMITIDO', rojo: 'ACCESO DENEGADO', salida: 'SALIDA REGISTRADA' };
-                semaforo.className = 'semaforo mt-4 ' + estado;
-                semaforo.querySelector('.luz').innerHTML = `<i class="bi ${iconos[estado]}"></i>`;
-                document.getElementById('semaforoTitulo').textContent = titulos[estado];
-                document.getElementById('semaforoMensaje').textContent = r.mensaje;
+            var semaforo = document.getElementById('semaforo');
+            semaforo.className = 'semaforo mt-3 ' + estado;
+            semaforo.querySelector('.luz').innerHTML = '<i class="bi ' + icono + '"></i>';
+            document.getElementById('semaforoTitulo').textContent = titulo;
+            document.getElementById('semaforoMensaje').textContent = r.mensaje;
 
-                const datos = [];
-                if (r.socio) datos.push(`<b>${texto(r.socio)}</b> · Folio ${texto(r.folio)}`);
-                if (r.membresia) datos.push(`Membresía ${texto(r.membresia)} · vence ${texto(r.vence)}`);
-                if (r.minutos !== null && r.minutos !== undefined) datos.push(`Permanencia: <b>${r.minutos} min</b>`);
-                document.getElementById('semaforoSocio').innerHTML = datos.join('<br>');
-            }
+            // Datos del socio
+            var datos = '';
+            if (r.socio)
+                datos += '<b>' + escapar(r.socio) + '</b> · Folio ' + r.folio;
+            if (r.membresia)
+                datos += '<br>Membresía ' + escapar(r.membresia) + ' · vence ' + r.vence;
+            if (r.minutos != null)
+                datos += '<br>Permanencia: <b>' + r.minutos + ' min</b>';
+            document.getElementById('semaforoSocio').innerHTML = datos;
+        }
 
-            function texto(valor) {
-                const span = document.createElement('span');
-                span.textContent = valor ?? '';
-                return span.innerHTML;
-            }
-
-            async function actualizarEstado() {
-                try {
-                    const resp = await fetch(`?handler=Estado&idSucursal=${idSucursal}`, { cache: 'no-store' });
-                    if (!resp.ok) return;
-                    const datos = await resp.json();
+        // Pide el aforo y los movimientos del día (se llama cada 5 segundos)
+        function actualizarEstado() {
+            fetch('?handler=Estado&idSucursal=' + idSucursal, { cache: 'no-store' })
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (datos) {
                     pintarAforo(datos.ocupacion, datos.aforoMaximo);
-                    const filas = datos.movimientos.map(m => `
-                        <tr class="${m.salida ? '' : 'dentro'}">
-                            <td class="fw-bold">${texto(m.folio)}</td>
-                            <td>${texto(m.socio)}</td>
-                            <td>${m.entrada}</td>
-                            <td>${m.salida ?? '<span class="etiqueta etiqueta-activo">Dentro</span>'}</td>
-                            <td class="text-end">${m.minutos} min</td>
-                        </tr>`).join('');
-                    document.getElementById('movimientos').innerHTML = filas ||
-                        '<tr><td colspan="5" class="text-center text-secondary">Sin movimientos hoy.</td></tr>';
-                } catch { /* sin conexión: se reintenta en el siguiente ciclo */ }
-            }
 
-            async function registrar(accion) {
-                const folio = campo.value.trim();
-                if (!folio) { campo.focus(); return; }
+                    var filas = '';
+                    for (var i = 0; i < datos.movimientos.length; i++) {
+                        var m = datos.movimientos[i];
+                        var salida = m.salida;
+                        var claseFila = '';
+                        if (salida == null) {
+                            salida = '<span class="etiqueta etiqueta-activo">Dentro</span>';
+                            claseFila = 'dentro';
+                        }
 
-                const datos = new FormData();
-                datos.append('folio', folio);
-                datos.append('idSucursal', idSucursal);
+                        filas += '<tr class="' + claseFila + '">'
+                            + '<td class="fw-bold">' + m.folio + '</td>'
+                            + '<td>' + escapar(m.socio) + '</td>'
+                            + '<td>' + m.entrada + '</td>'
+                            + '<td>' + salida + '</td>'
+                            + '<td class="text-end">' + m.minutos + ' min</td>'
+                            + '</tr>';
+                    }
 
-                try {
-                    const resp = await fetch(`?handler=${accion}`, {
-                        method: 'POST',
-                        headers: { 'RequestVerificationToken': token },
-                        body: datos
-                    });
-                    const r = await resp.json();
-                    pintarSemaforo(r);
-                    if (r.aforoMaximo) pintarAforo(r.ocupacion, r.aforoMaximo);
-                    actualizarEstado();
-                } catch {
-                    pintarSemaforo({ resultado: 'Denegado', mensaje: 'No se pudo conectar con el servidor.' });
-                }
+                    if (filas == '')
+                        filas = '<tr><td colspan="5" class="text-center text-secondary">Sin movimientos hoy.</td></tr>';
+                    document.getElementById('movimientos').innerHTML = filas;
+                })
+                .catch(function () {
+                    // Sin conexión: se vuelve a intentar en el siguiente ciclo
+                });
+        }
 
-                campo.value = '';
+        // Registra la entrada o la salida del folio capturado
+        function registrar(accion) {
+            var campo = document.getElementById('folio');
+            var folio = campo.value.trim();
+            if (folio == '') {
                 campo.focus();
+                return;
             }
 
-            // Enter = entrada, Shift + Enter = salida
-            document.getElementById('formAcceso').addEventListener('submit', e => { e.preventDefault(); registrar('Entrada'); });
-            document.getElementById('btnSalida').addEventListener('click', () => registrar('Salida'));
-            campo.addEventListener('keydown', e => {
-                if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); registrar('Salida'); }
-            });
+            var datos = new FormData();
+            datos.append('folio', folio);
+            datos.append('idSucursal', idSucursal);
 
-            pintarAforo(@ocupacion, @aforo);
-            actualizarEstado();
-            setInterval(actualizarEstado, 5000);
-        })();
+            // El token antifalsificación que ASP.NET pide en los POST
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('?handler=' + accion, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: datos
+            })
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (r) {
+                    pintarSemaforo(r);
+                    if (r.aforoMaximo)
+                        pintarAforo(r.ocupacion, r.aforoMaximo);
+                    actualizarEstado();
+                })
+                .catch(function () {
+                    pintarSemaforo({ resultado: 'Denegado', mensaje: 'No se pudo conectar con el servidor.' });
+                });
+
+            campo.value = '';
+            campo.focus();
+        }
+
+        // Enter = entrada
+        document.getElementById('formAcceso').addEventListener('submit', function (e) {
+            e.preventDefault();
+            registrar('Entrada');
+        });
+
+        // Botón salida
+        document.getElementById('btnSalida').addEventListener('click', function () {
+            registrar('Salida');
+        });
+
+        // Shift + Enter = salida
+        document.getElementById('folio').addEventListener('keydown', function (e) {
+            if (e.key == 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                registrar('Salida');
+            }
+        });
+
+        pintarAforo(@ocupacion, @aforo);
+        actualizarEstado();
+        setInterval(actualizarEstado, 5000);
     </script>
 }
 }

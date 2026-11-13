@@ -1,15 +1,14 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Gestión de sucursales. Permisos: Seguridad/Modulos.cs (solo Administrador)
-    public class SucursalModel : PaginaBase
+    // Gestión de sucursales (solo Administrador)
+    public class SucursalModel : PaginaProtegida
     {
         private readonly logicaSucursal _logica;
         private readonly logicaEjercicio _logicaEstatus;   // Reutiliza el combo Activo / Inactivo
@@ -18,6 +17,7 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaEstatus = logicaEstatus;
+            RolesPermitidos = new string[] { "Administrador" };
         }
 
         [BindProperty]
@@ -36,16 +36,88 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdEstatus { get; set; }
 
-        public List<SelectListItem> Estados { get; set; } = new();
-        public List<SelectListItem> Estatus { get; set; } = new();
-        public List<DataRow> Sucursales { get; set; } = new();
+        public List<SelectListItem> Estados { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Sucursales { get; set; } = new List<DataRow>();
 
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        public void OnGet()
         {
-            return Filtros(pagina, ("BusquedaNombre", BusquedaNombre), ("BusquedaIdEstado", BusquedaIdEstado), ("BusquedaIdEstatus", BusquedaIdEstatus));
+            Cargar();
         }
 
-        private void CargarPantalla()
+        // Botón Editar: carga la sucursal en el formulario
+        public void OnGetEditar(int id)
+        {
+            try
+            {
+                Sucursal = _logica.Obtener(id) ?? new bdSucursal();
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo cargar la sucursal.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+        }
+
+        // Botón Guardar / Actualizar
+        public IActionResult OnPostGuardar()
+        {
+            Mensaje = Validar();
+            if (Mensaje != "")
+            {
+                TipoMensaje = "warning";
+                Cargar();
+                return Page();
+            }
+
+            try
+            {
+                bdRespuesta r = _logica.Guardar(Sucursal, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+
+                if (r.TipoMensaje == "success")
+                    Limpiar();
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al guardar la sucursal.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Eliminar (baja lógica)
+        public IActionResult OnPostEliminar(int id)
+        {
+            try
+            {
+                bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al eliminar la sucursal.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Exportar a Excel
+        public IActionResult OnGetExportar()
+        {
+            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdEstado, BusquedaIdEstatus);
+            return ExportarExcel(dt, "Sucursales",
+                new string[] { "Sucursal", "Dirección", "Teléfono", "Aforo máximo", "Ocupación actual", "Apertura", "Cierre", "Empleados", "Estatus" },
+                new string[] { "Nombre", "Direccion", "Telefono", "AforoMaximo", "Ocupacion", "HoraApertura", "HoraCierre", "TotalEmpleados", "Estatus" });
+        }
+
+        // Llena combos y tabla
+        private void Cargar()
         {
             try
             {
@@ -53,76 +125,46 @@ namespace PIA_Gimnasio.Pages
                 Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
                 Sucursales = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdEstado, BusquedaIdEstatus));
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
-        public void OnGet()
+        // Reglas de captura. Regresa el primer error o "" si todo está bien.
+        private string Validar()
         {
-            CargarPantalla();
+            if (string.IsNullOrWhiteSpace(Sucursal.Nombre))
+                return "Ingresa el nombre de la sucursal.";
+            if (string.IsNullOrWhiteSpace(Sucursal.Telefono) || !Regex.IsMatch(Sucursal.Telefono.Trim(), @"^\d{10}$"))
+                return "El teléfono debe tener 10 dígitos.";
+            if (Sucursal.AforoMaximo == null || Sucursal.AforoMaximo < 1 || Sucursal.AforoMaximo > 5000)
+                return "El aforo máximo debe estar entre 1 y 5000 personas.";
+            if (Sucursal.HoraApertura == null || Sucursal.HoraCierre == null)
+                return "Ingresa el horario de apertura y cierre.";
+            if (Sucursal.HoraCierre <= Sucursal.HoraApertura)
+                return "La hora de cierre debe ser posterior a la hora de apertura.";
+            if (string.IsNullOrWhiteSpace(Sucursal.Calle) || string.IsNullOrWhiteSpace(Sucursal.NumeroInt) ||
+                string.IsNullOrWhiteSpace(Sucursal.Colonia) || string.IsNullOrWhiteSpace(Sucursal.Municipio))
+                return "Ingresa la dirección completa (calle, número, colonia y municipio).";
+            if (Sucursal.IdEstado == null)
+                return "Selecciona el estado.";
+            if (string.IsNullOrWhiteSpace(Sucursal.CodigoPostal) || !Regex.IsMatch(Sucursal.CodigoPostal.Trim(), @"^\d{5}$"))
+                return "El código postal debe tener 5 dígitos.";
+            if (Sucursal.IdEstatus == null)
+                return "Selecciona el estatus.";
+            return "";
         }
 
-        public void OnGetEditar(int id)
+        private void Limpiar()
         {
-            CargarPantalla();
-
-            bdSucursal? sucursal = _logica.Obtener(id);
-            if (sucursal != null)
-                Sucursal = sucursal;
-            else
-                MostrarMensaje("No se encontró la sucursal seleccionada.", "warning");
-        }
-
-        public IActionResult OnPostGuardar()
-        {
-            List<string> errores = validacionSucursal.Validar(Sucursal);
-            if (errores.Count > 0)
+            ModelState.Clear();
+            Sucursal = new bdSucursal
             {
-                MostrarMensaje(errores[0], "warning");
-                CargarPantalla();
-                return Page();
-            }
-
-            try
-            {
-                MostrarRespuesta(_logica.Guardar(Sucursal, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al guardar la sucursal.", "danger");
-            }
-
-            if (TipoMensaje != "success")
-            {
-                CargarPantalla();
-                return Page();
-            }
-
-            return Redirigir();
-        }
-
-        public IActionResult OnPostEliminar(int id)
-        {
-            try
-            {
-                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al eliminar la sucursal.", "danger");
-            }
-
-            return Redirigir();
-        }
-
-        public IActionResult OnGetExportar()
-        {
-            return ExportarCsv(_logica.Consultar(BusquedaNombre, BusquedaIdEstado, BusquedaIdEstatus), "Sucursales",
-                ("Sucursal", "Nombre"), ("Dirección", "Direccion"), ("Teléfono", "Telefono"), ("Aforo máximo", "AforoMaximo"),
-                ("Ocupación actual", "Ocupacion"), ("Apertura", "HoraApertura"), ("Cierre", "HoraCierre"),
-                ("Empleados", "TotalEmpleados"), ("Estatus", "Estatus"));
+                HoraApertura = new TimeSpan(6, 0, 0),
+                HoraCierre = new TimeSpan(22, 0, 0)
+            };
         }
     }
 }

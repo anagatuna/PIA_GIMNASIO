@@ -1,17 +1,15 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
-using PIA_Gimnasio.Seguridad;
 
 namespace PIA_Gimnasio.Pages
 {
     // Registro de socios con folio automático y expediente médico obligatorio.
-    // Permisos: Seguridad/Modulos.cs (Administrador y Recepcionista; solo el Administrador elimina)
-    public class SocioModel : PaginaBase
+    // Administrador y Recepcionista; solo el Administrador elimina.
+    public class SocioModel : PaginaProtegida
     {
         private readonly logicaSocio _logica;
         private readonly logicaSucursal _logicaSucursal;
@@ -22,6 +20,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaEstatus = logicaEstatus;
+            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
         [BindProperty]
@@ -40,109 +39,153 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdEstatus { get; set; }
 
-        public List<SelectListItem> Sucursales { get; set; } = new();
-        public List<SelectListItem> Estatus { get; set; } = new();
-        public List<SelectListItem> TiposSangre { get; } = CargarCombo(validacionSocio.TiposSangre);
-        public List<DataRow> Socios { get; set; } = new();
+        public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> TiposSangre { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Socios { get; set; } = new List<DataRow>();
 
-        public bool PuedeEliminar => User.IsInRole(Roles.Administrador);
-
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        public bool PuedeEliminar
         {
-            return Filtros(pagina, ("Busqueda", Busqueda), ("BusquedaIdSucursal", BusquedaIdSucursal), ("BusquedaIdEstatus", BusquedaIdEstatus));
+            get { return EsAdministrador; }
         }
 
-        private void CargarPantalla()
+        public void OnGet()
         {
+            // La recepcionista registra en su propia sucursal por omisión
+            Socio.IdSucursal = IdSucursalSesion();
+            Cargar();
+        }
+
+        // Botón Editar: carga el socio en el formulario
+        public void OnGetEditar(int id)
+        {
+            try
+            {
+                Socio = _logica.Obtener(id) ?? new bdSocio();
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo cargar el socio.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+        }
+
+        // Botón Guardar / Actualizar
+        public IActionResult OnPostGuardar()
+        {
+            Mensaje = Validar();
+            if (Mensaje != "")
+            {
+                TipoMensaje = "warning";
+                Cargar();
+                return Page();
+            }
+
+            try
+            {
+                // El SP genera el folio y guarda el expediente en la misma transacción
+                bdRespuesta r = _logica.Guardar(Socio, Expediente, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+
+                if (r.TipoMensaje == "success")
+                    Limpiar();
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al guardar el socio.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Eliminar (baja lógica, solo Administrador)
+        public IActionResult OnPostEliminar(int id)
+        {
+            if (!PuedeEliminar)
+            {
+                Mensaje = "Solo el administrador puede eliminar socios.";
+                TipoMensaje = "warning";
+                Cargar();
+                return Page();
+            }
+
+            try
+            {
+                bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al eliminar el socio.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Exportar a Excel
+        public IActionResult OnGetExportar()
+        {
+            DataTable dt = _logica.Consultar(Busqueda, BusquedaIdSucursal, BusquedaIdEstatus);
+            return ExportarExcel(dt, "Socios",
+                new string[] { "Folio", "Socio", "Correo", "Teléfono", "Sucursal", "Membresía", "Vencimiento", "Inscripción", "Estatus" },
+                new string[] { "Folio", "Socio", "Correo", "Telefono", "Sucursal", "Membresia", "FechaVencimiento", "FechaInscripcion", "Estatus" });
+        }
+
+        // Llena combos y tabla
+        private void Cargar()
+        {
+            TiposSangre = CargarCombo(logicaSocio.TiposSangre);
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
                 Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
                 Socios = Paginar(_logica.Consultar(Busqueda, BusquedaIdSucursal, BusquedaIdEstatus));
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
-        public void OnGet()
+        // Reglas de captura. Regresa el primer error o "" si todo está bien.
+        private string Validar()
         {
-            // La recepcionista registra en su propia sucursal por omisión
-            if (int.TryParse(User.FindFirst("IdSucursal")?.Value, out int idSucursal))
-                Socio.IdSucursal = idSucursal;
+            if (string.IsNullOrWhiteSpace(Socio.Nombre) || string.IsNullOrWhiteSpace(Socio.PrimerApellido))
+                return "Ingresa el nombre y el primer apellido.";
 
-            CargarPantalla();
+            if (Socio.FechaNacimiento == null)
+                return "Ingresa la fecha de nacimiento.";
+            if (Socio.FechaNacimiento > DateTime.Today.AddYears(-12) || Socio.FechaNacimiento < DateTime.Today.AddYears(-100))
+                return "El socio debe tener entre 12 y 100 años.";
+
+            if (string.IsNullOrWhiteSpace(Socio.Correo) || !Regex.IsMatch(Socio.Correo.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return "Ingresa un correo válido.";
+            if (string.IsNullOrWhiteSpace(Socio.Telefono) || !Regex.IsMatch(Socio.Telefono.Trim(), @"^\d{10}$"))
+                return "El teléfono debe tener 10 dígitos.";
+
+            if (Socio.IdSucursal == null)
+                return "Selecciona la sucursal de inscripción.";
+            if (Socio.IdEstatus == null)
+                return "Selecciona el estatus.";
+
+            // Expediente médico obligatorio al registrar
+            if (Socio.IdCliente == 0 && string.IsNullOrEmpty(Expediente.TipoSangre))
+                return "Selecciona el tipo de sangre (el expediente médico es obligatorio).";
+
+            return "";
         }
 
-        public void OnGetEditar(int id)
+        private void Limpiar()
         {
-            CargarPantalla();
-
-            bdSocio? socio = _logica.Obtener(id);
-            if (socio != null)
-                Socio = socio;
-            else
-                MostrarMensaje("No se encontró el socio seleccionado.", "warning");
-        }
-
-        public IActionResult OnPostGuardar()
-        {
-            bool esNuevo = Socio.IdCliente == 0;
-
-            List<string> errores = validacionSocio.Validar(Socio);
-            if (esNuevo)
-                errores.AddRange(validacionSocio.ValidarExpediente(Expediente));   // Expediente obligatorio al registrar
-
-            if (errores.Count > 0)
-            {
-                MostrarMensaje(errores[0], "warning");
-                CargarPantalla();
-                return Page();
-            }
-
-            try
-            {
-                var (respuesta, _) = _logica.Guardar(Socio, Expediente, IdUsuarioSesion());
-                MostrarRespuesta(respuesta);
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al guardar el socio.", "danger");
-            }
-
-            if (TipoMensaje != "success")
-            {
-                CargarPantalla();
-                return Page();
-            }
-
-            return Redirigir();
-        }
-
-        public IActionResult OnPostEliminar(int id)
-        {
-            if (!PuedeEliminar)
-                return Forbid();
-
-            try
-            {
-                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al eliminar el socio.", "danger");
-            }
-
-            return Redirigir();
-        }
-
-        public IActionResult OnGetExportar()
-        {
-            return ExportarCsv(_logica.Consultar(Busqueda, BusquedaIdSucursal, BusquedaIdEstatus), "Socios",
-                ("Folio", "Folio"), ("Socio", "Socio"), ("Correo", "Correo"), ("Teléfono", "Telefono"),
-                ("Sucursal", "Sucursal"), ("Membresía", "Membresia"), ("Vencimiento", "FechaVencimiento"),
-                ("Inscripción", "FechaInscripcion"), ("Estatus", "Estatus"));
+            ModelState.Clear();
+            Socio = new bdSocio();
+            Expediente = new bdExpediente();
         }
     }
 }

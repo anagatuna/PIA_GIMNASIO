@@ -1,6 +1,4 @@
 using System.Data;
-using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Datos;
@@ -10,6 +8,10 @@ namespace PIA_Gimnasio.Logica
 {
     public class logicaRutina
     {
+        // Valores permitidos (también se validan en spRutina)
+        public static List<string> DiasSemana = new List<string> { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
+        public static List<string> Objetivos = new List<string> { "Hipertrofia", "Pérdida de peso", "Reacondicionamiento", "Fuerza", "Resistencia" };
+
         private readonly bdConexion _bd;
 
         public logicaRutina(bdConexion bd)
@@ -18,7 +20,7 @@ namespace PIA_Gimnasio.Logica
         }
 
         // Accion 1: registrar cabecera + detalle en una sola transacción (el detalle viaja en JSON)
-        public (bdRespuesta Respuesta, int IdRutina) Guardar(bdRutina rutina, int usuarioSesion)
+        public bdRespuesta Guardar(bdRutina rutina, int usuarioSesion)
         {
             string detalle = JsonSerializer.Serialize(rutina.Detalles);
 
@@ -34,7 +36,9 @@ namespace PIA_Gimnasio.Logica
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spRutina", p);
 
-            return (Respuesta(dt), Convert.ToInt32(dt.Rows[0]["IdRutina"]));
+            bdRespuesta r = Respuesta(dt);
+            r.Id = Convert.ToInt32(dt.Rows[0]["IdRutina"]);
+            return r;
         }
 
         // Accion 2: cabecera de una rutina
@@ -108,27 +112,22 @@ namespace PIA_Gimnasio.Logica
             return dt.Rows.Count == 0 ? null : dt.Rows[0];
         }
 
-        #region Verificación médica
+        // ---------- Verificación médica ----------
+        // Compara la contraindicación de cada ejercicio contra el expediente del socio.
+        // Ejemplo: el ejercicio dice "Rodilla, Lumbar" y el socio tiene en lesiones previas "lesión de rodilla".
 
-        // Campos del expediente que se comparan contra las contraindicaciones
-        private static readonly (string Columna, string Etiqueta)[] CamposMedicos =
-        {
-            ("PadecimientosCronicos", "Padecimientos crónicos"),
-            ("LesionesPrevias", "Lesiones previas"),
-            ("Alergias", "Alergias"),
-            ("CondicionRiesgo", "Condición de riesgo")
-        };
+        // Campos del expediente que se revisan y cómo se nombran en la alerta
+        private static string[] CamposMedicos = { "PadecimientosCronicos", "LesionesPrevias", "Alergias", "CondicionRiesgo" };
+        private static string[] NombresCampos = { "padecimientos crónicos", "lesiones previas", "alergias", "condición de riesgo" };
 
         // Palabras demasiado generales para considerarlas coincidencia por sí solas
-        private static readonly HashSet<string> PalabrasGenerales = new()
+        private static List<string> PalabrasGenerales = new List<string>
         {
             "lesion", "lesiones", "dolor", "problema", "problemas", "cronico", "cronica", "previa", "previas",
-            "condicion", "riesgo", "enfermedad", "sindrome", "leve", "grave", "severa", "severo", "ninguna", "ninguno"
+            "condicion", "riesgo", "enfermedad", "sindrome", "leve", "grave", "severa", "severo", "ninguna", "ninguno", "n a"
         };
 
-        // Regresa la alerta si la contraindicación del ejercicio coincide con algo del expediente; si no, null.
-        // Coincide cuando un término contiene al otro ("rodilla" / "lesión de rodilla") o comparten una palabra
-        // significativa ("lesión de rodilla" / "rodilla operada").
+        // Regresa el texto de la alerta si el ejercicio está contraindicado para el socio; si no, null.
         public static string? RevisarContraindicacion(DataRow? expediente, string ejercicio, string? contraIndicacion)
         {
             if (expediente == null)
@@ -136,70 +135,74 @@ namespace PIA_Gimnasio.Logica
 
             foreach (string termino in Terminos(contraIndicacion))
             {
-                foreach (var (columna, etiqueta) in CamposMedicos)
+                for (int i = 0; i < CamposMedicos.Length; i++)
                 {
-                    string? valor = expediente[columna] == DBNull.Value ? null : expediente[columna].ToString();
+                    string valor = expediente[CamposMedicos[i]].ToString() ?? "";
 
                     foreach (string dato in Terminos(valor))
                     {
                         if (Coinciden(termino, dato))
-                            return $"{ejercicio}: está contraindicado por \"{termino}\" y el socio registra en {etiqueta.ToLower()}: \"{dato}\".";
+                            return ejercicio + ": está contraindicado por \"" + termino + "\" y el socio registra en " + NombresCampos[i] + ": \"" + dato + "\".";
                     }
                 }
             }
             return null;
         }
 
-        // Alertas de todos los ejercicios de la rutina (una por ejercicio distinto)
-        public static List<string> RevisarRutina(DataRow? expediente, IEnumerable<(string Ejercicio, string? ContraIndicacion)> ejercicios)
+        // Separa un texto en términos: "Rodilla, hipertensión / asma" -> Rodilla | hipertensión | asma
+        private static List<string> Terminos(string? texto)
         {
-            return ejercicios
-                .Select(e => RevisarContraindicacion(expediente, e.Ejercicio, e.ContraIndicacion))
-                .Where(a => a != null)
-                .Distinct()
-                .ToList()!;
-        }
-
-        // Separa un texto en términos ("Rodilla, hipertensión / asma" -> 3 términos), sin "Ninguna"
-        private static IEnumerable<string> Terminos(string? texto)
-        {
+            List<string> terminos = new List<string>();
             if (string.IsNullOrWhiteSpace(texto))
-                return Enumerable.Empty<string>();
+                return terminos;
 
-            return texto.Replace(" y ", ",").Split(new[] { ',', ';', '/' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(t => !PalabrasGenerales.Contains(Normalizar(t)) && Normalizar(t) != "n/a");
+            string[] partes = texto.Replace(" y ", ",").Split(new char[] { ',', ';', '/' });
+            foreach (string parte in partes)
+            {
+                string termino = parte.Trim();
+                if (termino != "" && !PalabrasGenerales.Contains(Normalizar(termino).Trim()))
+                    terminos.Add(termino);
+            }
+            return terminos;
         }
 
+        // Coinciden si uno contiene al otro ("rodilla" / "lesión de rodilla")
+        // o si comparten una palabra importante ("lesión de rodilla" / "rodilla operada")
         private static bool Coinciden(string a, string b)
         {
-            string x = Normalizar(a), y = Normalizar(b);
+            string x = Normalizar(a);
+            string y = Normalizar(b);
+
             if (x.Contains(y) || y.Contains(x))
                 return true;
 
-            var palabrasX = Palabras(x);
-            return Palabras(y).Any(palabrasX.Contains);
-        }
-
-        private static HashSet<string> Palabras(string texto)
-        {
-            return texto.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Where(p => p.Length >= 4 && !PalabrasGenerales.Contains(p))
-                .ToHashSet();
+            List<string> palabrasY = new List<string>(y.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            foreach (string palabra in x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (palabra.Length >= 4 && !PalabrasGenerales.Contains(palabra) && palabrasY.Contains(palabra))
+                    return true;
+            }
+            return false;
         }
 
         // Minúsculas y sin acentos, para comparar "Lesión" con "lesion"
         private static string Normalizar(string texto)
         {
-            var sb = new StringBuilder();
-            foreach (char c in texto.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD))
-            {
-                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                    sb.Append(char.IsLetterOrDigit(c) ? c : ' ');
-            }
-            return sb.ToString().Normalize(NormalizationForm.FormC);
-        }
+            string resultado = texto.Trim().ToLower();
+            resultado = resultado.Replace("á", "a").Replace("é", "e").Replace("í", "i")
+                                 .Replace("ó", "o").Replace("ú", "u").Replace("ü", "u");
 
-        #endregion
+            // Cualquier signo que no sea letra o número se cambia por espacio
+            string limpio = "";
+            foreach (char c in resultado)
+            {
+                if (char.IsLetterOrDigit(c))
+                    limpio += c;
+                else
+                    limpio += ' ';
+            }
+            return limpio;
+        }
 
         // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta
         private bdRespuesta Respuesta(DataTable dt)

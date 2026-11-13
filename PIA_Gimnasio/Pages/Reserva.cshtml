@@ -5,7 +5,13 @@
     ViewData["AnchoCompleto"] = true;
     ViewData["EliminarTitulo"] = "¿Cancelar reserva?";
     ViewData["EliminarDescripcion"] = "liberará su lugar en la clase y dejará de contar en su límite semanal.";
-    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
 }
 
 <section class="gestion">
@@ -16,7 +22,7 @@
             <div class="card-gestion h-100">
                 <h4 class="titulo-card text-center"><i class="bi bi-bookmark-plus"></i>&nbsp;Nueva reserva</h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <div class="form-floating mb-3">
                         <select asp-for="Reserva.IdCliente" asp-items="Model.Socios" class="form-select" id="selSocio" required>
                             <option value="">Selecciona...</option>
@@ -57,7 +63,7 @@
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Reservas</span></h4>
 
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-floating">
@@ -109,7 +115,9 @@
                                 @foreach (DataRow fila in Model.Reservas)
                                 {
                                     int estatus = Convert.ToInt32(fila["IdEstatus"]);
-                                    string clase = estatus switch { 5 => "etiqueta-activo", 6 => "etiqueta-rol", _ => "etiqueta-inactivo" };
+                                    string clase = "etiqueta-inactivo";
+                                    if (estatus == 5) clase = "etiqueta-activo";
+                                    else if (estatus == 6) clase = "etiqueta-rol";
 
                                     <tr>
                                         <td class="col-accion">
@@ -154,16 +162,22 @@
 @section Scripts {
     <script>
         // Al elegir socio muestra su plan y cuántas clases lleva en la semana
-        (function () {
-            const socio = document.getElementById('selSocio');
-            const resumen = document.getElementById('resumenSocio');
+        function mostrarResumen() {
+            var socio = document.getElementById('selSocio');
+            var resumen = document.getElementById('resumenSocio');
 
-            async function mostrar() {
-                if (!socio.value) { resumen.classList.add('d-none'); return; }
-                try {
-                    const resp = await fetch(`?handler=Resumen&idCliente=${socio.value}`);
-                    const r = await resp.json();
-                    resumen.classList.remove('d-none', 'sin-plan', 'al-limite');
+            if (socio.value == '') {
+                resumen.classList.add('d-none');
+                return;
+            }
+
+            // Pide el resumen a la página (handler Resumen)
+            fetch('?handler=Resumen&idCliente=' + socio.value)
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (r) {
+                    resumen.classList.remove('d-none');
+                    resumen.classList.remove('sin-plan');
+                    resumen.classList.remove('al-limite');
 
                     if (!r.tienePlan) {
                         resumen.classList.add('sin-plan');
@@ -171,19 +185,28 @@
                         return;
                     }
 
-                    const disponibles = Math.max(0, r.maximo - r.usadas);
-                    if (disponibles === 0) resumen.classList.add('al-limite');
-                    const span = document.createElement('b');
-                    span.textContent = r.membresia;
-                    resumen.innerHTML = `<i class="bi bi-tags"></i> Plan ${span.outerHTML} (vence ${r.vence})<br>` +
-                        (r.maximo === 0
-                            ? 'Su plan no incluye clases grupales.'
-                            : `Esta semana: <b>${r.usadas} de ${r.maximo}</b> clases · le quedan <b>${disponibles}</b>`);
-                } catch { resumen.classList.add('d-none'); }
-            }
+                    var disponibles = r.maximo - r.usadas;
+                    if (disponibles < 0)
+                        disponibles = 0;
+                    if (disponibles == 0)
+                        resumen.classList.add('al-limite');
 
-            socio.addEventListener('change', mostrar);
-            mostrar();
-        })();
+                    // El nombre del plan se pasa por textContent para que no se interprete como HTML
+                    var plan = document.createElement('b');
+                    plan.textContent = r.membresia;
+                    var texto = '<i class="bi bi-tags"></i> Plan ' + plan.outerHTML + ' (vence ' + r.vence + ')<br>';
+                    if (r.maximo == 0)
+                        texto += 'Su plan no incluye clases grupales.';
+                    else
+                        texto += 'Esta semana: <b>' + r.usadas + ' de ' + r.maximo + '</b> clases · le quedan <b>' + disponibles + '</b>';
+                    resumen.innerHTML = texto;
+                })
+                .catch(function () {
+                    resumen.classList.add('d-none');
+                });
+        }
+
+        document.getElementById('selSocio').addEventListener('change', mostrarResumen);
+        mostrarResumen();
     </script>
 }

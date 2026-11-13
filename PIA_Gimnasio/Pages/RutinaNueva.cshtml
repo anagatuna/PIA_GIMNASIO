@@ -1,25 +1,29 @@
 @page
 @model PIA_Gimnasio.Pages.RutinaNuevaModel
 @using System.Text.Json
-@using PIA_Gimnasio.Logica.Validacion
+@using PIA_Gimnasio.Logica
 @{
     ViewData["Title"] = "Diseñador de rutinas";
     ViewData["AnchoCompleto"] = true;
 
-    // Datos que usa el JavaScript del diseñador
-    var ejerciciosJson = JsonSerializer.Serialize(Model.Ejercicios.ToDictionary(
-        e => e["IdEjercicio"].ToString()!,
-        e => new
+    // Datos que usa el JavaScript del diseñador.
+    // Ejercicios por Id: { "1": { nombre, grupo, nivel, contra }, "2": {...} }
+    Dictionary<string, object> ejercicios = new Dictionary<string, object>();
+    foreach (DataRow e in Model.Ejercicios)
+    {
+        ejercicios[e["IdEjercicio"].ToString()!] = new
         {
             nombre = e["Nombre"].ToString(),
             grupo = e["GrupoMuscular"].ToString(),
             nivel = e["NivelDificultad"].ToString(),
             contra = e["ContraIndicacion"].ToString()
-        }));
+        };
+    }
+    var ejerciciosJson = JsonSerializer.Serialize(ejercicios);
     var detallesJson = JsonSerializer.Serialize(Model.Rutina.Detalles);
     var alertasJson = JsonSerializer.Serialize(Model.AlertasPorEjercicio);
     var conExpedienteJson = JsonSerializer.Serialize(Model.SociosConExpediente);
-    var diasJson = JsonSerializer.Serialize(validacionRutina.DiasSemana);
+    var diasJson = JsonSerializer.Serialize(logicaRutina.DiasSemana);
 }
 
 <form method="post" id="formRutina">
@@ -105,7 +109,7 @@
                         <div class="col-6 col-md-2">
                             <div class="form-floating">
                                 <select class="form-select" id="nuevoDia">
-                                    @foreach (var dia in validacionRutina.DiasSemana)
+                                    @foreach (var dia in logicaRutina.DiasSemana)
                                     {
                                         <option value="@dia">@dia</option>
                                     }
@@ -117,14 +121,26 @@
                             <div class="form-floating">
                                 <select class="form-select" id="nuevoEjercicio">
                                     <option value="">Selecciona...</option>
-                                    @foreach (var grupo in Model.Ejercicios.GroupBy(e => e["GrupoMuscular"].ToString()))
+                                    @* Los ejercicios vienen ordenados por grupo muscular (spEjercicio).
+                                       Cada vez que cambia el grupo se cierra el optgroup anterior y se abre uno nuevo. *@
+                                    @{ string grupoActual = ""; }
+                                    @foreach (DataRow e in Model.Ejercicios)
                                     {
-                                        <optgroup label="@grupo.Key">
-                                            @foreach (var e in grupo)
+                                        string grupo = e["GrupoMuscular"].ToString()!;
+                                        if (grupo != grupoActual)
+                                        {
+                                            if (grupoActual != "")
                                             {
-                                                <option value="@e["IdEjercicio"]">@e["Nombre"] · @e["NivelDificultad"]</option>
+                                                @:</optgroup>
                                             }
-                                        </optgroup>
+                                            @:<optgroup label="@grupo">
+                                            grupoActual = grupo;
+                                        }
+                                        <option value="@e["IdEjercicio"]">@e["Nombre"] · @e["NivelDificultad"]</option>
+                                    }
+                                    @if (grupoActual != "")
+                                    {
+                                        @:</optgroup>
                                     }
                                 </select>
                                 <label for="nuevoEjercicio">Ejercicio</label>
@@ -190,134 +206,226 @@
 
 @section Scripts {
     <script>
-        (function () {
-            const ejercicios = @Html.Raw(ejerciciosJson);
-            const dias = @Html.Raw(diasJson);
-            const conExpediente = new Set(@Html.Raw(conExpedienteJson));
-            let alertas = @Html.Raw(alertasJson);
-            let detalles = @Html.Raw(detallesJson);
+        // Datos que manda la página
+        var ejercicios = @Html.Raw(ejerciciosJson);          // { "1": { nombre, grupo, nivel, contra }, ... }
+        var dias = @Html.Raw(diasJson);                      // [ "Lunes", ..., "Domingo" ]
+        var conExpediente = @Html.Raw(conExpedienteJson);    // Ids de los socios que tienen expediente
+        var alertas = @Html.Raw(alertasJson);                // { "IdEjercicio": "texto de la alerta" }
+        var detalles = @Html.Raw(detallesJson);              // Ejercicios agregados a la rutina
 
-            const $ = id => document.getElementById(id);
-            const escapar = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        // Convierte un texto para meterlo al HTML sin que se interprete como etiquetas
+        function escapar(valor) {
+            var span = document.createElement('span');
+            span.textContent = valor;
+            return span.innerHTML;
+        }
 
-            // Dibuja la matriz de Lunes a Domingo con los ejercicios de cada día
-            function dibujar() {
-                $('matriz').innerHTML = dias.map(dia => {
-                    const delDia = detalles.map((d, i) => ({ ...d, i })).filter(d => d.DiaSemana === dia);
-                    const items = delDia.map(d => {
-                        const e = ejercicios[d.IdEjercicio] || { nombre: 'Ejercicio inactivo', grupo: '' };
-                        const alerta = alertas[d.IdEjercicio];
-                        return `<div class="ejercicio-dia ${alerta ? 'con-alerta' : ''}" title="${escapar(alerta || '')}">
-                                    <button type="button" class="quitar" data-i="${d.i}" aria-label="Quitar"><i class="bi bi-x"></i></button>
-                                    <div class="nombre">${alerta ? '<i class="bi bi-exclamation-triangle-fill"></i> ' : ''}${escapar(e.nombre)}</div>
-                                    <div class="grupo">${escapar(e.grupo)}</div>
-                                    <div class="metricas">${d.Series}×${d.Repeticiones} · ${d.TiempoDescanso}s</div>
-                                </div>`;
-                    }).join('');
-                    return `<div class="dia-col">
-                                <div class="dia-titulo">${dia}<span>${delDia.length}</span></div>
-                                <div class="dia-items">${items || '<div class="dia-vacio">Descanso</div>'}</div>
-                            </div>`;
-                }).join('');
+        // Dibuja la matriz de Lunes a Domingo con los ejercicios de cada día
+        function dibujar() {
+            var html = '';
 
-                // Alertas de los ejercicios que ya están en la rutina
-                const lista = [...new Set(detalles.map(d => alertas[d.IdEjercicio]).filter(Boolean))];
-                $('listaAlertas').innerHTML = lista.map(a => `<li>${escapar(a)}</li>`).join('');
-                $('panelAlertas').classList.toggle('d-none', lista.length === 0);
+            for (var j = 0; j < dias.length; j++) {
+                var dia = dias[j];
+                var items = '';
+                var cantidad = 0;
 
-                // Marca en el combo los ejercicios contraindicados
-                for (const op of $('nuevoEjercicio').options) {
-                    if (!op.value) continue;
-                    const base = op.textContent.replace(/^⚠ /, '');
-                    op.textContent = alertas[op.value] ? '⚠ ' + base : base;
+                for (var i = 0; i < detalles.length; i++) {
+                    var d = detalles[i];
+                    if (d.DiaSemana != dia)
+                        continue;
+
+                    cantidad++;
+                    var e = ejercicios[d.IdEjercicio];
+                    if (e == null)
+                        e = { nombre: 'Ejercicio inactivo', grupo: '' };
+
+                    var alerta = alertas[d.IdEjercicio];
+                    var claseAlerta = '';
+                    var iconoAlerta = '';
+                    if (alerta) {
+                        claseAlerta = 'con-alerta';
+                        iconoAlerta = '<i class="bi bi-exclamation-triangle-fill"></i> ';
+                    } else {
+                        alerta = '';
+                    }
+
+                    items += '<div class="ejercicio-dia ' + claseAlerta + '" title="' + escapar(alerta) + '">'
+                        + '<button type="button" class="quitar" data-i="' + i + '" aria-label="Quitar"><i class="bi bi-x"></i></button>'
+                        + '<div class="nombre">' + iconoAlerta + escapar(e.nombre) + '</div>'
+                        + '<div class="grupo">' + escapar(e.grupo) + '</div>'
+                        + '<div class="metricas">' + d.Series + '×' + d.Repeticiones + ' · ' + d.TiempoDescanso + 's</div>'
+                        + '</div>';
                 }
-                mostrarAlertaPrevia();
+
+                if (items == '')
+                    items = '<div class="dia-vacio">Descanso</div>';
+
+                html += '<div class="dia-col">'
+                    + '<div class="dia-titulo">' + dia + '<span>' + cantidad + '</span></div>'
+                    + '<div class="dia-items">' + items + '</div>'
+                    + '</div>';
+            }
+            document.getElementById('matriz').innerHTML = html;
+
+            // Alertas de los ejercicios que ya están en la rutina (sin repetir)
+            var lista = [];
+            for (var i = 0; i < detalles.length; i++) {
+                var texto = alertas[detalles[i].IdEjercicio];
+                if (texto && lista.indexOf(texto) == -1)
+                    lista.push(texto);
             }
 
-            function mostrarAlertaPrevia() {
-                const alerta = alertas[$('nuevoEjercicio').value];
-                $('alertaPrevia').textContent = alerta ? '⚠ ' + alerta : '';
-                $('alertaPrevia').classList.toggle('d-none', !alerta);
+            var htmlAlertas = '';
+            for (var i = 0; i < lista.length; i++) {
+                htmlAlertas += '<li>' + escapar(lista[i]) + '</li>';
+            }
+            document.getElementById('listaAlertas').innerHTML = htmlAlertas;
+
+            if (lista.length == 0)
+                document.getElementById('panelAlertas').classList.add('d-none');
+            else
+                document.getElementById('panelAlertas').classList.remove('d-none');
+
+            // Marca en el combo los ejercicios contraindicados con ⚠
+            var opciones = document.getElementById('nuevoEjercicio').options;
+            for (var i = 0; i < opciones.length; i++) {
+                var op = opciones[i];
+                if (op.value == '')
+                    continue;
+
+                var nombre = op.textContent.replace('⚠ ', '');
+                if (alertas[op.value])
+                    op.textContent = '⚠ ' + nombre;
+                else
+                    op.textContent = nombre;
             }
 
-            // Agregar ejercicio al día con validación de métricas
-            $('btnAgregar').addEventListener('click', function () {
-                const d = {
-                    IdEjercicio: parseInt($('nuevoEjercicio').value),
-                    DiaSemana: $('nuevoDia').value,
-                    Series: parseInt($('nuevoSeries').value),
-                    Repeticiones: parseInt($('nuevoRepeticiones').value),
-                    TiempoDescanso: parseInt($('nuevoDescanso').value)
-                };
-                let error = '';
-                if (!d.IdEjercicio) error = 'Selecciona un ejercicio.';
-                else if (!(d.Series > 0)) error = 'Las series deben ser mayores a 0.';
-                else if (!(d.Repeticiones > 0)) error = 'Las repeticiones deben ser mayores a 0.';
-                else if (!(d.TiempoDescanso >= 0)) error = 'El descanso no puede ser negativo.';
-                $('errorAgregar').textContent = error;
-                if (error) return;
+            mostrarAlertaPrevia();
+        }
 
-                detalles.push(d);
-                dibujar();
-            });
+        // Muestra la alerta del ejercicio elegido antes de agregarlo
+        function mostrarAlertaPrevia() {
+            var aviso = document.getElementById('alertaPrevia');
+            var alerta = alertas[document.getElementById('nuevoEjercicio').value];
 
-            $('matriz').addEventListener('click', function (e) {
-                const btn = e.target.closest('.quitar');
-                if (!btn) return;
-                detalles.splice(parseInt(btn.dataset.i), 1);
-                dibujar();
-            });
-
-            $('nuevoEjercicio').addEventListener('change', mostrarAlertaPrevia);
-
-            // Al cambiar de socio se trae su expediente y se recalculan las alertas
-            $('selSocio').addEventListener('change', async function () {
-                const id = this.value;
-                const vacio = $('expedienteVacio'), datos = $('expedienteDatos');
-                alertas = {};
-                if (!id) {
-                    $('expedienteVacioTexto').textContent = 'Selecciona un socio para ver su expediente médico.';
-                    vacio.classList.remove('d-none', 'sin-expediente'); datos.classList.add('d-none');
-                    return dibujar();
-                }
-                const r = await fetch(`?handler=Expediente&idCliente=${id}`).then(r => r.json());
-                alertas = r.alertas;
-                if (r.tieneExpediente) {
-                    const ex = r.expediente, v = t => t && t.trim() ? t : '—';
-                    $('expTipoSangre').textContent = v(ex.tipoSangre);
-                    $('expPadecimientos').textContent = v(ex.padecimientos);
-                    $('expLesiones').textContent = v(ex.lesiones);
-                    $('expAlergias').textContent = v(ex.alergias);
-                    $('expCondicion').textContent = v(ex.condicion);
-                    vacio.classList.add('d-none'); datos.classList.remove('d-none');
-                } else {
-                    $('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
-                    vacio.classList.remove('d-none'); vacio.classList.add('sin-expediente'); datos.classList.add('d-none');
-                }
-                dibujar();
-            });
-
-            // Antes de enviar, convierte la matriz en campos Rutina.Detalles[i].*
-            $('formRutina').addEventListener('submit', function (e) {
-                if (detalles.length === 0) {
-                    e.preventDefault();
-                    $('errorAgregar').textContent = 'Agrega al menos un ejercicio a la rutina.';
-                    return;
-                }
-                $('detallesOcultos').innerHTML = detalles.map((d, i) =>
-                    ['IdEjercicio', 'DiaSemana', 'Series', 'Repeticiones', 'TiempoDescanso']
-                        .map(c => `<input type="hidden" name="Rutina.Detalles[${i}].${c}" value="${escapar(d[c])}" />`).join('')
-                ).join('');
-            });
-
-            // Socio elegido sin expediente (al regresar del servidor)
-            const socio = $('selSocio').value;
-            if (socio && !conExpediente.has(parseInt(socio))) {
-                $('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
-                $('expedienteVacio').classList.add('sin-expediente');
+            if (alerta) {
+                aviso.textContent = '⚠ ' + alerta;
+                aviso.classList.remove('d-none');
+            } else {
+                aviso.textContent = '';
+                aviso.classList.add('d-none');
             }
+        }
 
+        // Muestra el expediente del socio (o el aviso de que no tiene)
+        function mostrarExpediente(r) {
+            var vacio = document.getElementById('expedienteVacio');
+            var datos = document.getElementById('expedienteDatos');
+
+            if (r.tieneExpediente) {
+                document.getElementById('expTipoSangre').textContent = r.expediente.tipoSangre || '—';
+                document.getElementById('expPadecimientos').textContent = r.expediente.padecimientos || '—';
+                document.getElementById('expLesiones').textContent = r.expediente.lesiones || '—';
+                document.getElementById('expAlergias').textContent = r.expediente.alergias || '—';
+                document.getElementById('expCondicion').textContent = r.expediente.condicion || '—';
+                vacio.classList.add('d-none');
+                datos.classList.remove('d-none');
+            } else {
+                document.getElementById('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
+                vacio.classList.remove('d-none');
+                vacio.classList.add('sin-expediente');
+                datos.classList.add('d-none');
+            }
+        }
+
+        // Botón "Agregar al día": valida y agrega el ejercicio a la rutina
+        document.getElementById('btnAgregar').addEventListener('click', function () {
+            var d = {
+                IdEjercicio: parseInt(document.getElementById('nuevoEjercicio').value),
+                DiaSemana: document.getElementById('nuevoDia').value,
+                Series: parseInt(document.getElementById('nuevoSeries').value),
+                Repeticiones: parseInt(document.getElementById('nuevoRepeticiones').value),
+                TiempoDescanso: parseInt(document.getElementById('nuevoDescanso').value)
+            };
+
+            var error = '';
+            if (isNaN(d.IdEjercicio))
+                error = 'Selecciona un ejercicio.';
+            else if (isNaN(d.Series) || d.Series <= 0)
+                error = 'Las series deben ser mayores a 0.';
+            else if (isNaN(d.Repeticiones) || d.Repeticiones <= 0)
+                error = 'Las repeticiones deben ser mayores a 0.';
+            else if (isNaN(d.TiempoDescanso) || d.TiempoDescanso < 0)
+                error = 'El descanso no puede ser negativo.';
+
+            document.getElementById('errorAgregar').textContent = error;
+            if (error != '')
+                return;
+
+            detalles.push(d);
             dibujar();
-        })();
+        });
+
+        // Botón X de cada ejercicio: lo quita de la rutina
+        document.getElementById('matriz').addEventListener('click', function (e) {
+            var boton = e.target.closest('.quitar');
+            if (boton == null)
+                return;
+
+            detalles.splice(parseInt(boton.getAttribute('data-i')), 1);
+            dibujar();
+        });
+
+        document.getElementById('nuevoEjercicio').addEventListener('change', mostrarAlertaPrevia);
+
+        // Al cambiar de socio se trae su expediente y se recalculan las alertas
+        document.getElementById('selSocio').addEventListener('change', function () {
+            var id = this.value;
+            alertas = {};
+
+            if (id == '') {
+                document.getElementById('expedienteVacioTexto').textContent = 'Selecciona un socio para ver su expediente médico.';
+                document.getElementById('expedienteVacio').classList.remove('d-none');
+                document.getElementById('expedienteVacio').classList.remove('sin-expediente');
+                document.getElementById('expedienteDatos').classList.add('d-none');
+                dibujar();
+                return;
+            }
+
+            fetch('?handler=Expediente&idCliente=' + id)
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (r) {
+                    alertas = r.alertas;
+                    mostrarExpediente(r);
+                    dibujar();
+                });
+        });
+
+        // Antes de enviar, convierte los ejercicios en campos ocultos Rutina.Detalles[i].*
+        document.getElementById('formRutina').addEventListener('submit', function (e) {
+            if (detalles.length == 0) {
+                e.preventDefault();
+                document.getElementById('errorAgregar').textContent = 'Agrega al menos un ejercicio a la rutina.';
+                return;
+            }
+
+            var campos = ['IdEjercicio', 'DiaSemana', 'Series', 'Repeticiones', 'TiempoDescanso'];
+            var html = '';
+            for (var i = 0; i < detalles.length; i++) {
+                for (var c = 0; c < campos.length; c++) {
+                    html += '<input type="hidden" name="Rutina.Detalles[' + i + '].' + campos[c] + '" value="' + escapar(detalles[i][campos[c]]) + '" />';
+                }
+            }
+            document.getElementById('detallesOcultos').innerHTML = html;
+        });
+
+        // Si regresó del servidor con un socio sin expediente, muestra el aviso
+        var socioElegido = document.getElementById('selSocio').value;
+        if (socioElegido != '' && conExpediente.indexOf(parseInt(socioElegido)) == -1) {
+            document.getElementById('expedienteVacioTexto').textContent = 'Este socio no tiene expediente médico. Es obligatorio para asignarle una rutina.';
+            document.getElementById('expedienteVacio').classList.add('sin-expediente');
+        }
+
+        dibujar();
     </script>
 }

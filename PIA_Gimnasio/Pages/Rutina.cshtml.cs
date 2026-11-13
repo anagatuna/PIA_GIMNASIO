@@ -1,23 +1,23 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
+using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Permisos: Seguridad/Modulos.cs
-    public class RutinaModel : PaginaBase
+    // Lista de rutinas. El entrenador solo ve las que él diseñó.
+    public class RutinaModel : PaginaProtegida
     {
         private readonly logicaRutina _logica;
 
         public RutinaModel(logicaRutina logica)
         {
             _logica = logica;
+            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
-        // Filtros de búsqueda (vienen en la URL para conservarse al paginar)
+        // Filtros de búsqueda
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdCliente { get; set; }
 
@@ -28,35 +28,14 @@ namespace PIA_Gimnasio.Pages
         public string? BusquedaObjetivo { get; set; }
 
         // Para los combos y la tabla
-        public List<SelectListItem> Socios { get; set; } = new();
-        public List<SelectListItem> Entrenadores { get; set; } = new();
-        public List<SelectListItem> Objetivos { get; } = CargarCombo(validacionRutina.Objetivos);
-        public List<DataRow> Rutinas { get; set; } = new();
+        public List<SelectListItem> Socios { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Objetivos { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Rutinas { get; set; } = new List<DataRow>();
 
-        // El entrenador no filtra por entrenador: siempre ve las suyas
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
-        {
-            return Filtros(pagina, ("BusquedaIdCliente", BusquedaIdCliente),
-                ("BusquedaIdEmpleado", EsEntrenador ? null : BusquedaIdEmpleado), ("BusquedaObjetivo", BusquedaObjetivo));
-        }
-
-        // Al abrir la página o al buscar
         public void OnGet()
         {
-            // El entrenador solo ve las rutinas que él diseñó (sin empleado ligado no ve ninguna)
-            if (EsEntrenador)
-                BusquedaIdEmpleado = IdEmpleadoSesion() ?? -1;
-
-            try
-            {
-                Socios = CargarCombo(_logica.ConsultarSocios(), "IdCliente", "Socio");
-                Entrenadores = CargarCombo(_logica.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
-                Rutinas = Paginar(_logica.Consultar(BusquedaIdCliente, BusquedaIdEmpleado, BusquedaObjetivo));
-            }
-            catch (SqlException)
-            {
-                MostrarErrorConexion();
-            }
+            Cargar();
         }
 
         // Botón Eliminar (baja lógica)
@@ -67,16 +46,45 @@ namespace PIA_Gimnasio.Pages
                 // El entrenador solo puede eliminar las rutinas que él diseñó
                 DataRow? rutina = _logica.Obtener(id);
                 if (rutina != null && EsEntrenador && Convert.ToInt32(rutina["IdEmpleado"]) != IdEmpleadoSesion())
-                    MostrarMensaje("Solo puedes eliminar las rutinas que tú diseñaste.", "warning");
+                {
+                    Mensaje = "Solo puedes eliminar las rutinas que tú diseñaste.";
+                    TipoMensaje = "warning";
+                }
                 else
-                    MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
+                {
+                    bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion());
+                    Mensaje = r.Mensaje;
+                    TipoMensaje = r.TipoMensaje;
+                }
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarMensaje("Ocurrió un error al eliminar la rutina.", "danger");
+                Mensaje = "Ocurrió un error al eliminar la rutina.";
+                TipoMensaje = "danger";
             }
+            Cargar();
+            return Page();
+        }
 
-            return Redirigir();
+        // Llena combos y tabla
+        private void Cargar()
+        {
+            // El entrenador solo ve las rutinas que él diseñó (sin empleado ligado no ve ninguna)
+            if (EsEntrenador)
+                BusquedaIdEmpleado = IdEmpleadoSesion() ?? -1;
+
+            Objetivos = CargarCombo(logicaRutina.Objetivos);
+            try
+            {
+                Socios = CargarCombo(_logica.ConsultarSocios(), "IdCliente", "Socio");
+                Entrenadores = CargarCombo(_logica.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
+                Rutinas = Paginar(_logica.Consultar(BusquedaIdCliente, BusquedaIdEmpleado, BusquedaObjetivo));
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
+            }
         }
     }
 }

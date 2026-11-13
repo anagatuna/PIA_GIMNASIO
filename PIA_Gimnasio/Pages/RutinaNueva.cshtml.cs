@@ -1,15 +1,13 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Permisos: Seguridad/Modulos.cs
-    public class RutinaNuevaModel : PaginaBase
+    // Diseñador de rutinas: cabecera + ejercicios por día, con verificación del expediente médico
+    public class RutinaNuevaModel : PaginaProtegida
     {
         private readonly logicaRutina _logica;
         private readonly logicaEjercicio _logicaEjercicio;
@@ -18,9 +16,10 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaEjercicio = logicaEjercicio;
+            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
-        // Datos del formulario (cabecera + matriz semanal)
+        // Datos del formulario (cabecera + ejercicios)
         [BindProperty]
         public bdRutina Rutina { get; set; } = new bdRutina();
 
@@ -29,52 +28,14 @@ namespace PIA_Gimnasio.Pages
         public bool ConfirmarAlertas { get; set; }
 
         // Para los combos y el expediente
-        public List<SelectListItem> Socios { get; set; } = new();
-        public HashSet<int> SociosConExpediente { get; set; } = new();
-        public List<SelectListItem> Entrenadores { get; set; } = new();
-        public List<SelectListItem> Objetivos { get; } = CargarCombo(validacionRutina.Objetivos);
-        public List<DataRow> Ejercicios { get; set; } = new();
+        public List<SelectListItem> Socios { get; set; } = new List<SelectListItem>();
+        public List<int> SociosConExpediente { get; set; } = new List<int>();
+        public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Objetivos { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Ejercicios { get; set; } = new List<DataRow>();
         public DataRow? Expediente { get; set; }
-        public Dictionary<int, string> AlertasPorEjercicio { get; set; } = new();
-        public List<string> Alertas { get; set; } = new();
-
-        // Alerta de cada ejercicio activo para el expediente del socio (vacío si no hay expediente)
-        private Dictionary<int, string> CalcularAlertas(DataRow? expediente)
-        {
-            var alertas = new Dictionary<int, string>();
-            foreach (DataRow e in Ejercicios)
-            {
-                string? alerta = logicaRutina.RevisarContraindicacion(expediente, e["Nombre"].ToString()!, e["ContraIndicacion"].ToString());
-                if (alerta != null)
-                    alertas[Convert.ToInt32(e["IdEjercicio"])] = alerta;
-            }
-            return alertas;
-        }
-
-        private void CargarPantalla()
-        {
-            try
-            {
-                DataTable socios = _logica.ConsultarSocios();
-                Socios = CargarCombo(socios, "IdCliente", "Socio");
-                SociosConExpediente = socios.AsEnumerable().Where(r => Convert.ToInt32(r["TieneExpediente"]) == 1)
-                    .Select(r => Convert.ToInt32(r["IdCliente"])).ToHashSet();
-
-                Entrenadores = CargarCombo(_logica.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
-                Ejercicios = _logicaEjercicio.ConsultarActivos().AsEnumerable().ToList();
-
-                // Expediente y alertas del socio elegido
-                if (Rutina.IdCliente.HasValue)
-                {
-                    Expediente = _logica.ObtenerExpediente(Rutina.IdCliente.Value);
-                    AlertasPorEjercicio = CalcularAlertas(Expediente);
-                }
-            }
-            catch (SqlException)
-            {
-                MostrarErrorConexion();
-            }
-        }
+        public Dictionary<int, string> AlertasPorEjercicio { get; set; } = new Dictionary<int, string>();
+        public List<string> Alertas { get; set; } = new List<string>();
 
         // Al abrir el diseñador (opcionalmente con un socio ya elegido)
         public void OnGet(int? idCliente)
@@ -83,19 +44,22 @@ namespace PIA_Gimnasio.Pages
             if (EsEntrenador)
                 Rutina.IdEmpleado = IdEmpleadoSesion();   // El entrenador solo asigna rutinas a su nombre
 
-            CargarPantalla();
+            Cargar();
         }
 
         // Al cambiar de socio: regresa su expediente y la alerta de cada ejercicio (lo usa el JavaScript)
         public IActionResult OnGetExpediente(int idCliente)
         {
-            Ejercicios = _logicaEjercicio.ConsultarActivos().AsEnumerable().ToList();
+            CargarEjercicios();
             DataRow? expediente = _logica.ObtenerExpediente(idCliente);
+
+            if (expediente == null)
+                return new JsonResult(new { tieneExpediente = false, alertas = new Dictionary<int, string>() });
 
             return new JsonResult(new
             {
-                tieneExpediente = expediente != null,
-                expediente = expediente == null ? null : new
+                tieneExpediente = true,
+                expediente = new
                 {
                     tipoSangre = expediente["TipoSangre"].ToString(),
                     padecimientos = expediente["PadecimientosCronicos"].ToString(),
@@ -113,48 +77,146 @@ namespace PIA_Gimnasio.Pages
             if (EsEntrenador)
                 Rutina.IdEmpleado = IdEmpleadoSesion();
 
-            CargarPantalla();
+            Cargar();
 
-            // Cabecera, matriz semanal y métricas (Logica/Validacion/validacionRutina.cs)
-            var idsActivos = Ejercicios.Select(e => Convert.ToInt32(e["IdEjercicio"])).ToHashSet();
-            List<string> errores = validacionRutina.Validar(Rutina, idsActivos);
-
-            // Expediente médico obligatorio
-            if (Rutina.IdCliente.HasValue && Expediente == null)
-                errores.Add("El socio no tiene expediente médico. Regístralo antes de asignarle una rutina.");
-
-            if (errores.Count > 0)
+            Mensaje = Validar();
+            if (Mensaje != "")
             {
-                MostrarMensaje(errores[0], "warning");
+                TipoMensaje = "warning";
                 return Page();
             }
 
             // Verificación médica: si hay contraindicaciones, el entrenador debe confirmarlas
-            var nombres = Ejercicios.ToDictionary(e => Convert.ToInt32(e["IdEjercicio"]), e => e);
-            Alertas = logicaRutina.RevisarRutina(Expediente, Rutina.Detalles
-                .Select(d => (nombres[d.IdEjercicio]["Nombre"].ToString()!, nombres[d.IdEjercicio]["ContraIndicacion"].ToString())));
+            foreach (bdDetalleRutina d in Rutina.Detalles)
+            {
+                DataRow ejercicio = BuscarEjercicio(d.IdEjercicio)!;
+                string? alerta = logicaRutina.RevisarContraindicacion(Expediente, ejercicio["Nombre"].ToString()!, ejercicio["ContraIndicacion"].ToString());
+
+                // Una alerta por ejercicio, aunque se repita en varios días
+                if (alerta != null && !Alertas.Contains(alerta))
+                    Alertas.Add(alerta);
+            }
 
             if (Alertas.Count > 0 && !ConfirmarAlertas)
             {
-                MostrarMensaje("Hay ejercicios contraindicados para este socio. Revisa las alertas y confirma para guardar.", "warning");
+                Mensaje = "Hay ejercicios contraindicados para este socio. Revisa las alertas y confirma para guardar.";
+                TipoMensaje = "warning";
                 return Page();
             }
 
             try
             {
-                var (respuesta, idRutina) = _logica.Guardar(Rutina, IdUsuarioSesion());
-                MostrarRespuesta(respuesta);
-
-                if (respuesta.TipoMensaje != "success")
+                bdRespuesta r = _logica.Guardar(Rutina, IdUsuarioSesion());
+                if (r.TipoMensaje != "success")
+                {
+                    Mensaje = r.Mensaje;
+                    TipoMensaje = r.TipoMensaje;
                     return Page();
+                }
 
-                return Redirigir("/RutinaDetalle", new { id = idRutina });
+                // Abre el detalle de la rutina recién guardada
+                return RedirectToPage("/RutinaDetalle", new { id = r.Id, guardada = true });
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarMensaje("Ocurrió un error al guardar la rutina.", "danger");
+                Mensaje = "Ocurrió un error al guardar la rutina.";
+                TipoMensaje = "danger";
                 return Page();
             }
+        }
+
+        // Llena combos, ejercicios y el expediente del socio elegido
+        private void Cargar()
+        {
+            Objetivos = CargarCombo(logicaRutina.Objetivos);
+            try
+            {
+                DataTable socios = _logica.ConsultarSocios();
+                Socios = CargarCombo(socios, "IdCliente", "Socio");
+                foreach (DataRow r in socios.Rows)
+                {
+                    if (Convert.ToInt32(r["TieneExpediente"]) == 1)
+                        SociosConExpediente.Add(Convert.ToInt32(r["IdCliente"]));
+                }
+
+                Entrenadores = CargarCombo(_logica.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
+                CargarEjercicios();
+
+                if (Rutina.IdCliente != null)
+                {
+                    Expediente = _logica.ObtenerExpediente(Rutina.IdCliente.Value);
+                    AlertasPorEjercicio = CalcularAlertas(Expediente);
+                }
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
+            }
+        }
+
+        private void CargarEjercicios()
+        {
+            Ejercicios = new List<DataRow>();
+            foreach (DataRow r in _logicaEjercicio.ConsultarActivos().Rows)
+                Ejercicios.Add(r);
+        }
+
+        private DataRow? BuscarEjercicio(int idEjercicio)
+        {
+            foreach (DataRow e in Ejercicios)
+            {
+                if (Convert.ToInt32(e["IdEjercicio"]) == idEjercicio)
+                    return e;
+            }
+            return null;
+        }
+
+        // Alerta de cada ejercicio activo para el expediente del socio
+        private Dictionary<int, string> CalcularAlertas(DataRow? expediente)
+        {
+            Dictionary<int, string> alertas = new Dictionary<int, string>();
+            foreach (DataRow e in Ejercicios)
+            {
+                string? alerta = logicaRutina.RevisarContraindicacion(expediente, e["Nombre"].ToString()!, e["ContraIndicacion"].ToString());
+                if (alerta != null)
+                    alertas[Convert.ToInt32(e["IdEjercicio"])] = alerta;
+            }
+            return alertas;
+        }
+
+        // Reglas de captura. Regresa el primer error o "" si todo está bien.
+        private string Validar()
+        {
+            if (Rutina.IdCliente == null)
+                return "Selecciona el socio.";
+            if (Expediente == null)
+                return "El socio no tiene expediente médico. Regístralo antes de asignarle una rutina.";
+            if (Rutina.IdEmpleado == null)
+                return "Selecciona el entrenador.";
+            if (string.IsNullOrWhiteSpace(Rutina.Nombre))
+                return "Ingresa el nombre de la rutina.";
+            if (string.IsNullOrEmpty(Rutina.Objetivo) || !logicaRutina.Objetivos.Contains(Rutina.Objetivo))
+                return "Selecciona el objetivo.";
+            if (Rutina.FechaAsignacion == null)
+                return "Selecciona la fecha de asignación.";
+            if (Rutina.Detalles.Count == 0)
+                return "Agrega al menos un ejercicio a la rutina.";
+
+            foreach (bdDetalleRutina d in Rutina.Detalles)
+            {
+                if (d.DiaSemana == null || !logicaRutina.DiasSemana.Contains(d.DiaSemana))
+                    return "\"" + d.DiaSemana + "\" no es un día válido. Usa de Lunes a Domingo.";
+                if (d.Series <= 0)
+                    return "Las series deben ser mayores a 0.";
+                if (d.Repeticiones <= 0)
+                    return "Las repeticiones deben ser mayores a 0.";
+                if (d.TiempoDescanso < 0)
+                    return "El tiempo de descanso no puede ser negativo.";
+                if (BuscarEjercicio(d.IdEjercicio) == null)
+                    return "Hay ejercicios que no existen o están inactivos.";
+            }
+            return "";
         }
     }
 }

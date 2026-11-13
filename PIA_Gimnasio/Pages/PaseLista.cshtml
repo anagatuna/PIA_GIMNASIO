@@ -4,7 +4,13 @@
 @{
     ViewData["Title"] = "Pase de lista";
     ViewData["AnchoCompleto"] = true;
-    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
     var cultura = new System.Globalization.CultureInfo("es-MX");
     var clase = Model.ClaseActual;
     bool puedePasarLista = clase != null && Convert.ToInt32(clase["PuedePasarLista"]) == 1;
@@ -91,7 +97,7 @@
                     }
                     else
                     {
-                        <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                        <form method="post" asp-page-handler="Guardar" asp-route-Fecha="@Model.Dia.ToString("yyyy-MM-dd")" asp-route-IdClase="@Model.IdClase">
                             @if (puedePasarLista)
                             {
                                 <div class="d-flex justify-content-end mb-2">
@@ -139,7 +145,15 @@
 
 @section Scripts {
     <script>
-        document.getElementById('todosAsistieron')?.addEventListener('click', () =>
-            document.querySelectorAll('.opcion.asistio input').forEach(r => r.checked = true));
+        // Botón "Todos asistieron": marca la opción Asistió de cada socio
+        var botonTodos = document.getElementById('todosAsistieron');
+        if (botonTodos != null) {
+            botonTodos.addEventListener('click', function () {
+                var opciones = document.querySelectorAll('.opcion.asistio input');
+                for (var i = 0; i < opciones.length; i++) {
+                    opciones[i].checked = true;
+                }
+            });
+        }
     </script>
 }

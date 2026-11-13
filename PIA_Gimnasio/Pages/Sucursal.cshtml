@@ -6,7 +6,13 @@
     ViewData["EliminarTitulo"] = "¿Eliminar sucursal?";
     ViewData["EliminarDescripcion"] = "se dará de baja. Solo es posible si no tiene empleados ni socios registrados.";
     bool esEdicion = Model.Sucursal.IdSucursal > 0;
-    string Hora(object valor) => valor is TimeSpan t ? t.ToString(@"hh\:mm") : "";
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
 }
 
 <section class="gestion">
@@ -19,7 +25,7 @@
                     <i class="bi bi-building"></i>&nbsp;@(esEdicion ? "Editar sucursal" : "Nueva sucursal")
                 </h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <input type="hidden" asp-for="Sucursal.IdSucursal" />
 
                     <h6 class="subtitulo-seccion">Datos generales</h6>
@@ -117,7 +123,7 @@
                         <button type="submit" class="btn btn-naranja">
                             <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
                         </button>
-                        <a class="btn btn-oscuro" asp-page="/Sucursal" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                        <a class="btn btn-oscuro" asp-page="/Sucursal">Cancelar</a>
                     </div>
                 </form>
             </div>
@@ -129,7 +135,7 @@
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Sucursales</span></h4>
 
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-floating">
@@ -188,13 +194,11 @@
                                     int aforo = Convert.ToInt32(fila["AforoMaximo"]);
                                     int ocupacion = Convert.ToInt32(fila["Ocupacion"]);
                                     int porcentaje = aforo == 0 ? 0 : Math.Min(100, ocupacion * 100 / aforo);
-                                    var rutaEditar = Model.RutaFiltros();
-                                    rutaEditar["id"] = id.ToString()!;
 
                                     <tr class="@(Model.Sucursal.IdSucursal.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
-                                               asp-page="/Sucursal" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                               asp-page="/Sucursal" asp-page-handler="Editar" asp-route-id="@id">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                         </td>

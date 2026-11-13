@@ -1,8 +1,17 @@
 @* Datos del expediente médico del socio. En el diseñador de rutinas el JavaScript los actualiza por id. *@
 @model DataRow?
 @{
-    string Dato(string columna) => Model == null || Model[columna] == DBNull.Value || string.IsNullOrWhiteSpace(Model[columna].ToString())
-        ? "—" : Model[columna].ToString()!;
+    // Regresa el dato del expediente o "—" si viene vacío
+    string Dato(string columna)
+    {
+        if (Model == null)
+            return "—";
+
+        string valor = Model[columna].ToString() ?? "";
+        if (valor.Trim() == "")
+            return "—";
+        return valor;
+    }
 }
 
 <div id="expedienteVacio" class="expediente-vacio @(Model == null ? "" : "d-none")">

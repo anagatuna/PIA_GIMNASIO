@@ -16,7 +16,7 @@
             <div class="card-gestion h-100">
                 <h4 class="titulo-card text-center"><i class="bi bi-credit-card-2-front"></i>&nbsp;Nueva suscripción</h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <h6 class="subtitulo-seccion">Venta</h6>
                     <div class="form-floating mb-1">
                         <select asp-for="Suscripcion.IdCliente" asp-items="Model.Socios" class="form-select" required>
@@ -77,7 +77,7 @@
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Suscripciones</span></h4>
 
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-floating">
@@ -132,7 +132,9 @@
                                 {
                                     int estatus = Convert.ToInt32(fila["IdEstatus"]);
                                     int dias = Convert.ToInt32(fila["DiasRestantes"]);
-                                    string clase = estatus switch { 1 => "etiqueta-activo", 3 => "etiqueta-avanzado", _ => "etiqueta-inactivo" };
+                                    string clase = "etiqueta-inactivo";
+                                    if (estatus == 1) clase = "etiqueta-activo";
+                                    else if (estatus == 3) clase = "etiqueta-avanzado";
 
                                     <tr>
                                         <td class="col-accion">
@@ -193,13 +195,27 @@
     <script>
         // Muestra la fecha de vencimiento (1 mes menos 1 día, igual que spSuscripcion)
         document.getElementById('fechaInicio').addEventListener('change', function () {
-            const salida = document.getElementById('fechaVencimiento');
-            if (!this.value) { salida.value = ''; return; }
-            const [a, m, d] = this.value.split('-').map(Number);
-            const vence = new Date(a, m, d);          // mismo día del mes siguiente
-            if (vence.getDate() !== d) vence.setDate(0); // 31 ene -> 28/29 feb (igual que DATEADD)
+            var salida = document.getElementById('fechaVencimiento');
+            if (this.value == '') {
+                salida.value = '';
+                return;
+            }
+
+            // La fecha viene como "2026-11-13"
+            var partes = this.value.split('-');
+            var anio = parseInt(partes[0]);
+            var mes = parseInt(partes[1]);
+            var dia = parseInt(partes[2]);
+
+            var vence = new Date(anio, mes, dia);   // mismo día del mes siguiente (en JavaScript los meses van de 0 a 11)
+            if (vence.getDate() != dia)
+                vence.setDate(0);                   // 31 ene -> 28/29 feb (igual que DATEADD)
             vence.setDate(vence.getDate() - 1);
-            salida.value = vence.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            // Formato dd/MM/yyyy
+            var dd = ('0' + vence.getDate()).slice(-2);
+            var mm = ('0' + (vence.getMonth() + 1)).slice(-2);
+            salida.value = dd + '/' + mm + '/' + vence.getFullYear();
         });
     </script>
 }

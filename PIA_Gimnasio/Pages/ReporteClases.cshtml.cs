@@ -1,14 +1,12 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
     // Reporte 4: ocupación y asistencia de clases. El entrenador solo ve sus clases.
-    // Permisos: Seguridad/Modulos.cs (Administrador y Entrenador)
-    public class ReporteClasesModel : PaginaBase
+    public class ReporteClasesModel : PaginaProtegida
     {
         private readonly logicaReporte _logica;
         private readonly logicaSucursal _logicaSucursal;
@@ -19,39 +17,32 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaEmpleado = logicaEmpleado;
+            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
+        // Filtros
         [BindProperty(SupportsGet = true)] public string? Clase { get; set; }
         [BindProperty(SupportsGet = true)] public int? IdSucursal { get; set; }
         [BindProperty(SupportsGet = true)] public int? IdEmpleado { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Desde { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Hasta { get; set; }
 
-        public List<SelectListItem> Sucursales { get; set; } = new();
-        public List<SelectListItem> Entrenadores { get; set; } = new();
-        public List<DataRow> Filas { get; set; } = new();
+        public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Filas { get; set; } = new List<DataRow>();
+
+        // Resumen
         public int TotalReservas { get; set; }
         public double OcupacionPromedio { get; set; }
         public double? Efectividad { get; set; }
 
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
-        {
-            return Filtros(pagina, ("Clase", Clase), ("IdSucursal", IdSucursal), ("IdEmpleado", IdEmpleado),
-                ("Desde", Desde?.ToString("yyyy-MM-dd")), ("Hasta", Hasta?.ToString("yyyy-MM-dd")));
-        }
-
-        private DataTable Consultar()
-        {
-            if (EsEntrenador)
-                IdEmpleado = IdEmpleadoSesion() ?? -1;
-            return _logica.Clases(Clase, IdSucursal, IdEmpleado, Desde, Hasta);
-        }
-
         public void OnGet()
         {
             // Por omisión, el mes actual
-            Desde ??= new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            Hasta ??= Desde.Value.AddMonths(1).AddDays(-1);
+            if (Desde == null)
+                Desde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            if (Hasta == null)
+                Hasta = Desde.Value.AddMonths(1).AddDays(-1);
 
             try
             {
@@ -59,34 +50,53 @@ namespace PIA_Gimnasio.Pages
                 if (!EsEntrenador)
                     Entrenadores = CargarCombo(_logicaEmpleado.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
 
-                // Sin consulta si el rango de fechas está invertido
-                if (!RangoFechasValido(Desde, Hasta))
+                if (Desde > Hasta)
+                {
+                    Mensaje = "La fecha inicial no puede ser posterior a la fecha final.";
+                    TipoMensaje = "warning";
                     return;
+                }
 
-                DataTable tabla = Consultar();
-                var filas = tabla.AsEnumerable().ToList();
-                TotalReservas = filas.Sum(r => Convert.ToInt32(r["Reservas"]));
-                OcupacionPromedio = filas.Count == 0 ? 0 : filas.Average(r => Convert.ToDouble(r["Ocupacion"]));
-                int asistieron = filas.Sum(r => Convert.ToInt32(r["Asistieron"]));
-                int faltas = filas.Sum(r => Convert.ToInt32(r["Faltas"]));
-                Efectividad = asistieron + faltas == 0 ? null : asistieron * 100.0 / (asistieron + faltas);
-                Filas = Paginar(tabla);
+                DataTable dt = Consultar();
+
+                double sumaOcupacion = 0;
+                int asistieron = 0;
+                int faltas = 0;
+                foreach (DataRow r in dt.Rows)
+                {
+                    TotalReservas += Convert.ToInt32(r["Reservas"]);
+                    sumaOcupacion += Convert.ToDouble(r["Ocupacion"]);
+                    asistieron += Convert.ToInt32(r["Asistieron"]);
+                    faltas += Convert.ToInt32(r["Faltas"]);
+                }
+
+                OcupacionPromedio = dt.Rows.Count == 0 ? 0 : sumaOcupacion / dt.Rows.Count;
+                if (asistieron + faltas > 0)
+                    Efectividad = asistieron * 100.0 / (asistieron + faltas);
+
+                Filas = Paginar(dt);
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
+        // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            if (!RangoFechasValido(Desde, Hasta))
-                return Redirigir();
+            return ExportarExcel(Consultar(), "Reporte_Clases",
+                new string[] { "Clase", "Fecha", "Hora", "Salón", "Sucursal", "Entrenador", "Cupo", "Reservas", "Ocupación %", "Asistieron", "Faltas", "Efectividad %" },
+                new string[] { "Clase", "Fecha", "HoraInicio", "Salon", "Sucursal", "Entrenador", "CupoMaximo", "Reservas", "Ocupacion", "Asistieron", "Faltas", "Efectividad" });
+        }
 
-            return ExportarCsv(Consultar(), "Clases",
-                ("Clase", "Clase"), ("Fecha", "Fecha"), ("Hora", "HoraInicio"), ("Salón", "Salon"), ("Sucursal", "Sucursal"),
-                ("Entrenador", "Entrenador"), ("Cupo", "CupoMaximo"), ("Reservas", "Reservas"), ("Ocupación %", "Ocupacion"),
-                ("Asistieron", "Asistieron"), ("Faltas", "Faltas"), ("Efectividad %", "Efectividad"));
+        // El entrenador solo ve sus propias clases
+        private DataTable Consultar()
+        {
+            if (EsEntrenador)
+                IdEmpleado = IdEmpleadoSesion() ?? -1;
+            return _logica.Clases(Clase, IdSucursal, IdEmpleado, Desde, Hasta);
         }
     }
 }

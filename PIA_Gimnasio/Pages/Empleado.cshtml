@@ -18,7 +18,7 @@
                     <i class="bi bi-person-workspace"></i>&nbsp;@(esEdicion ? "Editar empleado" : "Nuevo empleado")
                 </h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <input type="hidden" asp-for="Empleado.IdEmpleado" />
 
                     <!-- Datos personales -->
@@ -137,7 +137,7 @@
                         <button type="submit" class="btn btn-naranja">
                             <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
                         </button>
-                        <a class="btn btn-oscuro" asp-page="/Empleado" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                        <a class="btn btn-oscuro" asp-page="/Empleado">Cancelar</a>
                     </div>
                 </form>
             </div>
@@ -149,7 +149,7 @@
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Empleados</span></h4>
 
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <div class="form-floating">
@@ -213,13 +213,11 @@
                                 {
                                     var id = fila["IdEmpleado"];
                                     bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
-                                    var rutaEditar = Model.RutaFiltros();
-                                    rutaEditar["id"] = id.ToString()!;
 
                                     <tr class="@(Model.Empleado.IdEmpleado.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
-                                               asp-page="/Empleado" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                               asp-page="/Empleado" asp-page-handler="Editar" asp-route-id="@id">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                         </td>
@@ -277,21 +275,29 @@
 @section Scripts {
     <script>
         // Habilita las especialidades solo si el puesto seleccionado es Entrenador
-        (function () {
-            const puesto = document.getElementById('selPuesto');
-            const seccion = document.getElementById('seccionEspecialidades');
-            const ayuda = document.getElementById('ayudaEspecialidades');
+        function actualizarEspecialidades() {
+            var puesto = document.getElementById('selPuesto');
+            var seccion = document.getElementById('seccionEspecialidades');
+            var ayuda = document.getElementById('ayudaEspecialidades');
+            var esEntrenador = puesto.value != '' && puesto.value == puesto.getAttribute('data-entrenador');
 
-            function actualizar() {
-                const esEntrenador = puesto.value !== '' && puesto.value === puesto.dataset.entrenador;
-                seccion.disabled = !esEntrenador;
-                seccion.classList.toggle('deshabilitada', !esEntrenador);
-                ayuda.textContent = esEntrenador ? 'Marca las disciplinas que puede impartir.' : 'Se habilitan al seleccionar el puesto Entrenador.';
-                if (!esEntrenador)
-                    seccion.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false);
+            if (esEntrenador) {
+                seccion.disabled = false;
+                seccion.classList.remove('deshabilitada');
+                ayuda.textContent = 'Marca las disciplinas que puede impartir.';
+            } else {
+                seccion.disabled = true;
+                seccion.classList.add('deshabilitada');
+                ayuda.textContent = 'Se habilitan al seleccionar el puesto Entrenador.';
+
+                // Desmarca las especialidades
+                var casillas = seccion.querySelectorAll('input[type=checkbox]');
+                for (var i = 0; i < casillas.length; i++) {
+                    casillas[i].checked = false;
+                }
             }
+        }
 
-            puesto.addEventListener('change', actualizar);
-        })();
+        document.getElementById('selPuesto').addEventListener('change', actualizarEspecialidades);
     </script>
 }

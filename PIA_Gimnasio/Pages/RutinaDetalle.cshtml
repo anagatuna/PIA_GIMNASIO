@@ -1,6 +1,5 @@
 @page
 @model PIA_Gimnasio.Pages.RutinaDetalleModel
-@using PIA_Gimnasio.Logica.Validacion
 @using PIA_Gimnasio.Logica
 @{
     ViewData["Title"] = "Detalle de rutina";
@@ -29,7 +28,7 @@
                         <dt><i class="bi bi-calendar-event"></i> Fecha de asignación</dt>
                         <dd>@Convert.ToDateTime(r["FechaAsignacion"]).ToString("dd/MM/yyyy")</dd>
                         <dt><i class="bi bi-list-check"></i> Ejercicios</dt>
-                        <dd>@Model.Detalle.Count en @Model.Detalle.Select(d => d["DiaSemana"]).Distinct().Count() días</dd>
+                        <dd>@Model.Detalle.Count en @Model.TotalDias días</dd>
                     </dl>
 
                     <hr />
@@ -63,9 +62,15 @@
                     }
 
                     <div class="matriz-semanal">
-                        @foreach (var dia in validacionRutina.DiasSemana)
+                        @foreach (var dia in logicaRutina.DiasSemana)
                         {
-                            var delDia = Model.Detalle.Where(d => d["DiaSemana"].ToString() == dia).ToList();
+                            // Ejercicios de este día
+                            List<DataRow> delDia = new List<DataRow>();
+                            foreach (DataRow d in Model.Detalle)
+                            {
+                                if (d["DiaSemana"].ToString() == dia)
+                                    delDia.Add(d);
+                            }
                             <div class="dia-col">
                                 <div class="dia-titulo">@dia<span>@delDia.Count</span></div>
                                 <div class="dia-items">

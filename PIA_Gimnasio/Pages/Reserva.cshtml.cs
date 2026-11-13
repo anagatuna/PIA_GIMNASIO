@@ -1,16 +1,14 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
     // Captura de reservas: valida cupo del salón y límite semanal del plan (Bronce 0, Plata 3, Oro 5).
-    // Permisos: Seguridad/Modulos.cs (Administrador y Recepcionista)
-    public class ReservaModel : PaginaBase
+    // Administrador y Recepcionista.
+    public class ReservaModel : PaginaProtegida
     {
         private readonly logicaReserva _logica;
         private readonly logicaSocio _logicaSocio;
@@ -19,6 +17,7 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaSocio = logicaSocio;
+            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
         [BindProperty]
@@ -33,34 +32,14 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdEstatus { get; set; }
 
-        public List<SelectListItem> Socios { get; set; } = new();
-        public List<SelectListItem> Clases { get; set; } = new();
-        public List<SelectListItem> Estatus { get; set; } = new();
-        public List<DataRow> Reservas { get; set; } = new();
-
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
-        {
-            return Filtros(pagina, ("Busqueda", Busqueda), ("BusquedaFecha", BusquedaFecha?.ToString("yyyy-MM-dd")), ("BusquedaIdEstatus", BusquedaIdEstatus));
-        }
-
-        private void CargarPantalla()
-        {
-            try
-            {
-                Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
-                Clases = CargarCombo(_logica.ConsultarClasesDisponibles(), "IdClase", "Clase");
-                Estatus = CargarCombo(_logica.ConsultarEstatus(), "IdEstatus", "Descripcion");
-                Reservas = Paginar(_logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus));
-            }
-            catch (SqlException)
-            {
-                MostrarErrorConexion();
-            }
-        }
+        public List<SelectListItem> Socios { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Clases { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Reservas { get; set; } = new List<DataRow>();
 
         public void OnGet()
         {
-            CargarPantalla();
+            Cargar();
         }
 
         // Plan del socio y clases usadas en la semana (lo usa el JavaScript al elegir socio)
@@ -81,67 +60,96 @@ namespace PIA_Gimnasio.Pages
                     vence = Convert.ToDateTime(r["FechaVencimiento"]).ToString("dd/MM/yyyy")
                 });
             }
-            catch (SqlException)
+            catch (Exception)
             {
                 return StatusCode(503);
             }
         }
 
+        // Botón Reservar
         public IActionResult OnPostGuardar()
         {
-            List<string> errores = validacionOperacion.ValidarReserva(Reserva);
-
             // La reserva guarda al empleado que la captura
             int? idEmpleado = IdEmpleadoSesion();
-            if (!idEmpleado.HasValue)
-                errores.Add("Tu cuenta no está ligada a un empleado; no puedes capturar reservas.");
 
-            if (errores.Count > 0)
+            if (Reserva.IdCliente == null)
+                Mensaje = "Selecciona el socio.";
+            else if (Reserva.IdClase == null)
+                Mensaje = "Selecciona la clase.";
+            else if (idEmpleado == null)
+                Mensaje = "Tu cuenta no está ligada a un empleado; no puedes capturar reservas.";
+
+            if (Mensaje != "")
             {
-                MostrarMensaje(errores[0], "warning");
-                CargarPantalla();
+                TipoMensaje = "warning";
+                Cargar();
                 return Page();
             }
 
             try
             {
-                // El SP bloquea la clase y valida cupo, membresía vigente y límite semanal
-                MostrarRespuesta(_logica.Registrar(Reserva, idEmpleado!.Value, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al registrar la reserva.", "danger");
-            }
+                // El SP valida cupo, membresía vigente y límite semanal
+                bdRespuesta r = _logica.Registrar(Reserva, idEmpleado!.Value, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
 
-            if (TipoMensaje != "success")
-            {
-                CargarPantalla();
-                return Page();
+                if (r.TipoMensaje == "success")
+                {
+                    ModelState.Clear();
+                    Reserva = new bdReserva();
+                }
             }
-
-            return Redirigir();
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al registrar la reserva.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
         }
 
-        // Cancelar reserva (usa la confirmación del Layout)
+        // Botón Cancelar reserva (usa la ventana de confirmación)
         public IActionResult OnPostEliminar(int id)
         {
             try
             {
-                MostrarRespuesta(_logica.Cancelar(id, IdUsuarioSesion()));
+                bdRespuesta r = _logica.Cancelar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarMensaje("Ocurrió un error al cancelar la reserva.", "danger");
+                Mensaje = "Ocurrió un error al cancelar la reserva.";
+                TipoMensaje = "danger";
             }
-
-            return Redirigir();
+            Cargar();
+            return Page();
         }
 
+        // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            return ExportarCsv(_logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus), "Reservas",
-                ("Folio", "Folio"), ("Socio", "Socio"), ("Clase", "Clase"), ("Fecha", "Fecha"), ("Hora", "HoraInicio"),
-                ("Salón", "Salon"), ("Sucursal", "Sucursal"), ("Solicitud", "FechaSolicitud"), ("Estatus", "Estatus"));
+            DataTable dt = _logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus);
+            return ExportarExcel(dt, "Reservas",
+                new string[] { "Folio", "Socio", "Clase", "Fecha", "Hora", "Salón", "Sucursal", "Solicitud", "Estatus" },
+                new string[] { "Folio", "Socio", "Clase", "Fecha", "HoraInicio", "Salon", "Sucursal", "FechaSolicitud", "Estatus" });
+        }
+
+        // Llena combos y tabla
+        private void Cargar()
+        {
+            try
+            {
+                Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
+                Clases = CargarCombo(_logica.ConsultarClasesDisponibles(), "IdClase", "Clase");
+                Estatus = CargarCombo(_logica.ConsultarEstatus(), "IdEstatus", "Descripcion");
+                Reservas = Paginar(_logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus));
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
+            }
         }
     }
 }

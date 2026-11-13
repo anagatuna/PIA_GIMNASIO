@@ -33,23 +33,21 @@
                 <h1 class="titulo">Bienvenido</h1>
                 <p class="subtitulo">Inicia sesión para continuar</p>
 
-                @if (!string.IsNullOrEmpty(Model.MensajeError))
+                @if (Model.Mensaje != "")
                 {
-                    <div class="alerta-error" role="alert">@Model.MensajeError</div>
+                    <div class="alerta-error" role="alert">@Model.Mensaje</div>
                 }
 
                 <form method="post">
-                    <input type="hidden" asp-for="ReturnUrl" />
-
                     <div class="mb-3">
-                        <label asp-for="Input.Cuenta" class="form-label">Cuenta</label>
-                        <input asp-for="Input.Cuenta" class="form-control" placeholder="Usuario" maxlength="50" autocomplete="username" autofocus required />
+                        <label asp-for="Usuario.Cuenta" class="form-label">Cuenta</label>
+                        <input asp-for="Usuario.Cuenta" class="form-control" placeholder="Usuario" maxlength="50" autocomplete="username" autofocus required />
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.Contrasenia" class="form-label">Contraseña</label>
+                        <label asp-for="Usuario.Contrasenia" class="form-label">Contraseña</label>
                         <div class="campo-pass">
-                            <input asp-for="Input.Contrasenia" type="password" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="current-password" required />
+                            <input asp-for="Usuario.Contrasenia" type="password" class="form-control" placeholder="Contraseña" maxlength="50" autocomplete="current-password" required />
                             <button type="button" class="btn-ver" id="btnVer">Mostrar</button>
                         </div>
                     </div>
@@ -63,17 +61,17 @@
     </main>
 
     <script>
-            // Mostrar / ocultar contraseña
-            (function() {
-                const btn = document.getElementById('btnVer');
-                const input = document.getElementById('Input_Contrasenia');
-                if (!btn || !input) return;
-                btn.addEventListener('click', function() {
-                    const oculto = input.type === 'password';
-                    input.type = oculto ? 'text' : 'password';
-                    btn.textContent = oculto ? 'Ocultar' : 'Mostrar';
-                });
-            })();
+        // Mostrar / ocultar contraseña
+        document.getElementById('btnVer').addEventListener('click', function () {
+            var input = document.getElementById('Usuario_Contrasenia');
+            if (input.type == 'password') {
+                input.type = 'text';
+                this.textContent = 'Ocultar';
+            } else {
+                input.type = 'password';
+                this.textContent = 'Mostrar';
+            }
+        });
     </script>
 </body>
 </html>

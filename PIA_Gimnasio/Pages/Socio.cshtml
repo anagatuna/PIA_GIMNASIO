@@ -21,7 +21,7 @@
                     <i class="bi bi-person-plus"></i>&nbsp;@(esEdicion ? "Editar socio" : "Nuevo socio")
                 </h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <input type="hidden" asp-for="Socio.IdCliente" />
 
                     <!-- Folio -->
@@ -140,7 +140,7 @@
                         <button type="submit" class="btn btn-naranja">
                             <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Registrar socio")
                         </button>
-                        <a class="btn btn-oscuro" asp-page="/Socio" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                        <a class="btn btn-oscuro" asp-page="/Socio">Cancelar</a>
                     </div>
                 </form>
             </div>
@@ -152,7 +152,7 @@
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Socios</span></h4>
 
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-floating">
@@ -212,13 +212,11 @@
                                     var id = fila["IdCliente"];
                                     bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
                                     bool tieneExpediente = Convert.ToInt32(fila["TieneExpediente"]) == 1;
-                                    var rutaEditar = Model.RutaFiltros();
-                                    rutaEditar["id"] = id.ToString()!;
 
                                     <tr class="@(Model.Socio.IdCliente.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
-                                               asp-page="/Socio" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                               asp-page="/Socio" asp-page-handler="Editar" asp-route-id="@id">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                         </td>

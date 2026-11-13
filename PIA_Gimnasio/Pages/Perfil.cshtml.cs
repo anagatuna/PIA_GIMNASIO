@@ -1,13 +1,12 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Cualquier usuario con sesión puede ver su perfil
-    public class PerfilModel : PaginaBase
+    // Cualquier usuario con sesión puede ver su perfil y cambiar su contraseña
+    public class PerfilModel : PaginaProtegida
     {
         private readonly logicaUsuario _logica;
 
@@ -18,7 +17,7 @@ namespace PIA_Gimnasio.Pages
 
         // Formulario de cambio de contraseña
         [BindProperty]
-        public CambioContrasenia Cambio { get; set; } = new();
+        public CambioContrasenia Cambio { get; set; } = new CambioContrasenia();
 
         public class CambioContrasenia
         {
@@ -30,52 +29,64 @@ namespace PIA_Gimnasio.Pages
         // Datos para la vista
         public DataRow? Perfil { get; set; }
 
-        private void CargarPerfil()
-        {
-            try
-            {
-                Perfil = _logica.ObtenerPerfil(IdUsuarioSesion());
-            }
-            catch (SqlException)
-            {
-                MostrarErrorConexion();
-            }
-        }
-
         public void OnGet()
         {
-            CargarPerfil();
+            Cargar();
         }
 
         // Botón Cambiar contraseña
         public void OnPost()
         {
-            // Reglas de captura (Logica/Validacion/validacionUsuario.cs)
-            List<string> errores = validacionUsuario.ValidarCambioContrasenia(Cambio.Actual, Cambio.Nueva, Cambio.Confirmacion);
-            if (errores.Count > 0)
+            if (string.IsNullOrEmpty(Cambio.Actual))
+                Mensaje = "Ingresa tu contraseña actual.";
+            else if (string.IsNullOrEmpty(Cambio.Nueva))
+                Mensaje = "Ingresa la nueva contraseña.";
+            else if (Cambio.Nueva.Length < 6 || Cambio.Nueva.Length > 50)
+                Mensaje = "La contraseña debe tener entre 6 y 50 caracteres.";
+            else if (Cambio.Nueva == Cambio.Actual)
+                Mensaje = "La nueva contraseña debe ser diferente a la actual.";
+            else if (Cambio.Nueva != Cambio.Confirmacion)
+                Mensaje = "La confirmación no coincide con la nueva contraseña.";
+
+            if (Mensaje != "")
             {
-                MostrarMensaje(errores[0], "warning");
-                CargarPerfil();
+                TipoMensaje = "warning";
+                Cargar();
                 return;
             }
 
             try
             {
-                MostrarRespuesta(_logica.CambiarContrasenia(IdUsuarioSesion(), Cambio.Actual!, Cambio.Nueva!));
+                bdRespuesta r = _logica.CambiarContrasenia(IdUsuarioSesion(), Cambio.Actual!, Cambio.Nueva!);
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
 
                 // Si salió bien se vacía el formulario
-                if (TipoMensaje == "success")
+                if (r.TipoMensaje == "success")
                 {
                     ModelState.Clear();
                     Cambio = new CambioContrasenia();
                 }
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarMensaje("Ocurrió un error al cambiar la contraseña.", "danger");
+                Mensaje = "Ocurrió un error al cambiar la contraseña.";
+                TipoMensaje = "danger";
             }
+            Cargar();
+        }
 
-            CargarPerfil();
+        private void Cargar()
+        {
+            try
+            {
+                Perfil = _logica.ObtenerPerfil(IdUsuarioSesion());
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
+            }
         }
     }
 }

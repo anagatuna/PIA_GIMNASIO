@@ -49,7 +49,7 @@
                     }
                     else
                     {
-                        <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                        <form method="post" asp-page-handler="Guardar" asp-route-IdCliente="@Model.IdCliente" asp-route-Busqueda="@Model.Busqueda">
                             <div class="form-floating mb-3">
                                 <select asp-for="Expediente.TipoSangre" asp-items="Model.TiposSangre" class="form-select" required>
                                     <option value="">Selecciona...</option>
@@ -91,7 +91,7 @@
             <div class="card-gestion h-100">
                 <h4 class="titulo-card"><i class="bi bi-grid-3x3-gap"></i>&nbsp;Consulta registros: <span class="resaltado">Socios</span></h4>
 
-                <form method="get">
+                <form method="get" id="formBusqueda">
                     <div class="row">
                         <div class="col-md-8 mb-3">
                             <div class="form-floating">
@@ -124,13 +124,11 @@
                                 {
                                     var id = fila["IdCliente"].ToString()!;
                                     bool tiene = Convert.ToInt32(fila["TieneExpediente"]) == 1;
-                                    var ruta = Model.RutaFiltros();
-                                    ruta["IdCliente"] = id;
 
                                     <tr class="@(Model.IdCliente?.ToString() == id ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo @(tiene ? "btn-verde" : "btn-rojo")" title="Ver expediente"
-                                               asp-page="/ExpedienteMedico" asp-all-route-data="ruta">
+                                               asp-page="/ExpedienteMedico" asp-route-IdCliente="@id" asp-route-Busqueda="@Model.Busqueda">
                                                 <i class="bi @(tiene ? "bi-eye" : "bi-exclamation-lg")"></i>
                                             </a>
                                         </td>
@@ -144,8 +142,15 @@
                                             }
                                             else
                                             {
-                                                @string.Join(" · ", new[] { fila["PadecimientosCronicos"], fila["LesionesPrevias"], fila["CondicionRiesgo"] }
-                                                    .Where(v => v != DBNull.Value && !string.IsNullOrWhiteSpace(v.ToString())))
+                                                // Junta padecimientos, lesiones y condición, saltándose los vacíos
+                                                List<string> datos = new List<string>();
+                                                foreach (string columna in new string[] { "PadecimientosCronicos", "LesionesPrevias", "CondicionRiesgo" })
+                                                {
+                                                    string valor = fila[columna].ToString() ?? "";
+                                                    if (valor.Trim() != "")
+                                                        datos.Add(valor);
+                                                }
+                                                @string.Join(" · ", datos)
                                             }
                                         </td>
                                     </tr>

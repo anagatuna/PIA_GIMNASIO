@@ -2,15 +2,14 @@
 @model PIA_Gimnasio.Pages.ReporteSociosModel
 @{
     ViewData["Title"] = "Reporte de socios";
-    ViewData["AnchoCompleto"] = true;
-    int Conteo(int estatus) => Model.Conteo.TryGetValue(estatus, out int n) ? n : 0;
+    ViewData["AnchoCompleto"] = true;
 }
 
 <section class="gestion">
     <div class="card-gestion">
         <h4 class="titulo-card"><i class="bi bi-file-earmark-text"></i>&nbsp;Reporte: <span class="resaltado">Socios y estado de membresías</span></h4>
 
-        <form method="get">
+        <form method="get" id="formBusqueda">
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <div class="form-floating">
@@ -40,10 +39,10 @@
 
         <div class="tarjetas-resumen mb-3">
             <div class="tarjeta"><span>Socios</span><b>@Model.TotalRegistros</b></div>
-            <div class="tarjeta verde"><span>Activas</span><b>@Conteo(1)</b></div>
-            <div class="tarjeta roja"><span>Vencidas</span><b>@Conteo(3)</b></div>
-            <div class="tarjeta"><span>Canceladas</span><b>@Conteo(4)</b></div>
-            <div class="tarjeta"><span>Sin membresía</span><b>@Conteo(0)</b></div>
+            <div class="tarjeta verde"><span>Activas</span><b>@Model.Activas</b></div>
+            <div class="tarjeta roja"><span>Vencidas</span><b>@Model.Vencidas</b></div>
+            <div class="tarjeta"><span>Canceladas</span><b>@Model.Canceladas</b></div>
+            <div class="tarjeta"><span>Sin membresía</span><b>@Model.SinMembresia</b></div>
         </div>
 
         @if (Model.Filas.Count > 0)
@@ -58,7 +57,9 @@
                         {
                             int estatus = Convert.ToInt32(f["IdEstatusMembresia"]);
                             bool expediente = Convert.ToInt32(f["TieneExpediente"]) == 1;
-                            string clase = estatus switch { 1 => "etiqueta-activo", 3 => "etiqueta-avanzado", _ => "etiqueta-inactivo" };
+                            string clase = "etiqueta-inactivo";
+                            if (estatus == 1) clase = "etiqueta-activo";
+                            else if (estatus == 3) clase = "etiqueta-avanzado";
                             <tr>
                                 <td class="fw-bold">@f["Folio"]</td>
                                 <td class="fw-semibold">@f["Socio"]</td>

@@ -1,13 +1,12 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Reporte 3: entradas, salidas y minutos de permanencia. Permisos: Seguridad/Modulos.cs (Administrador y Recepcionista)
-    public class ReporteControlAccesoModel : PaginaBase
+    // Reporte 3: entradas, salidas y minutos de permanencia (Administrador y Recepcionista)
+    public class ReporteControlAccesoModel : PaginaProtegida
     {
         private readonly logicaReporte _logica;
         private readonly logicaSucursal _logicaSucursal;
@@ -16,64 +15,84 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
+            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
+        // Filtros
         [BindProperty(SupportsGet = true)] public string? Busqueda { get; set; }
         [BindProperty(SupportsGet = true)] public int? IdSucursal { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Desde { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Hasta { get; set; }
 
-        public List<SelectListItem> Sucursales { get; set; } = new();
-        public List<DataRow> Filas { get; set; } = new();
+        public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Filas { get; set; } = new List<DataRow>();
+
+        // Resumen
         public int Dentro { get; set; }
         public double PromedioMinutos { get; set; }
         public int SociosDistintos { get; set; }
 
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
-        {
-            return Filtros(pagina, ("Busqueda", Busqueda), ("IdSucursal", IdSucursal),
-                ("Desde", Desde?.ToString("yyyy-MM-dd")), ("Hasta", Hasta?.ToString("yyyy-MM-dd")));
-        }
-
-        private DataTable Consultar() => _logica.ControlAcceso(Busqueda, IdSucursal, Desde, Hasta);
-
         public void OnGet()
         {
             // Por omisión, los últimos 7 días
-            Desde ??= DateTime.Today.AddDays(-6);
-            Hasta ??= DateTime.Today;
+            if (Desde == null)
+                Desde = DateTime.Today.AddDays(-6);
+            if (Hasta == null)
+                Hasta = DateTime.Today;
 
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
 
-                // Sin consulta si el rango de fechas está invertido
-                if (!RangoFechasValido(Desde, Hasta))
+                if (Desde > Hasta)
+                {
+                    Mensaje = "La fecha inicial no puede ser posterior a la fecha final.";
+                    TipoMensaje = "warning";
                     return;
+                }
 
-                DataTable tabla = Consultar();
-                var filas = tabla.AsEnumerable().ToList();
-                Dentro = filas.Count(r => r["FechaSalida"] == DBNull.Value);
-                // El promedio solo considera visitas terminadas (las que siguen en curso aún no tienen permanencia final)
-                var minutos = filas.Where(r => Convert.ToInt32(r["EnCurso"]) == 0).Select(r => Convert.ToInt32(r["Minutos"])).ToList();
-                PromedioMinutos = minutos.Count == 0 ? 0 : minutos.Average();
-                SociosDistintos = filas.Select(r => r["Folio"]).Distinct().Count();
-                Filas = Paginar(tabla);
+                DataTable dt = _logica.ControlAcceso(Busqueda, IdSucursal, Desde, Hasta);
+
+                int sumaMinutos = 0;
+                int visitasTerminadas = 0;
+                List<string> folios = new List<string>();
+
+                foreach (DataRow r in dt.Rows)
+                {
+                    // Socios que siguen dentro (sin salida)
+                    if (r["FechaSalida"] == DBNull.Value)
+                        Dentro++;
+
+                    // El promedio solo considera visitas terminadas
+                    if (Convert.ToInt32(r["EnCurso"]) == 0)
+                    {
+                        sumaMinutos += Convert.ToInt32(r["Minutos"]);
+                        visitasTerminadas++;
+                    }
+
+                    string folio = r["Folio"].ToString()!;
+                    if (!folios.Contains(folio))
+                        folios.Add(folio);
+                }
+
+                PromedioMinutos = visitasTerminadas == 0 ? 0 : (double)sumaMinutos / visitasTerminadas;
+                SociosDistintos = folios.Count;
+                Filas = Paginar(dt);
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
+        // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            if (!RangoFechasValido(Desde, Hasta))
-                return Redirigir();
-
-            return ExportarCsv(Consultar(), "ControlAcceso",
-                ("Folio", "Folio"), ("Socio", "Socio"), ("Sucursal", "Sucursal"),
-                ("Entrada", "FechaEntrada"), ("Salida", "FechaSalida"), ("Minutos de permanencia", "Minutos"), ("En curso (1=Sí)", "EnCurso"));
+            DataTable dt = _logica.ControlAcceso(Busqueda, IdSucursal, Desde, Hasta);
+            return ExportarExcel(dt, "Reporte_ControlAcceso",
+                new string[] { "Folio", "Socio", "Sucursal", "Entrada", "Salida", "Minutos de permanencia", "En curso (1=Sí)" },
+                new string[] { "Folio", "Socio", "Sucursal", "FechaEntrada", "FechaSalida", "Minutos", "EnCurso" });
         }
     }
 }

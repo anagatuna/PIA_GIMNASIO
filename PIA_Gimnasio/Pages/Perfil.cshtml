@@ -5,8 +5,17 @@
     ViewData["AnchoCompleto"] = true;
 
     var p = Model.Perfil;
-    string Dato(string columna) => p == null || p[columna] == DBNull.Value || string.IsNullOrWhiteSpace(p[columna].ToString())
-        ? "Sin asignar" : p[columna].ToString()!;
+    // Regresa el dato del perfil o "Sin asignar" si viene vacío
+    string Dato(string columna)
+    {
+        if (p == null)
+            return "Sin asignar";
+
+        string valor = p[columna].ToString() ?? "";
+        if (valor.Trim() == "")
+            return "Sin asignar";
+        return valor;
+    }
     var nombre = p == null ? "" : Dato("NombreEmpleado");
     var inicial = string.IsNullOrEmpty(nombre) || nombre == "Sin asignar" ? "U" : nombre.Substring(0, 1).ToUpper();
 }

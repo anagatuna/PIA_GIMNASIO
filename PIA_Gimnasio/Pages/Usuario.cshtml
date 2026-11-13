@@ -19,7 +19,7 @@
                     <i class="bi bi-person-gear"></i>&nbsp;@(esEdicion ? "Editar usuario" : "Nuevo usuario")
                 </h4>
 
-                <form method="post" asp-page-handler="Guardar" asp-all-route-data="Model.RutaFiltros()">
+                <form method="post" asp-page-handler="Guardar">
                     <input type="hidden" asp-for="Usuario.IdUsuario" />
 
                     <!-- Empleado (relación 1:1) -->
@@ -93,7 +93,7 @@
                         <button type="submit" class="btn btn-naranja">
                             <i class="bi bi-floppy me-1"></i>@(esEdicion ? "Actualizar" : "Guardar")
                         </button>
-                        <a class="btn btn-oscuro" asp-page="/Usuario" asp-all-route-data="Model.RutaFiltros()">Cancelar</a>
+                        <a class="btn btn-oscuro" asp-page="/Usuario">Cancelar</a>
                     </div>
                 </form>
 
@@ -184,13 +184,11 @@
                                     var id = fila["IdUsuario"];
                                     var empleado = fila["Empleado"]?.ToString();
                                     bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
-                                    var rutaEditar = Model.RutaFiltros();
-                                    rutaEditar["id"] = id.ToString()!;
 
                                     <tr class="@(Model.Usuario.IdUsuario.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo btn-amarillo" title="Editar"
-                                               asp-page="/Usuario" asp-page-handler="Editar" asp-all-route-data="rutaEditar">
+                                               asp-page="/Usuario" asp-page-handler="Editar" asp-route-id="@id">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                         </td>

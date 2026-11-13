@@ -1,26 +1,19 @@
-﻿@using PIA_Gimnasio.Seguridad
-@{
-    // Página actual para marcar el link activo en el menú
-    var paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
-    string Activo(string ruta) => paginaActual.StartsWith(ruta, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+﻿@{
+    // Datos del usuario que inició sesión (se guardan en Login.cshtml.cs)
+    bool conSesion = Context.Session.GetInt32("IdUsuario") != null;
+    string nombre = Context.Session.GetString("Nombre") ?? "";
+    string rol = Context.Session.GetString("Rol") ?? "";
+    string inicial = nombre == "" ? "U" : nombre.Substring(0, 1).ToUpper();
 
-    // Un módulo está activo si la página actual le pertenece (ej. /RutinaNueva pertenece a /Rutina)
-    bool ModuloActivo(Modulo m) => Modulos.ModuloDe(paginaActual) == m;
+    bool admin = rol == "Administrador";
+    bool recepcion = rol == "Recepcionista";
+    bool entrenador = rol == "Entrenador";
+
+    // Página actual, para marcar la opción activa del menú
+    string paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
 
     // Las pantallas de gestión usan todo el ancho (ViewData["AnchoCompleto"] = true)
-    var contenedor = ViewData["AnchoCompleto"] is true ? "container-fluid px-3 px-lg-4" : "container";
-
-    // Confirmación para eliminar: la página pone ViewData["EliminarTitulo"] y ViewData["EliminarDescripcion"].
-    // El formulario regresa a la misma página y búsqueda, con handler=Eliminar.
-    string? accionEliminar = null;
-    if (ViewData["EliminarTitulo"] != null)
-    {
-        var parametros = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Context.Request.QueryString.Value)
-            .Where(p => p.Key != "handler" && p.Key != "id")
-            .ToDictionary(p => p.Key, p => (string?)p.Value.ToString());
-        parametros["handler"] = "Eliminar";
-        accionEliminar = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Context.Request.Path, parametros);
-    }
+    string contenedor = ViewData["AnchoCompleto"] is true ? "container-fluid px-3 px-lg-4" : "container";
 }
 
 <!DOCTYPE html>
@@ -38,17 +31,17 @@
 <body>
     <header class="topbar mb-4">
         <div class="@contenedor d-flex align-items-center justify-content-between">
-            <a class="marca" asp-area="" asp-page="/Inicio">
+            <a class="marca" asp-page="/Inicio">
                 <img src="~/img/logo-claro.png" alt="Chispi Fit" />
             </a>
 
-            @if (User.Identity?.IsAuthenticated == true)
+            @if (conSesion)
             {
                 <div class="d-flex align-items-center gap-3">
                     <span class="usuario-chip d-none d-sm-inline">
-                        <i class="bi bi-person-circle me-1"></i>@User.FindFirst("NombreCompleto")?.Value
+                        <i class="bi bi-person-circle me-1"></i>@nombre
                     </span>
-                    <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuOpciones" aria-controls="menuOpciones" aria-label="Abrir menú">
+                    <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuOpciones" aria-label="Abrir menú">
                         <i class="bi bi-list"></i>
                     </button>
                 </div>
@@ -56,15 +49,12 @@
         </div>
     </header>
 
-    @if (User.Identity?.IsAuthenticated == true)
+    @if (conSesion)
     {
-        var nombre = User.FindFirst("NombreCompleto")?.Value ?? "Usuario";
-        var inicial = string.IsNullOrEmpty(nombre) ? "U" : nombre.Substring(0, 1).ToUpper();
-
-        <!-- ---------- Menú de opciones ---------- -->
-        <div class="offcanvas offcanvas-end menu-lateral" tabindex="-1" id="menuOpciones" aria-labelledby="menuOpcionesLabel">
+        <!-- ---------- Menú de opciones (cada rol ve solo sus pantallas) ---------- -->
+        <div class="offcanvas offcanvas-end menu-lateral" tabindex="-1" id="menuOpciones">
             <div class="offcanvas-header">
-                <img src="~/img/logo-oscuro.png" alt="Chispi Fit" class="menu-logo" id="menuOpcionesLabel" />
+                <img src="~/img/logo-oscuro.png" alt="Chispi Fit" class="menu-logo" />
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
             </div>
 
@@ -73,63 +63,75 @@
                     <div class="avatar">@inicial</div>
                     <div>
                         @nombre
-                        <small>@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</small>
+                        <small>@rol</small>
                     </div>
                 </div>
 
-                <a class="menu-link @(paginaActual == "/Inicio" ? "active" : "")" asp-page="/Inicio">
-                    <i class="bi bi-house"></i> Inicio
-                </a>
+                <a class="menu-link @(paginaActual == "/Inicio" ? "active" : "")" asp-page="/Inicio"><i class="bi bi-house"></i> Inicio</a>
 
-                <!-- Módulos permitidos para el rol (Seguridad/Modulos.cs) -->
-                @foreach (var seccion in Modulos.PermitidosPara(User).GroupBy(m => m.Seccion))
+                <!-- Socios -->
+                <div class="menu-seccion">Socios</div>
+                @if (admin || recepcion)
                 {
-                    var abierto = seccion.Any(ModuloActivo);
-                    var idGrupo = "grupo" + seccion.Key.Replace(" ", "").Replace("ó", "o").Replace("á", "a");
-                    bool desplegable = seccion.Count() > 3;
+                    <a class="menu-link @(paginaActual == "/Socio" ? "active" : "")" asp-page="/Socio"><i class="bi bi-people"></i> Socios</a>
+                }
+                <a class="menu-link @(paginaActual == "/ExpedienteMedico" ? "active" : "")" asp-page="/ExpedienteMedico"><i class="bi bi-heart-pulse"></i> Expediente médico</a>
+                @if (admin || recepcion)
+                {
+                    <a class="menu-link @(paginaActual == "/Suscripcion" ? "active" : "")" asp-page="/Suscripcion"><i class="bi bi-credit-card-2-front"></i> Suscripciones</a>
+                }
 
-                    @if (desplegable)
-                    {
-                        <button class="menu-seccion boton-seccion" type="button" data-bs-toggle="collapse" data-bs-target="#@idGrupo"
-                                aria-expanded="@(abierto ? "true" : "false")" aria-controls="@idGrupo">
-                            @seccion.Key <span class="cantidad">@seccion.Count()</span><i class="bi bi-chevron-down flecha"></i>
-                        </button>
-                        @:<div class="collapse @(abierto ? "show" : "")" id="@idGrupo"><div class="submenu">
-                    }
-                    else
-                    {
-                        <div class="menu-seccion">@seccion.Key</div>
-                    }
-                    @foreach (var m in seccion)
-                    {
-                        // Si la pantalla todavía no existe en el proyecto, se muestra deshabilitada
-                        var url = Url.Page(m.Pagina);
-                        if (url != null)
-                        {
-                            <a class="menu-link @(ModuloActivo(m) ? "active" : "")" href="@url">
-                                <i class="bi @m.Icono"></i> @m.Titulo
-                            </a>
-                        }
-                        else
-                        {
-                            <span class="menu-link pendiente" title="Pantalla en desarrollo">
-                                <i class="bi @m.Icono"></i> @m.Titulo
-                            </span>
-                        }
-                    }
-                    @if (desplegable)
-                    {
-                        @:</div></div>
-                    }
+                <!-- Operación diaria -->
+                <div class="menu-seccion">Operación</div>
+                @if (admin || recepcion)
+                {
+                    <a class="menu-link @(paginaActual == "/ControlAcceso" ? "active" : "")" asp-page="/ControlAcceso"><i class="bi bi-door-open"></i> Control de acceso</a>
+                }
+                @if (admin)
+                {
+                    <a class="menu-link @(paginaActual == "/Clase" ? "active" : "")" asp-page="/Clase"><i class="bi bi-calendar3"></i> Clases grupales</a>
+                }
+                @if (admin || recepcion)
+                {
+                    <a class="menu-link @(paginaActual == "/Reserva" ? "active" : "")" asp-page="/Reserva"><i class="bi bi-bookmark-check"></i> Reservas</a>
+                }
+                @if (admin || entrenador)
+                {
+                    <a class="menu-link @(paginaActual == "/PaseLista" ? "active" : "")" asp-page="/PaseLista"><i class="bi bi-list-check"></i> Pase de lista</a>
+                    <a class="menu-link @(paginaActual.StartsWith("/Rutina") ? "active" : "")" asp-page="/Rutina"><i class="bi bi-clipboard2-pulse"></i> Rutinas</a>
+                }
+
+                <!-- Administración (solo Administrador) -->
+                @if (admin)
+                {
+                    <div class="menu-seccion">Administración</div>
+                    <a class="menu-link @(paginaActual == "/Usuario" ? "active" : "")" asp-page="/Usuario"><i class="bi bi-shield-lock"></i> Usuarios</a>
+                    <a class="menu-link @(paginaActual == "/Sucursal" ? "active" : "")" asp-page="/Sucursal"><i class="bi bi-building"></i> Sucursales</a>
+                    <a class="menu-link @(paginaActual == "/Empleado" ? "active" : "")" asp-page="/Empleado"><i class="bi bi-person-workspace"></i> Empleados</a>
+                }
+
+                <!-- Reportes -->
+                <div class="menu-seccion">Reportes</div>
+                @if (admin)
+                {
+                    <a class="menu-link @(paginaActual == "/ReporteEmpleados" ? "active" : "")" asp-page="/ReporteEmpleados"><i class="bi bi-file-earmark-person"></i> Empleados por sucursal</a>
+                }
+                @if (admin || recepcion)
+                {
+                    <a class="menu-link @(paginaActual == "/ReporteSocios" ? "active" : "")" asp-page="/ReporteSocios"><i class="bi bi-file-earmark-text"></i> Socios y membresías</a>
+                    <a class="menu-link @(paginaActual == "/ReporteControlAcceso" ? "active" : "")" asp-page="/ReporteControlAcceso"><i class="bi bi-file-earmark-bar-graph"></i> Control de acceso</a>
+                }
+                @if (admin || entrenador)
+                {
+                    <a class="menu-link @(paginaActual == "/ReporteClases" ? "active" : "")" asp-page="/ReporteClases"><i class="bi bi-file-earmark-check"></i> Clases y asistencia</a>
+                    <a class="menu-link @(paginaActual == "/ReporteRutinas" ? "active" : "")" asp-page="/ReporteRutinas"><i class="bi bi-file-earmark-medical"></i> Rutinas asignadas</a>
                 }
 
                 <!-- Cuenta -->
                 <div class="menu-seccion">Mi cuenta</div>
-                <a class="menu-link @Activo("/Perfil")" asp-page="/Perfil">
-                    <i class="bi bi-person-badge"></i> Mi perfil
-                </a>
+                <a class="menu-link @(paginaActual == "/Perfil" ? "active" : "")" asp-page="/Perfil"><i class="bi bi-person-badge"></i> Mi perfil</a>
 
-                <form method="post" asp-page="/Login" asp-page-handler="Logout" class="mt-4">
+                <form method="post" asp-page="/Login" asp-page-handler="Salir" class="mt-4">
                     <button type="submit" class="btn-cerrar-sesion">
                         <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
                     </button>
@@ -144,24 +146,27 @@
         </main>
     </div>
 
-    <!-- Mensaje del SP (la página lo pasa con [ViewData] Mensaje / TipoMensaje) -->
-    <partial name="_Mensaje" model='((string?)ViewData["Mensaje"], (string?)ViewData["TipoMensaje"])' />
-
-    <!-- Confirmación para eliminar (solo en las páginas que la piden) -->
-    @if (accionEliminar != null)
-    {
-        <partial name="_ModalEliminar" model='((string)ViewData["EliminarTitulo"]!, (string?)ViewData["EliminarDescripcion"] ?? "", accionEliminar)' />
-    }
-
     <footer class="border-top footer text-muted">
         <div class="@contenedor">
-            &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-area="" asp-page="/Privacidad">Privacidad</a>
+            &copy; @DateTime.Now.Year - PIA Gimnasio - <a asp-page="/Privacidad">Privacidad</a>
         </div>
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Ventana de aviso: se abre sola si la página trae Mensaje -->
+    @if (Model is PIA_Gimnasio.Pages.PaginaProtegida pagina && pagina.Mensaje != "")
+    {
+        <partial name="_Mensaje" model="pagina" />
+    }
+
+    <!-- Ventana para confirmar eliminar (solo en las páginas que ponen ViewData["EliminarTitulo"]) -->
+    @if (ViewData["EliminarTitulo"] != null)
+    {
+        <partial name="_ModalEliminar" />
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

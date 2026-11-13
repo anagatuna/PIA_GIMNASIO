@@ -9,7 +9,7 @@
     <div class="card-gestion">
         <h4 class="titulo-card"><i class="bi bi-file-earmark-person"></i>&nbsp;Reporte: <span class="resaltado">Empleados y distribución</span></h4>
 
-        <form method="get">
+        <form method="get" id="formBusqueda">
             <div class="row">
                 <div class="col-md-4 col-xl-2 mb-3">
                     <div class="form-floating">
@@ -54,7 +54,7 @@
             <div class="tarjeta"><span>Total de empleados</span><b>@Model.TotalRegistros</b></div>
             @foreach (var s in Model.PorSede)
             {
-                <div class="tarjeta"><span>@s.Sucursal</span><b>@s.Total</b></div>
+                <div class="tarjeta"><span>@s.Key</span><b>@s.Value</b></div>
             }
         </div>
 

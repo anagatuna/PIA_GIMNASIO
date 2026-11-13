@@ -8,6 +8,9 @@ namespace PIA_Gimnasio.Entidades
         public DateTime? FechaInicio { get; set; } = DateTime.Today;
 
         // Mismo cálculo que spSuscripcion: un mes menos un día (del 4 de nov al 3 de dic)
-        public static DateTime CalcularVencimiento(DateTime inicio) => inicio.AddMonths(1).AddDays(-1);
+        public static DateTime CalcularVencimiento(DateTime inicio)
+        {
+            return inicio.AddMonths(1).AddDays(-1);
+        }
     }
 }

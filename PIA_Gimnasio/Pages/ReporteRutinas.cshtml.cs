@@ -1,15 +1,12 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Reporte 5: historial de rutinas prescritas. El entrenador solo ve las suyas.
-    // Permisos: Seguridad/Modulos.cs (Administrador y Entrenador)
-    public class ReporteRutinasModel : PaginaBase
+    // Reporte 5: rutinas asignadas y sus ejercicios. El entrenador solo ve las suyas.
+    public class ReporteRutinasModel : PaginaProtegida
     {
         private readonly logicaReporte _logica;
         private readonly logicaEmpleado _logicaEmpleado;
@@ -18,61 +15,79 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaEmpleado = logicaEmpleado;
+            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
+        // Filtros
         [BindProperty(SupportsGet = true)] public string? Socio { get; set; }
         [BindProperty(SupportsGet = true)] public int? IdEmpleado { get; set; }
         [BindProperty(SupportsGet = true)] public string? Objetivo { get; set; }
         [BindProperty(SupportsGet = true)] public string? GrupoMuscular { get; set; }
         [BindProperty(SupportsGet = true)] public string? NivelDificultad { get; set; }
 
-        public List<SelectListItem> Entrenadores { get; set; } = new();
-        public List<SelectListItem> Objetivos { get; } = CargarCombo(validacionRutina.Objetivos);
-        public List<SelectListItem> Grupos { get; } = CargarCombo(validacionEjercicio.GruposMusculares);
-        public List<SelectListItem> Niveles { get; } = CargarCombo(validacionEjercicio.NivelesDificultad);
-        public List<DataRow> Filas { get; set; } = new();
+        public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Objetivos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Grupos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Niveles { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Filas { get; set; } = new List<DataRow>();
+
+        // Resumen
         public int SociosDistintos { get; set; }
         public int TotalEjercicios { get; set; }
 
-        // Grupo o nivel filtran los ejercicios: la columna muestra solo los que coinciden
-        public bool FiltraEjercicios => !string.IsNullOrEmpty(GrupoMuscular) || !string.IsNullOrEmpty(NivelDificultad);
-
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        // Si se filtra por grupo o nivel, la columna muestra solo los ejercicios que coinciden
+        public bool FiltraEjercicios
         {
-            return Filtros(pagina, ("Socio", Socio), ("IdEmpleado", IdEmpleado), ("Objetivo", Objetivo),
-                ("GrupoMuscular", GrupoMuscular), ("NivelDificultad", NivelDificultad));
-        }
-
-        private DataTable Consultar()
-        {
-            if (EsEntrenador)
-                IdEmpleado = IdEmpleadoSesion() ?? -1;
-            return _logica.Rutinas(Socio, IdEmpleado, Objetivo, GrupoMuscular, NivelDificultad);
+            get { return !string.IsNullOrEmpty(GrupoMuscular) || !string.IsNullOrEmpty(NivelDificultad); }
         }
 
         public void OnGet()
         {
+            Objetivos = CargarCombo(logicaRutina.Objetivos);
+            Grupos = CargarCombo(logicaEjercicio.GruposMusculares);
+            Niveles = CargarCombo(logicaEjercicio.NivelesDificultad);
+
             try
             {
                 if (!EsEntrenador)
                     Entrenadores = CargarCombo(_logicaEmpleado.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
 
-                DataTable tabla = Consultar();
-                SociosDistintos = tabla.AsEnumerable().Select(r => r["Folio"]).Distinct().Count();
-                TotalEjercicios = tabla.AsEnumerable().Sum(r => Convert.ToInt32(r["TotalEjercicios"]));
-                Filas = Paginar(tabla);
+                DataTable dt = Consultar();
+
+                List<string> folios = new List<string>();
+                foreach (DataRow r in dt.Rows)
+                {
+                    TotalEjercicios += Convert.ToInt32(r["TotalEjercicios"]);
+
+                    string folio = r["Folio"].ToString()!;
+                    if (!folios.Contains(folio))
+                        folios.Add(folio);
+                }
+                SociosDistintos = folios.Count;
+
+                Filas = Paginar(dt);
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
+        // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            return ExportarCsv(Consultar(), "Rutinas",
-                ("Asignación", "FechaAsignacion"), ("Folio", "Folio"), ("Socio", "Socio"), ("Entrenador", "Entrenador"),
-                ("Rutina", "Rutina"), ("Objetivo", "Objetivo"), ("Días", "TotalDias"), ("Ejercicios", "TotalEjercicios"), ("Detalle", "Ejercicios"));
+            return ExportarExcel(Consultar(), "Reporte_Rutinas",
+                new string[] { "Asignación", "Folio", "Socio", "Entrenador", "Rutina", "Objetivo", "Días", "Ejercicios", "Detalle" },
+                new string[] { "FechaAsignacion", "Folio", "Socio", "Entrenador", "Rutina", "Objetivo", "TotalDias", "TotalEjercicios", "Ejercicios" });
+        }
+
+        // El entrenador solo ve sus propias rutinas
+        private DataTable Consultar()
+        {
+            if (EsEntrenador)
+                IdEmpleado = IdEmpleadoSesion() ?? -1;
+            return _logica.Rutinas(Socio, IdEmpleado, Objetivo, GrupoMuscular, NivelDificultad);
         }
     }
 }

@@ -1,19 +1,19 @@
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Agenda del día y pase de lista. El entrenador solo ve sus clases; el administrador ve todas.
-    // Permisos: Seguridad/Modulos.cs (Administrador y Entrenador)
-    public class PaseListaModel : PaginaBase
+    // Clases del día y pase de lista. El entrenador solo ve sus clases; el administrador ve todas.
+    public class PaseListaModel : PaginaProtegida
     {
         private readonly logicaPaseLista _logica;
 
         public PaseListaModel(logicaPaseLista logica)
         {
             _logica = logica;
+            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
         [BindProperty(SupportsGet = true)]
@@ -24,71 +24,90 @@ namespace PIA_Gimnasio.Pages
 
         // IdReserva -> estatus (5 Confirmado, 6 Asistió, 7 Falta). Se envía como Asistencia[IdReserva]
         [BindProperty]
-        public Dictionary<int, int> Asistencia { get; set; } = new();
+        public Dictionary<int, int> Asistencia { get; set; } = new Dictionary<int, int>();
 
-        public DateTime Dia => (Fecha ?? DateTime.Today).Date;
-        public List<DataRow> Clases { get; set; } = new();
-        public List<DataRow> Participantes { get; set; } = new();
-        public DataRow? ClaseActual => Clases.FirstOrDefault(c => Convert.ToInt32(c["IdClase"]) == IdClase);
+        public List<DataRow> Clases { get; set; } = new List<DataRow>();
+        public List<DataRow> Participantes { get; set; } = new List<DataRow>();
+        public DataRow? ClaseActual { get; set; }
 
-        // El entrenador queda limitado a sus propias clases
-        private int? Entrenador => EsEntrenador ? IdEmpleadoSesion() ?? -1 : null;
-
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        public DateTime Dia
         {
-            return Filtros(pagina, ("Fecha", Dia.ToString("yyyy-MM-dd")), ("IdClase", IdClase));
+            get { return (Fecha ?? DateTime.Today).Date; }
         }
 
-        private void CargarPantalla()
+        // El entrenador queda limitado a sus propias clases (-1 si no tiene empleado ligado)
+        private int? Entrenador()
         {
-            try
-            {
-                Clases = _logica.ConsultarClases(Dia, Entrenador).AsEnumerable().ToList();
-
-                // Si no se eligió clase, abre la primera del día
-                if (!IdClase.HasValue || ClaseActual == null)
-                    IdClase = Clases.Count > 0 ? Convert.ToInt32(Clases[0]["IdClase"]) : null;
-
-                if (IdClase.HasValue)
-                    Participantes = _logica.ConsultarParticipantes(IdClase.Value, Entrenador).AsEnumerable().ToList();
-            }
-            catch (SqlException)
-            {
-                MostrarErrorConexion();
-            }
+            if (EsEntrenador)
+                return IdEmpleadoSesion() ?? -1;
+            return null;
         }
 
         public void OnGet()
         {
-            CargarPantalla();
+            Cargar();
         }
 
+        // Botón Guardar asistencia
         public IActionResult OnPostGuardar()
         {
-            if (!IdClase.HasValue || Asistencia.Count == 0)
+            if (IdClase == null || Asistencia.Count == 0)
             {
-                MostrarMensaje("No hay participantes para registrar.", "warning");
-                CargarPantalla();
+                Mensaje = "No hay participantes para registrar.";
+                TipoMensaje = "warning";
+                Cargar();
                 return Page();
             }
 
             try
             {
                 // El SP valida que la clase ya haya comenzado y que sea del entrenador
-                MostrarRespuesta(_logica.Guardar(IdClase.Value, Entrenador, Asistencia, IdUsuarioSesion()));
+                bdRespuesta r = _logica.Guardar(IdClase.Value, Entrenador(), Asistencia, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarMensaje("Ocurrió un error al guardar el pase de lista.", "danger");
+                Mensaje = "Ocurrió un error al guardar el pase de lista.";
+                TipoMensaje = "danger";
             }
+            Cargar();
+            return Page();
+        }
 
-            if (TipoMensaje != "success")
+        // Llena las clases del día y los participantes de la clase elegida
+        private void Cargar()
+        {
+            try
             {
-                CargarPantalla();
-                return Page();
-            }
+                Clases = new List<DataRow>();
+                foreach (DataRow r in _logica.ConsultarClases(Dia, Entrenador()).Rows)
+                    Clases.Add(r);
 
-            return Redirigir();
+                // Busca la clase elegida; si no hay, abre la primera del día
+                ClaseActual = null;
+                foreach (DataRow c in Clases)
+                {
+                    if (Convert.ToInt32(c["IdClase"]) == IdClase)
+                        ClaseActual = c;
+                }
+                if (ClaseActual == null && Clases.Count > 0)
+                    ClaseActual = Clases[0];
+
+                IdClase = ClaseActual == null ? null : Convert.ToInt32(ClaseActual["IdClase"]);
+
+                Participantes = new List<DataRow>();
+                if (IdClase != null)
+                {
+                    foreach (DataRow r in _logica.ConsultarParticipantes(IdClase.Value, Entrenador()).Rows)
+                        Participantes.Add(r);
+                }
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
+            }
         }
     }
 }

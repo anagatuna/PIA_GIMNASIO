@@ -1,15 +1,14 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
-using PIA_Gimnasio.Logica.Validacion;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Gestión de empleados con especialidades dinámicas. Permisos: Seguridad/Modulos.cs (solo Administrador)
-    public class EmpleadoModel : PaginaBase
+    // Gestión de empleados con sus especialidades (solo Administrador)
+    public class EmpleadoModel : PaginaProtegida
     {
         private readonly logicaEmpleado _logica;
         private readonly logicaSucursal _logicaSucursal;
@@ -20,6 +19,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaEstatus = logicaEstatus;
+            RolesPermitidos = new string[] { "Administrador" };
         }
 
         [BindProperty]
@@ -37,23 +37,105 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdEstatus { get; set; }
 
-        public List<SelectListItem> Sucursales { get; set; } = new();
-        public List<SelectListItem> Puestos { get; set; } = new();
-        public List<SelectListItem> Estatus { get; set; } = new();
-        public List<SelectListItem> Especialidades { get; set; } = new();
-        public List<DataRow> Empleados { get; set; } = new();
+        public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Puestos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Especialidades { get; set; } = new List<SelectListItem>();
+        public List<DataRow> Empleados { get; set; } = new List<DataRow>();
 
         // Id del puesto "Entrenador": el JavaScript habilita las especialidades solo con ese puesto
         public int IdPuestoEntrenador { get; set; }
-        public bool EsPuestoEntrenador => Empleado.IdPuesto.HasValue && Empleado.IdPuesto == IdPuestoEntrenador;
 
-        public override Dictionary<string, string> RutaFiltros(int? pagina = null)
+        public bool EsPuestoEntrenador
         {
-            return Filtros(pagina, ("BusquedaNombre", BusquedaNombre), ("BusquedaIdSucursal", BusquedaIdSucursal),
-                ("BusquedaIdPuesto", BusquedaIdPuesto), ("BusquedaIdEstatus", BusquedaIdEstatus));
+            get { return Empleado.IdPuesto == IdPuestoEntrenador; }
         }
 
-        private void CargarPantalla()
+        public void OnGet()
+        {
+            Cargar();
+        }
+
+        // Botón Editar: carga el empleado en el formulario
+        public void OnGetEditar(int id)
+        {
+            try
+            {
+                Empleado = _logica.Obtener(id) ?? new bdEmpleado();
+            }
+            catch (Exception)
+            {
+                Mensaje = "No se pudo cargar el empleado.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+        }
+
+        // Botón Guardar / Actualizar
+        public IActionResult OnPostGuardar()
+        {
+            Cargar();
+
+            // Las especialidades solo aplican al puesto Entrenador
+            if (!EsPuestoEntrenador)
+                Empleado.Especialidades.Clear();
+
+            Mensaje = Validar();
+            if (Mensaje != "")
+            {
+                TipoMensaje = "warning";
+                return Page();
+            }
+
+            try
+            {
+                bdRespuesta r = _logica.Guardar(Empleado, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+
+                if (r.TipoMensaje == "success")
+                {
+                    Limpiar();
+                    Cargar();
+                }
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al guardar el empleado.";
+                TipoMensaje = "danger";
+            }
+            return Page();
+        }
+
+        // Botón Eliminar (baja lógica)
+        public IActionResult OnPostEliminar(int id)
+        {
+            try
+            {
+                bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al eliminar el empleado.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
+        }
+
+        // Botón Exportar a Excel
+        public IActionResult OnGetExportar()
+        {
+            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, BusquedaIdEstatus);
+            return ExportarExcel(dt, "Empleados",
+                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Teléfono", "CURP", "RFC", "Fecha de contratación", "Cuenta de usuario", "Estatus" },
+                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Telefono", "CURP", "RFC", "FechaContratacion", "Cuenta", "Estatus" });
+        }
+
+        // Llena combos y tabla
+        private void Cargar()
         {
             try
             {
@@ -61,83 +143,73 @@ namespace PIA_Gimnasio.Pages
                 Puestos = CargarCombo(_logica.ConsultarPuestos(), "IdPuesto", "Nombre");
                 Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
                 Especialidades = CargarCombo(_logica.ConsultarEspecialidades(), "IdEspecialidad", "Nombre");
-                IdPuestoEntrenador = Puestos.Where(p => p.Text.Equals("Entrenador", StringComparison.OrdinalIgnoreCase))
-                    .Select(p => int.Parse(p.Value)).FirstOrDefault();
+
+                // Busca el Id del puesto Entrenador
+                foreach (SelectListItem p in Puestos)
+                {
+                    if (p.Text.ToUpper() == "ENTRENADOR")
+                        IdPuestoEntrenador = Convert.ToInt32(p.Value);
+                }
 
                 Empleados = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, BusquedaIdEstatus));
             }
-            catch (SqlException)
+            catch (Exception)
             {
-                MostrarErrorConexion();
+                Mensaje = "No se pudo conectar con la base de datos.";
+                TipoMensaje = "danger";
             }
         }
 
-        public void OnGet()
+        // Reglas de captura. Regresa el primer error o "" si todo está bien.
+        private string Validar()
         {
-            CargarPantalla();
+            if (string.IsNullOrWhiteSpace(Empleado.Nombre) || string.IsNullOrWhiteSpace(Empleado.PrimerApellido))
+                return "Ingresa el nombre y el primer apellido.";
+
+            // Identificación: al menos CURP o RFC, y con formato válido si se captura
+            if (string.IsNullOrWhiteSpace(Empleado.CURP) && string.IsNullOrWhiteSpace(Empleado.RFC))
+                return "Captura al menos la CURP o el RFC del empleado.";
+            if (!string.IsNullOrWhiteSpace(Empleado.CURP) && !Regex.IsMatch(Empleado.CURP.Trim().ToUpper(), @"^[A-Z]{4}\d{6}[HMX][A-Z]{5}[A-Z0-9]\d$"))
+                return "La CURP no tiene un formato válido (18 caracteres).";
+            if (!string.IsNullOrWhiteSpace(Empleado.RFC) && !Regex.IsMatch(Empleado.RFC.Trim().ToUpper(), @"^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$"))
+                return "El RFC no tiene un formato válido (12 o 13 caracteres).";
+
+            if (Empleado.FechaNacimiento == null)
+                return "Ingresa la fecha de nacimiento.";
+            if (Empleado.FechaNacimiento > DateTime.Today.AddYears(-18) || Empleado.FechaNacimiento < DateTime.Today.AddYears(-90))
+                return "El empleado debe tener entre 18 y 90 años.";
+
+            if (string.IsNullOrWhiteSpace(Empleado.Correo) || !Regex.IsMatch(Empleado.Correo.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return "Ingresa un correo válido.";
+            if (string.IsNullOrWhiteSpace(Empleado.Telefono) || !Regex.IsMatch(Empleado.Telefono.Trim(), @"^\d{10}$"))
+                return "El teléfono debe tener 10 dígitos.";
+
+            if (Empleado.IdSucursal == null)
+                return "Selecciona la sucursal.";
+            if (Empleado.IdPuesto == null)
+                return "Selecciona el puesto.";
+
+            if (Empleado.FechaContratacion == null)
+                return "Ingresa la fecha de contratación.";
+            if (Empleado.FechaContratacion > DateTime.Today)
+                return "La fecha de contratación no puede ser futura.";
+            if (Empleado.FechaContratacion < Empleado.FechaNacimiento.Value.AddYears(18))
+                return "La fecha de contratación debe ser posterior a sus 18 años.";
+
+            // Especialidades: obligatorias para un entrenador
+            if (EsPuestoEntrenador && Empleado.Especialidades.Count == 0)
+                return "Selecciona al menos una especialidad para el entrenador.";
+
+            if (Empleado.IdEstatus == null)
+                return "Selecciona el estatus.";
+
+            return "";
         }
 
-        public void OnGetEditar(int id)
+        private void Limpiar()
         {
-            CargarPantalla();
-
-            bdEmpleado? empleado = _logica.Obtener(id);
-            if (empleado != null)
-                Empleado = empleado;
-            else
-                MostrarMensaje("No se encontró el empleado seleccionado.", "warning");
-        }
-
-        public IActionResult OnPostGuardar()
-        {
-            CargarPantalla();
-
-            // Las especialidades solo aplican al puesto Entrenador
-            if (!EsPuestoEntrenador)
-                Empleado.Especialidades.Clear();
-
-            List<string> errores = validacionEmpleado.Validar(Empleado, EsPuestoEntrenador);
-            if (errores.Count > 0)
-            {
-                MostrarMensaje(errores[0], "warning");
-                return Page();
-            }
-
-            try
-            {
-                MostrarRespuesta(_logica.Guardar(Empleado, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al guardar el empleado.", "danger");
-            }
-
-            if (TipoMensaje != "success")
-                return Page();
-
-            return Redirigir();
-        }
-
-        public IActionResult OnPostEliminar(int id)
-        {
-            try
-            {
-                MostrarRespuesta(_logica.Eliminar(id, IdUsuarioSesion()));
-            }
-            catch (SqlException)
-            {
-                MostrarMensaje("Ocurrió un error al eliminar el empleado.", "danger");
-            }
-
-            return Redirigir();
-        }
-
-        public IActionResult OnGetExportar()
-        {
-            return ExportarCsv(_logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, BusquedaIdEstatus), "Empleados",
-                ("Empleado", "Empleado"), ("Puesto", "Puesto"), ("Especialidades", "Especialidades"), ("Sucursal", "Sucursal"),
-                ("Correo", "Correo"), ("Teléfono", "Telefono"), ("CURP", "CURP"), ("RFC", "RFC"),
-                ("Fecha de contratación", "FechaContratacion"), ("Cuenta de usuario", "Cuenta"), ("Estatus", "Estatus"));
+            ModelState.Clear();
+            Empleado = new bdEmpleado();
         }
     }
 }

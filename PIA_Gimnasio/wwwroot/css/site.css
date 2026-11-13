@@ -167,34 +167,6 @@ body {
         font-weight: 500;
     }
 
-    /* Flechita del grupo desplegable */
-    .menu-link .flecha {
-        margin-left: auto;
-        font-size: .8rem;
-        transition: transform .2s;
-    }
-
-    .menu-link[aria-expanded="true"] {
-        color: #fff;
-    }
-
-        .menu-link[aria-expanded="true"] .flecha {
-            transform: rotate(180deg);
-        }
-
-.submenu {
-    background: rgba(255, 255, 255, .04);
-    border: 1px solid rgba(255, 255, 255, .06);
-    border-radius: 12px;
-    margin: 4px 0 6px;
-    padding: 4px;
-}
-
-    .submenu .menu-link {
-        font-size: .9rem;
-        padding: 8px 12px;
-    }
-
 .btn-cerrar-sesion {
     margin-top: auto;
     background: rgba(255, 59, 48, .12);
@@ -511,26 +483,21 @@ abbr.asterisco {
     place-items: center;
 }
 
-.contenedor-toast {
-    top: 60px; /* debajo de la barra superior */
+/* Color del ícono en la ventana de aviso (_Mensaje.cshtml) */
+.icono-alerta.aviso-success {
+    background: rgba(52, 199, 89, .14);
+    color: #34c759;
 }
 
-.toast-gestion {
-    border: none;
-    border-radius: 14px;
-    color: #fff;
-    font-weight: 500;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+.icono-alerta.aviso-warning {
+    background: rgba(255, 149, 0, .14);
+    color: var(--naranja);
 }
 
-    .toast-gestion .btn-close {
-        filter: invert(1);
-    }
-
-.toast-success { background: #34c759; }
-.toast-danger  { background: #ff3b30; }
-.toast-warning { background: var(--naranja); }
-.toast-info    { background: var(--menu-bg); }
+.icono-alerta.aviso-danger {
+    background: rgba(255, 59, 48, .12);
+    color: #ff3b30;
+}
 
 .etiqueta-avanzado {
     background: rgba(255, 59, 48, .12);
@@ -755,48 +722,6 @@ abbr.asterisco {
     font-weight: 500;
 }
 
-/* Opción del menú cuya pantalla todavía no existe */
-.menu-link.pendiente {
-    opacity: .45;
-    cursor: default;
-}
-
-    .menu-link.pendiente:hover {
-        background: none;
-        color: var(--menu-texto);
-    }
-
-/* Título de sección que despliega sus opciones (secciones largas) */
-.boton-seccion {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    background: none;
-    border: none;
-    text-align: left;
-}
-
-    .boton-seccion:hover {
-        color: rgba(255, 255, 255, .7);
-    }
-
-    .boton-seccion .cantidad {
-        background: rgba(255, 255, 255, .1);
-        border-radius: 999px;
-        padding: 0 7px;
-        font-size: .65rem;
-    }
-
-    .boton-seccion .flecha {
-        margin-left: auto;
-        transition: transform .2s;
-    }
-
-    .boton-seccion[aria-expanded="true"] .flecha {
-        transform: rotate(180deg);
-    }
-
 /* =====================================================
    Panel de inicio
    ===================================================== */
@@ -835,7 +760,6 @@ abbr.asterisco {
     border-radius: 999px;
     overflow: hidden;
 }
-    .barra-aforo.grande { height: 14px; }
     .barra-aforo span {
         display: block;
         height: 100%;
@@ -889,33 +813,34 @@ abbr.asterisco {
 .semaforo {
     display: flex;
     align-items: center;
-    gap: 18px;
-    border-radius: 18px;
-    padding: 18px;
+    gap: 12px;
+    border-radius: 14px;
+    padding: 10px 14px;
     background: #f2f2f7;
+    font-size: .9rem;
     transition: background .25s ease;
 }
     .semaforo .luz {
         flex: 0 0 auto;
-        width: 84px;
-        height: 84px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        font-size: 2.6rem;
+        font-size: 1.3rem;
         color: #fff;
         background: #c7c7cc;
     }
     .semaforo.verde { background: rgba(52, 199, 89, .14); }
-        .semaforo.verde .luz { background: #34c759; box-shadow: 0 0 28px rgba(52, 199, 89, .7); }
+        .semaforo.verde .luz { background: #34c759; box-shadow: 0 0 10px rgba(52, 199, 89, .6); }
     .semaforo.rojo { background: rgba(255, 59, 48, .12); }
-        .semaforo.rojo .luz { background: #ff3b30; box-shadow: 0 0 28px rgba(255, 59, 48, .7); animation: parpadeo .35s 3; }
+        .semaforo.rojo .luz { background: #ff3b30; box-shadow: 0 0 10px rgba(255, 59, 48, .6); animation: parpadeo .35s 3; }
     .semaforo.salida { background: rgba(28, 29, 33, .07); }
         .semaforo.salida .luz { background: var(--menu-bg); }
-.semaforo-titulo { font-weight: 800; font-size: 1.15rem; letter-spacing: .5px; }
+.semaforo-titulo { font-weight: 800; font-size: .95rem; letter-spacing: .5px; }
 .semaforo.verde .semaforo-titulo { color: #248a3d; }
 .semaforo.rojo .semaforo-titulo { color: #d70015; }
-.semaforo-socio { margin-top: 6px; font-size: .9rem; color: #48484a; }
+.semaforo-socio { margin-top: 4px; font-size: .85rem; color: #48484a; }
 
 @keyframes parpadeo { 50% { opacity: .35; } }
 
@@ -929,8 +854,6 @@ abbr.asterisco {
 }
 .aforo-cifra { font-size: 2.4rem; font-weight: 800; line-height: 1; }
     .aforo-cifra small { font-size: 1.1rem; color: #8e8e93; font-weight: 600; }
-.en-vivo { font-size: .75rem; font-weight: 700; color: #ff3b30; white-space: nowrap; }
-    .en-vivo i { animation: parpadeo 1.5s infinite; }
 .tabla-movimientos { max-height: 420px; overflow-y: auto; }
     .tabla-movimientos tr.dentro td { font-weight: 600; }
 
