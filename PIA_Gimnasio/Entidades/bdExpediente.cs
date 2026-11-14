@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Ficha clínica del socio (tabla EXPEDIENTE_MEDICO). Obligatoria para asignar rutinas.
     public class bdExpediente
     {
         public int IdCliente { get; set; }

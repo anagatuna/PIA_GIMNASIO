@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Sede física de la cadena (tabla SUCURSAL)
     public class bdSucursal
     {
         public int IdSucursal { get; set; }

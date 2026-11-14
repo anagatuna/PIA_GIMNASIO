@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Cabecera de una rutina (tabla RUTINA) con sus ejercicios (DETALLE_RUTINA)
     public class bdRutina
     {
         public int IdRutina { get; set; }

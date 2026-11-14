@@ -4,7 +4,7 @@
     ViewData["Title"] = "Empleados";
     ViewData["AnchoCompleto"] = true;
     ViewData["EliminarTitulo"] = "¿Eliminar empleado?";
-    ViewData["EliminarDescripcion"] = "se dará de baja. Si tiene cuenta de usuario, también se dará de baja (relación 1:1).";
+    ViewData["EliminarDescripcion"] = "se dará de baja. Si tiene cuenta de usuario, también se dará de baja.";
     bool esEdicion = Model.Empleado.IdEmpleado > 0;
 }
 
@@ -236,14 +236,14 @@
                                             @fila["Puesto"]
                                             @if (fila["Especialidades"] != DBNull.Value)
                                             {
-                                                <div class="small text-secondary"><i class="bi bi-award"></i> @fila["Especialidades"]</div>
+                                                <div class="small text-secondary"> @fila["Especialidades"]</div>
                                             }
                                         </td>
                                         <td>@fila["Sucursal"]</td>
                                         <td>
                                             @if (fila["Cuenta"] != DBNull.Value)
                                             {
-                                                <span class="etiqueta etiqueta-rol"><i class="bi bi-person-lock"></i> @fila["Cuenta"]</span>
+                                                <span class="etiqueta etiqueta-rol"> @fila["Cuenta"]</span>
                                             }
                                             else
                                             {

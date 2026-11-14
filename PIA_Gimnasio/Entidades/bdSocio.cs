@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Socio / cliente del gimnasio (tabla CLIENTE)
     public class bdSocio
     {
         public int IdCliente { get; set; }

@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Venta de una membresía a un socio (tabla SUSCRIPCION). La vigencia de 1 mes la calcula el SP.
     public class bdSuscripcion
     {
         public int? IdCliente { get; set; }

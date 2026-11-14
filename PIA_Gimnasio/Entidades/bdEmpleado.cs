@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Personal del gimnasio (tabla EMPLEADO + EMPLEADO_ESPECIALIDAD)
     public class bdEmpleado
     {
         public int IdEmpleado { get; set; }

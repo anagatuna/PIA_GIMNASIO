@@ -97,7 +97,6 @@
                 }
                 @if (admin || entrenador)
                 {
-                    <a class="menu-link @(paginaActual == "/PaseLista" ? "active" : "")" asp-page="/PaseLista"><i class="bi bi-list-check"></i> Pase de lista</a>
                     <a class="menu-link @(paginaActual.StartsWith("/Rutina") ? "active" : "")" asp-page="/Rutina"><i class="bi bi-clipboard2-pulse"></i> Rutinas</a>
                 }
 
@@ -121,11 +120,7 @@
                     <a class="menu-link @(paginaActual == "/ReporteSocios" ? "active" : "")" asp-page="/ReporteSocios"><i class="bi bi-file-earmark-text"></i> Socios y membresías</a>
                     <a class="menu-link @(paginaActual == "/ReporteControlAcceso" ? "active" : "")" asp-page="/ReporteControlAcceso"><i class="bi bi-file-earmark-bar-graph"></i> Control de acceso</a>
                 }
-                @if (admin || entrenador)
-                {
-                    <a class="menu-link @(paginaActual == "/ReporteClases" ? "active" : "")" asp-page="/ReporteClases"><i class="bi bi-file-earmark-check"></i> Clases y asistencia</a>
-                    <a class="menu-link @(paginaActual == "/ReporteRutinas" ? "active" : "")" asp-page="/ReporteRutinas"><i class="bi bi-file-earmark-medical"></i> Rutinas asignadas</a>
-                }
+              
 
                 <!-- Cuenta -->
                 <div class="menu-seccion">Mi cuenta</div>
