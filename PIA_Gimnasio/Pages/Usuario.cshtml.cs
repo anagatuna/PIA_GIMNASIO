@@ -10,10 +10,12 @@ namespace PIA_Gimnasio.Pages
     public class UsuarioModel : PaginaProtegida
     {
         private readonly logicaUsuario _logica;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public UsuarioModel(logicaUsuario logica)
+        public UsuarioModel(logicaUsuario logica, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador" };
         }
 
@@ -126,7 +128,7 @@ namespace PIA_Gimnasio.Pages
         {
             try
             {
-                Roles = CargarCombo(_logica.ConsultarRoles(), "IdRol", "Descripcion");
+                Roles = CargarCombo(_logicaCatalogo.ConsultarRoles(), "IdCatalogo", "Descripcion");
 
                 // Empleados activos sin cuenta (si se edita, incluye el empleado de ese usuario)
                 Empleados = CargarCombo(_logica.ConsultarEmpleadosDisponibles(Usuario.IdUsuario), "IdEmpleado", "Empleado");

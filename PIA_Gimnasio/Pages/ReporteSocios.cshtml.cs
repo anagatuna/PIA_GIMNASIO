@@ -10,13 +10,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaReporte _logica;
         private readonly logicaSucursal _logicaSucursal;
-        private readonly logicaMembresia _logicaMembresia;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public ReporteSociosModel(logicaReporte logica, logicaSucursal logicaSucursal, logicaMembresia logicaMembresia)
+        public ReporteSociosModel(logicaReporte logica, logicaSucursal logicaSucursal, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            _logicaMembresia = logicaMembresia;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
@@ -50,7 +50,7 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
-                Membresias = CargarCombo(_logicaMembresia.Consultar(), "IdTipoMembresia", "Nombre");
+                Membresias = CargarCombo(_logicaCatalogo.ConsultarMembresias(), "IdCatalogo", "Descripcion");
 
                 DataTable dt = _logica.Socios(IdSucursal, IdTipoMembresia, IdEstatus);
 

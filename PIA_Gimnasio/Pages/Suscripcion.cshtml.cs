@@ -12,13 +12,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaSuscripcion _logica;
         private readonly logicaSocio _logicaSocio;
-        private readonly logicaMembresia _logicaMembresia;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public SuscripcionModel(logicaSuscripcion logica, logicaSocio logicaSocio, logicaMembresia logicaMembresia)
+        public SuscripcionModel(logicaSuscripcion logica, logicaSocio logicaSocio, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSocio = logicaSocio;
-            _logicaMembresia = logicaMembresia;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
@@ -154,9 +154,9 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
-                Membresias = CargarCombo(_logicaMembresia.ConsultarActivas(), "IdTipoMembresia", "Membresia");
-                MembresiasFiltro = CargarCombo(_logicaMembresia.Consultar(), "IdTipoMembresia", "Nombre");
-                Estatus = CargarCombo(_logica.ConsultarEstatus(), "IdEstatus", "Descripcion");
+                Membresias = CargarCombo(_logicaCatalogo.ConsultarMembresiasVenta(), "IdCatalogo", "Descripcion");
+                MembresiasFiltro = CargarCombo(_logicaCatalogo.ConsultarMembresias(), "IdCatalogo", "Descripcion");
+                Estatus = CargarCombo(_logicaCatalogo.ConsultarEstatusSuscripcion(), "IdCatalogo", "Descripcion");
                 Suscripciones = Paginar(_logica.Consultar(Busqueda, BusquedaIdTipoMembresia, BusquedaIdEstatus));
             }
             catch (Exception)

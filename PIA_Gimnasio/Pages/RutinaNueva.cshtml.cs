@@ -10,12 +10,12 @@ namespace PIA_Gimnasio.Pages
     public class RutinaNuevaModel : PaginaProtegida
     {
         private readonly logicaRutina _logica;
-        private readonly logicaEjercicio _logicaEjercicio;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public RutinaNuevaModel(logicaRutina logica, logicaEjercicio logicaEjercicio)
+        public RutinaNuevaModel(logicaRutina logica, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
-            _logicaEjercicio = logicaEjercicio;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador", "Entrenador" };
         }
 
@@ -90,7 +90,7 @@ namespace PIA_Gimnasio.Pages
             foreach (bdDetalleRutina d in Rutina.Detalles)
             {
                 DataRow ejercicio = BuscarEjercicio(d.IdEjercicio)!;
-                string? alerta = logicaRutina.RevisarContraindicacion(Expediente, ejercicio["Nombre"].ToString()!, ejercicio["ContraIndicacion"].ToString());
+                string? alerta = logicaRutina.RevisarContraindicacion(Expediente, ejercicio["Descripcion"].ToString()!, ejercicio["ContraIndicacion"].ToString());
 
                 // Una alerta por ejercicio, aunque se repita en varios días
                 if (alerta != null && !Alertas.Contains(alerta))
@@ -128,7 +128,7 @@ namespace PIA_Gimnasio.Pages
         // Llena combos, ejercicios y el expediente del socio elegido
         private void Cargar()
         {
-            Objetivos = CargarCombo(logicaRutina.Objetivos);
+            Objetivos = CargarCombo(logicaCatalogo.Objetivos);
             try
             {
                 DataTable socios = _logica.ConsultarSocios();
@@ -158,7 +158,7 @@ namespace PIA_Gimnasio.Pages
         private void CargarEjercicios()
         {
             Ejercicios = new List<DataRow>();
-            foreach (DataRow r in _logicaEjercicio.ConsultarActivos().Rows)
+            foreach (DataRow r in _logicaCatalogo.ConsultarEjercicios().Rows)
                 Ejercicios.Add(r);
         }
 
@@ -166,7 +166,7 @@ namespace PIA_Gimnasio.Pages
         {
             foreach (DataRow e in Ejercicios)
             {
-                if (Convert.ToInt32(e["IdEjercicio"]) == idEjercicio)
+                if (Convert.ToInt32(e["IdCatalogo"]) == idEjercicio)
                     return e;
             }
             return null;
@@ -178,9 +178,9 @@ namespace PIA_Gimnasio.Pages
             Dictionary<int, string> alertas = new Dictionary<int, string>();
             foreach (DataRow e in Ejercicios)
             {
-                string? alerta = logicaRutina.RevisarContraindicacion(expediente, e["Nombre"].ToString()!, e["ContraIndicacion"].ToString());
+                string? alerta = logicaRutina.RevisarContraindicacion(expediente, e["Descripcion"].ToString()!, e["ContraIndicacion"].ToString());
                 if (alerta != null)
-                    alertas[Convert.ToInt32(e["IdEjercicio"])] = alerta;
+                    alertas[Convert.ToInt32(e["IdCatalogo"])] = alerta;
             }
             return alertas;
         }
@@ -196,7 +196,7 @@ namespace PIA_Gimnasio.Pages
                 return "Selecciona el entrenador.";
             if (string.IsNullOrWhiteSpace(Rutina.Nombre))
                 return "Ingresa el nombre de la rutina.";
-            if (string.IsNullOrEmpty(Rutina.Objetivo) || !logicaRutina.Objetivos.Contains(Rutina.Objetivo))
+            if (string.IsNullOrEmpty(Rutina.Objetivo) || !logicaCatalogo.Objetivos.Contains(Rutina.Objetivo))
                 return "Selecciona el objetivo.";
             if (Rutina.FechaAsignacion == null)
                 return "Selecciona la fecha de asignación.";
@@ -205,7 +205,7 @@ namespace PIA_Gimnasio.Pages
 
             foreach (bdDetalleRutina d in Rutina.Detalles)
             {
-                if (d.DiaSemana == null || !logicaRutina.DiasSemana.Contains(d.DiaSemana))
+                if (d.DiaSemana == null || !logicaCatalogo.DiasSemana.Contains(d.DiaSemana))
                     return "\"" + d.DiaSemana + "\" no es un día válido. Usa de Lunes a Domingo.";
                 if (d.Series <= 0)
                     return "Las series deben ser mayores a 0.";

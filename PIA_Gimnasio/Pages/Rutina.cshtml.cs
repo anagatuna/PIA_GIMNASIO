@@ -73,7 +73,7 @@ namespace PIA_Gimnasio.Pages
             if (EsEntrenador)
                 BusquedaIdEmpleado = IdEmpleadoSesion() ?? -1;
 
-            Objetivos = CargarCombo(logicaRutina.Objetivos);
+            Objetivos = CargarCombo(logicaCatalogo.Objetivos);
             try
             {
                 Socios = CargarCombo(_logica.ConsultarSocios(), "IdCliente", "Socio");

@@ -62,12 +62,6 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spSuscripcion", p));
         }
 
-        // Accion 5: combo de estatus (Activa, Vencida, Cancelada)
-        public DataTable ConsultarEstatus()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 5) };
-            return _bd.EjecutarStoredProcedure("spSuscripcion", p);
-        }
 
         private bdRespuesta Respuesta(DataTable dt)
         {
@@ -321,12 +315,6 @@ namespace PIA_Gimnasio.Logica
             return dt.Rows.Count == 0 ? null : dt.Rows[0];
         }
 
-        // Accion 6: combo de estatus de reserva
-        public DataTable ConsultarEstatus()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 6) };
-            return _bd.EjecutarStoredProcedure("spReserva", p);
-        }
 
         private bdRespuesta Respuesta(DataTable dt)
         {

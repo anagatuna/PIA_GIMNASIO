@@ -101,7 +101,7 @@ namespace PIA_Gimnasio.Pages
         // Llena la tabla y los datos del socio seleccionado
         private void Cargar()
         {
-            TiposSangre = CargarCombo(logicaSocio.TiposSangre);
+            TiposSangre = CargarCombo(logicaCatalogo.TiposSangre);
             try
             {
                 Socios = Paginar(_logica.Consultar(Busqueda));

@@ -12,11 +12,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaEmpleado _logica;
         private readonly logicaSucursal _logicaSucursal;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public EmpleadoModel(logicaEmpleado logica, logicaSucursal logicaSucursal)
+        public EmpleadoModel(logicaEmpleado logica, logicaSucursal logicaSucursal, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador" };
         }
 
@@ -137,8 +139,8 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
-                Puestos = CargarCombo(_logica.ConsultarPuestos(), "IdPuesto", "Nombre");
-                Especialidades = CargarCombo(_logica.ConsultarEspecialidades(), "IdEspecialidad", "Nombre");
+                Puestos = CargarCombo(_logicaCatalogo.ConsultarPuestos(), "IdCatalogo", "Descripcion");
+                Especialidades = CargarCombo(_logicaCatalogo.ConsultarEspecialidades(), "IdCatalogo", "Descripcion");
 
                 // Busca el Id del puesto Entrenador
                 foreach (SelectListItem p in Puestos)

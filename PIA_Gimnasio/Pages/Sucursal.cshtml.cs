@@ -11,10 +11,12 @@ namespace PIA_Gimnasio.Pages
     public class SucursalModel : PaginaProtegida
     {
         private readonly logicaSucursal _logica;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public SucursalModel(logicaSucursal logica)
+        public SucursalModel(logicaSucursal logica, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador" };
         }
 
@@ -118,7 +120,7 @@ namespace PIA_Gimnasio.Pages
         {
             try
             {
-                Estados = CargarCombo(_logica.ConsultarEstados(), "IdEstado", "Descripcion");
+                Estados = CargarCombo(_logicaCatalogo.ConsultarEstados(), "IdCatalogo", "Descripcion");
                 Sucursales = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdEstado, null));
             }
             catch (Exception)

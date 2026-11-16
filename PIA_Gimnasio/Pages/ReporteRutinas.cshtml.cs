@@ -43,9 +43,9 @@ namespace PIA_Gimnasio.Pages
 
         public void OnGet()
         {
-            Objetivos = CargarCombo(logicaRutina.Objetivos);
-            Grupos = CargarCombo(logicaEjercicio.GruposMusculares);
-            Niveles = CargarCombo(logicaEjercicio.NivelesDificultad);
+            Objetivos = CargarCombo(logicaCatalogo.Objetivos);
+            Grupos = CargarCombo(logicaCatalogo.GruposMusculares);
+            Niveles = CargarCombo(logicaCatalogo.NivelesDificultad);
 
             try
             {

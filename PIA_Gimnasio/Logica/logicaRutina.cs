@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Datos;
 using PIA_Gimnasio.Entidades;
@@ -8,10 +7,6 @@ namespace PIA_Gimnasio.Logica
 {
     public class logicaRutina
     {
-        // Valores permitidos (también se validan en spRutina)
-        public static List<string> DiasSemana = new List<string> { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
-        public static List<string> Objetivos = new List<string> { "Hipertrofia", "Pérdida de peso", "Reacondicionamiento", "Fuerza", "Resistencia" };
-
         private readonly bdConexion _bd;
 
         public logicaRutina(bdConexion bd)
@@ -19,11 +14,41 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1: registrar cabecera + detalle en una sola transacción (el detalle viaja en JSON)
+        // Registrar la rutina con sus ejercicios.
+        // Primero se valida la cabecera y cada ejercicio; si todo está bien se guarda la cabecera
+        // (Accion 1) y después cada ejercicio (Accion 10).
         public bdRespuesta Guardar(bdRutina rutina, int usuarioSesion)
         {
-            string detalle = JsonSerializer.Serialize(rutina.Detalles);
+            if (rutina.Detalles.Count == 0)
+                return new bdRespuesta { Mensaje = "Agrega al menos un ejercicio a la rutina.", TipoMensaje = "warning" };
 
+            // 1. Validar sin guardar
+            bdRespuesta r = GuardarCabecera(rutina, true, usuarioSesion);
+            if (r.TipoMensaje != "success")
+                return r;
+
+            foreach (bdDetalleRutina d in rutina.Detalles)
+            {
+                r = GuardarEjercicio(0, d, true);
+                if (r.TipoMensaje != "success")
+                    return r;
+            }
+
+            // 2. Guardar la cabecera y sus ejercicios
+            r = GuardarCabecera(rutina, false, usuarioSesion);
+            if (r.TipoMensaje != "success")
+                return r;
+
+            foreach (bdDetalleRutina d in rutina.Detalles)
+            {
+                GuardarEjercicio(r.Id, d, false);
+            }
+            return r;
+        }
+
+        // Accion 1: cabecera de la rutina (soloValidar = true no guarda)
+        private bdRespuesta GuardarCabecera(bdRutina rutina, bool soloValidar, int usuarioSesion)
+        {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
                 new SqlParameter("@IdCliente", Valor(rutina.IdCliente)),
@@ -31,7 +56,7 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@Nombre", Valor(rutina.Nombre?.Trim().ToUpper())),
                 new SqlParameter("@Objetivo", Valor(rutina.Objetivo)),
                 new SqlParameter("@FechaAsignacion", (object?)rutina.FechaAsignacion ?? DBNull.Value),
-                new SqlParameter("@Detalle", detalle),
+                new SqlParameter("@SoloValidar", soloValidar),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spRutina", p);
@@ -39,6 +64,22 @@ namespace PIA_Gimnasio.Logica
             bdRespuesta r = Respuesta(dt);
             r.Id = Convert.ToInt32(dt.Rows[0]["IdRutina"]);
             return r;
+        }
+
+        // Accion 10: un ejercicio del detalle (soloValidar = true no guarda)
+        private bdRespuesta GuardarEjercicio(int idRutina, bdDetalleRutina d, bool soloValidar)
+        {
+            SqlParameter[] p = {
+                new SqlParameter("@Accion", 10),
+                new SqlParameter("@IdRutina", idRutina),
+                new SqlParameter("@IdEjercicio", d.IdEjercicio),
+                new SqlParameter("@DiaSemana", Valor(d.DiaSemana)),
+                new SqlParameter("@Series", d.Series),
+                new SqlParameter("@Repeticiones", d.Repeticiones),
+                new SqlParameter("@TiempoDescanso", d.TiempoDescanso),
+                new SqlParameter("@SoloValidar", soloValidar)
+            };
+            return Respuesta(_bd.EjecutarStoredProcedure("spRutina", p));
         }
 
         // Accion 2: cabecera de una rutina

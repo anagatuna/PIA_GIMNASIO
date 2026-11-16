@@ -13,13 +13,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaSocio _logica;
         private readonly logicaSucursal _logicaSucursal;
-        private readonly logicaMembresia _logicaMembresia;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public SocioModel(logicaSocio logica, logicaSucursal logicaSucursal, logicaMembresia logicaMembresia)
+        public SocioModel(logicaSocio logica, logicaSucursal logicaSucursal, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            _logicaMembresia = logicaMembresia;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
@@ -148,11 +148,11 @@ namespace PIA_Gimnasio.Pages
         // Llena combos y tabla
         private void Cargar()
         {
-            TiposSangre = CargarCombo(logicaSocio.TiposSangre);
+            TiposSangre = CargarCombo(logicaCatalogo.TiposSangre);
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
-                Membresias = CargarCombo(_logicaMembresia.Consultar(), "IdTipoMembresia", "Nombre");
+                Membresias = CargarCombo(_logicaCatalogo.ConsultarMembresias(), "IdCatalogo", "Descripcion");
                 Socios = Paginar(_logica.Consultar(Busqueda, BusquedaIdSucursal, null, BusquedaIdTipoMembresia));
             }
             catch (Exception)

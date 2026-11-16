@@ -103,19 +103,7 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spUsuario", p));
         }
 
-        // Accion 8: combo de roles
-        public DataTable ConsultarRoles()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 8) };
-            return _bd.EjecutarStoredProcedure("spUsuario", p);
-        }
 
-        // Accion 9: combo de estatus (Activo / Inactivo)
-        public DataTable ConsultarEstatus()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 9) };
-            return _bd.EjecutarStoredProcedure("spUsuario", p);
-        }
 
         // Accion 10: ¿ya existe la cuenta? (idUsuario excluye al usuario que se está editando)
         public bool ExisteCuenta(string cuenta, int idUsuario)

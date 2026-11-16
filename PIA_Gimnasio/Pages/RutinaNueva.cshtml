@@ -11,9 +11,9 @@
     Dictionary<string, object> ejercicios = new Dictionary<string, object>();
     foreach (DataRow e in Model.Ejercicios)
     {
-        ejercicios[e["IdEjercicio"].ToString()!] = new
+        ejercicios[e["IdCatalogo"].ToString()!] = new
         {
-            nombre = e["Nombre"].ToString(),
+            nombre = e["Descripcion"].ToString(),
             grupo = e["GrupoMuscular"].ToString(),
             nivel = e["NivelDificultad"].ToString(),
             contra = e["ContraIndicacion"].ToString()
@@ -23,7 +23,7 @@
     var detallesJson = JsonSerializer.Serialize(Model.Rutina.Detalles);
     var alertasJson = JsonSerializer.Serialize(Model.AlertasPorEjercicio);
     var conExpedienteJson = JsonSerializer.Serialize(Model.SociosConExpediente);
-    var diasJson = JsonSerializer.Serialize(logicaRutina.DiasSemana);
+    var diasJson = JsonSerializer.Serialize(logicaCatalogo.DiasSemana);
 }
 
 <form method="post" id="formRutina">
@@ -108,7 +108,7 @@
                         <div class="col-6 col-md-2">
                             <div class="form-floating">
                                 <select class="form-select" id="nuevoDia">
-                                    @foreach (var dia in logicaRutina.DiasSemana)
+                                    @foreach (var dia in logicaCatalogo.DiasSemana)
                                     {
                                         <option value="@dia">@dia</option>
                                     }
@@ -120,7 +120,7 @@
                             <div class="form-floating">
                                 <select class="form-select" id="nuevoEjercicio">
                                     <option value="">Selecciona...</option>
-                                    @* Los ejercicios vienen ordenados por grupo muscular (spEjercicio).
+                                    @* Los ejercicios vienen ordenados por grupo muscular (spCatalogo).
                                        Cada vez que cambia el grupo se cierra el optgroup anterior y se abre uno nuevo. *@
                                     @{ string grupoActual = ""; }
                                     @foreach (DataRow e in Model.Ejercicios)
@@ -135,7 +135,7 @@
                                             @:<optgroup label="@grupo">
                                             grupoActual = grupo;
                                         }
-                                        <option value="@e["IdEjercicio"]">@e["Nombre"] · @e["NivelDificultad"]</option>
+                                        <option value="@e["IdCatalogo"]">@e["Descripcion"] · @e["NivelDificultad"]</option>
                                     }
                                     @if (grupoActual != "")
                                     {

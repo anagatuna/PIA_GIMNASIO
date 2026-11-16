@@ -101,12 +101,6 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spSucursal", p);
         }
 
-        // Accion 7: combo de estados
-        public DataTable ConsultarEstados()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 7) };
-            return _bd.EjecutarStoredProcedure("spSucursal", p);
-        }
 
         // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta
         private bdRespuesta Respuesta(DataTable dt)

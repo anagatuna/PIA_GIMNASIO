@@ -12,11 +12,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaReserva _logica;
         private readonly logicaSocio _logicaSocio;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public ReservaModel(logicaReserva logica, logicaSocio logicaSocio)
+        public ReservaModel(logicaReserva logica, logicaSocio logicaSocio, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSocio = logicaSocio;
+            _logicaCatalogo = logicaCatalogo;
             RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
@@ -143,7 +145,7 @@ namespace PIA_Gimnasio.Pages
             {
                 Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
                 Clases = CargarCombo(_logica.ConsultarClasesDisponibles(), "IdClase", "Clase");
-                Estatus = CargarCombo(_logica.ConsultarEstatus(), "IdEstatus", "Descripcion");
+                Estatus = CargarCombo(_logicaCatalogo.ConsultarEstatusReserva(), "IdCatalogo", "Descripcion");
                 Reservas = Paginar(_logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus));
             }
             catch (Exception)

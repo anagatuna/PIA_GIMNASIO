@@ -34,7 +34,7 @@
                     <a class="btn-circulo btn-oscuro" title="Día anterior" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(-1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-left"></i></a>
                     <div class="form-floating flex-grow-1">
                         <input id="Fecha" name="Fecha" type="date" class="form-control" value="@Model.Dia.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
-                        <label for="Fecha">@Model.Dia.ToString("dddd", cultura)</label>
+                        <label for="Fecha">@Model.Dia.ToString("dddd", cultura)</label>\
                     </div>
                     <a class="btn-circulo btn-oscuro" title="Día siguiente" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-right"></i></a>
                 </form>

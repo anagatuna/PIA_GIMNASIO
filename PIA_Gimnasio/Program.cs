@@ -19,9 +19,8 @@ builder.Services.AddSession(options =>
 // Clases que se inyectan en las páginas
 builder.Services.AddScoped<bdConexion>();
 builder.Services.AddScoped<logicaUsuario>();
-builder.Services.AddScoped<logicaEjercicio>();
+builder.Services.AddScoped<logicaCatalogo>();
 builder.Services.AddScoped<logicaRutina>();
-builder.Services.AddScoped<logicaMembresia>();
 builder.Services.AddScoped<logicaSucursal>();
 builder.Services.AddScoped<logicaEmpleado>();
 builder.Services.AddScoped<logicaSocio>();

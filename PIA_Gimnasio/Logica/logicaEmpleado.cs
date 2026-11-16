@@ -72,11 +72,10 @@ namespace PIA_Gimnasio.Logica
                 FechaContratacion = Convert.ToDateTime(r["FechaContratacion"])
             };
 
-            // Las especialidades vienen como "1,3,5"
-            string especialidades = r["Especialidades"].ToString() ?? "";
-            foreach (string idEspecialidad in especialidades.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            // Sus especialidades (un renglón por cada una)
+            foreach (DataRow esp in ConsultarEspecialidades(id).Rows)
             {
-                empleado.Especialidades.Add(Convert.ToInt32(idEspecialidad));
+                empleado.Especialidades.Add(Convert.ToInt32(esp["IdEspecialidad"]));
             }
 
             return empleado;
@@ -92,7 +91,11 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@IdPuesto", Valor(idPuesto)),
                 new SqlParameter("@IdEstatus", Valor(idEstatus))
             };
-            return _bd.EjecutarStoredProcedure("spEmpleado", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spEmpleado", p);
+
+            // Columna "Especialidades" con los nombres separados por coma (ej. "Pesas, Yoga")
+            AgregarEspecialidades(dt, ConsultarEspecialidades(null));
+            return dt;
         }
 
         // Accion 5: eliminar (baja lógica)
@@ -106,28 +109,65 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spEmpleado", p));
         }
 
-        // Accion 6: combo de puestos
-        public DataTable ConsultarPuestos()
+        // Accion 6: especialidades de los empleados, un renglón por especialidad (idEmpleado null = de todos)
+        public DataTable ConsultarEspecialidades(int? idEmpleado)
         {
-            SqlParameter[] p = { new SqlParameter("@Accion", 6) };
+            SqlParameter[] p = {
+                new SqlParameter("@Accion", 6),
+                new SqlParameter("@IdEmpleado", Valor(idEmpleado))
+            };
             return _bd.EjecutarStoredProcedure("spEmpleado", p);
         }
 
-        // Accion 7: lista de especialidades
-        public DataTable ConsultarEspecialidades()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 7) };
-            return _bd.EjecutarStoredProcedure("spEmpleado", p);
-        }
-
-        // Accion 8: entrenadores activos (combos de clases y reportes)
+        // Accion 8: entrenadores activos (combos de clases y reportes).
+        // Al nombre se le agregan sus especialidades: "CARLOS RAMIREZ (Pesas, CrossFit)"
         public DataTable ConsultarEntrenadores()
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 8),
                 new SqlParameter("@IdSucursal", DBNull.Value)
             };
-            return _bd.EjecutarStoredProcedure("spEmpleado", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spEmpleado", p);
+            DataTable especialidades = ConsultarEspecialidades(null);
+
+            foreach (DataRow fila in dt.Rows)
+            {
+                string lista = JuntarEspecialidades(especialidades, Convert.ToInt32(fila["IdEmpleado"]));
+                if (lista != "")
+                    fila["Entrenador"] = fila["Entrenador"] + " (" + lista + ")";
+            }
+            return dt;
+        }
+
+        // Agrega a la tabla la columna "Especialidades" (nombres separados por coma; vacía = NULL).
+        // La tabla debe traer la columna IdEmpleado. La usa también el reporte de empleados.
+        public static void AgregarEspecialidades(DataTable dt, DataTable especialidades)
+        {
+            dt.Columns.Add("Especialidades", typeof(string));
+            foreach (DataRow fila in dt.Rows)
+            {
+                string lista = JuntarEspecialidades(especialidades, Convert.ToInt32(fila["IdEmpleado"]));
+                if (lista == "")
+                    fila["Especialidades"] = DBNull.Value;
+                else
+                    fila["Especialidades"] = lista;
+            }
+        }
+
+        // Junta los nombres de las especialidades de un empleado: "Pesas, Yoga"
+        private static string JuntarEspecialidades(DataTable especialidades, int idEmpleado)
+        {
+            string lista = "";
+            foreach (DataRow esp in especialidades.Rows)
+            {
+                if (Convert.ToInt32(esp["IdEmpleado"]) == idEmpleado)
+                {
+                    if (lista != "")
+                        lista = lista + ", ";
+                    lista = lista + esp["Nombre"];
+                }
+            }
+            return lista;
         }
 
         // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta

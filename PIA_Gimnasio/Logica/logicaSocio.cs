@@ -8,8 +8,6 @@ namespace PIA_Gimnasio.Logica
     // Socios (spSocio). El registro incluye el expediente médico obligatorio.
     public class logicaSocio
     {
-        public static List<string> TiposSangre = new List<string> { "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-" };
-
         private readonly bdConexion _bd;
 
         public logicaSocio(bdConexion bd)

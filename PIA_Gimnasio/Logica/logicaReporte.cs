@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using PIA_Gimnasio.Datos;
 using PIA_Gimnasio.Entidades;
@@ -43,22 +42,48 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spPaseLista", p);
         }
 
-        // Accion 3: guardar asistencia. asistencia = IdReserva -> estatus (5, 6 o 7).
-        // El detalle viaja al SP en JSON: [{"IdReserva":1,"IdEstatus":6}, ...]
+        // Guardar asistencia. asistencia = IdReserva -> estatus (5, 6 o 7).
+        // Primero se validan todos los socios; si alguno tiene error no se guarda nada.
         public bdRespuesta Guardar(int idClase, int? idEmpleado, Dictionary<int, int> asistencia, int usuarioSesion)
         {
-            List<object> lista = new List<object>();
+            // 1. Validar a todos (no guarda)
+            string errores = "";
             foreach (KeyValuePair<int, int> a in asistencia)
             {
-                lista.Add(new { IdReserva = a.Key, IdEstatus = a.Value });
+                bdRespuesta r = GuardarSocio(idClase, idEmpleado, a.Key, a.Value, true, usuarioSesion);
+                if (r.TipoMensaje != "success" && !errores.Contains(r.Mensaje))
+                    errores = errores + r.Mensaje + " ";
             }
-            string detalle = JsonSerializer.Serialize(lista);
 
+            if (errores != "")
+                return new bdRespuesta { Mensaje = errores.Trim(), TipoMensaje = "warning" };
+
+            // 2. Guardar a todos
+            int guardados = 0;
+            foreach (KeyValuePair<int, int> a in asistencia)
+            {
+                bdRespuesta r = GuardarSocio(idClase, idEmpleado, a.Key, a.Value, false, usuarioSesion);
+                if (r.TipoMensaje == "success")
+                    guardados++;
+            }
+
+            return new bdRespuesta
+            {
+                Mensaje = "Pase de lista guardado (" + guardados + " participantes).",
+                TipoMensaje = "success"
+            };
+        }
+
+        // Accion 3: valida (soloValidar = true) o guarda la asistencia de un socio
+        private bdRespuesta GuardarSocio(int idClase, int? idEmpleado, int idReserva, int idEstatus, bool soloValidar, int usuarioSesion)
+        {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
                 new SqlParameter("@IdClase", idClase),
                 new SqlParameter("@IdEmpleado", Valor(idEmpleado)),
-                new SqlParameter("@Detalle", detalle),
+                new SqlParameter("@IdReserva", idReserva),
+                new SqlParameter("@IdEstatus", idEstatus),
+                new SqlParameter("@SoloValidar", soloValidar),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spPaseLista", p);
@@ -81,10 +106,12 @@ namespace PIA_Gimnasio.Logica
     public class logicaReporte
     {
         private readonly bdConexion _bd;
+        private readonly logicaEmpleado _logicaEmpleado;
 
-        public logicaReporte(bdConexion bd)
+        public logicaReporte(bdConexion bd, logicaEmpleado logicaEmpleado)
         {
             _bd = bd;
+            _logicaEmpleado = logicaEmpleado;
         }
 
         // Accion 1: empleados y distribución por sucursal
@@ -98,7 +125,11 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@FechaDesde", Valor(desde)),
                 new SqlParameter("@FechaHasta", Valor(hasta))
             };
-            return _bd.EjecutarStoredProcedure("spReporte", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spReporte", p);
+
+            // Columna "Especialidades" con los nombres separados por coma
+            logicaEmpleado.AgregarEspecialidades(dt, _logicaEmpleado.ConsultarEspecialidades(null));
+            return dt;
         }
 
         // Accion 2: socios y estado de membresías (idEstatus: 1 Activa, 3 Vencida, 4 Cancelada, 0 Sin membresía)
@@ -151,7 +182,29 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@GrupoMuscular", Valor(grupoMuscular)),
                 new SqlParameter("@NivelDificultad", Valor(nivelDificultad))
             };
-            return _bd.EjecutarStoredProcedure("spReporte", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spReporte", p);
+
+            // Accion 6: ejercicios de las rutinas, un renglón por ejercicio
+            SqlParameter[] p2 = { new SqlParameter("@Accion", 6) };
+            DataTable ejercicios = _bd.EjecutarStoredProcedure("spReporte", p2);
+
+            // Columna "Ejercicios" con los nombres separados por coma
+            dt.Columns.Add("Ejercicios", typeof(string));
+            foreach (DataRow fila in dt.Rows)
+            {
+                string lista = "";
+                foreach (DataRow ej in ejercicios.Rows)
+                {
+                    if (Convert.ToInt32(ej["IdRutina"]) == Convert.ToInt32(fila["IdRutina"]))
+                    {
+                        if (lista != "")
+                            lista = lista + ", ";
+                        lista = lista + ej["Nombre"];
+                    }
+                }
+                fila["Ejercicios"] = lista;
+            }
+            return dt;
         }
 
         // Manda NULL a SQL cuando el texto viene vacío
