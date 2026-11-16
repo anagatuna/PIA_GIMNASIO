@@ -32,6 +32,7 @@ builder.Services.AddScoped<logicaClase>();
 builder.Services.AddScoped<logicaReserva>();
 builder.Services.AddScoped<logicaPaseLista>();
 builder.Services.AddScoped<logicaReporte>();
+builder.Services.AddScoped<logicaInicio>();
 
 var app = builder.Build();
 

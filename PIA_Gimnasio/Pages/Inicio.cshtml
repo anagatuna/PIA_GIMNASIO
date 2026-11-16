@@ -4,6 +4,15 @@
     ViewData["Title"] = "Inicio";
     ViewData["AnchoCompleto"] = true;
     var inicial = string.IsNullOrEmpty(Model.Nombre) ? "U" : Model.Nombre.Substring(0, 1).ToUpper();
+    var cultura = new System.Globalization.CultureInfo("es-MX");
+
+    // Hora en formato 08:30 (vacío si no hay)
+    string Hora(object valor)
+    {
+        if (valor == DBNull.Value)
+            return "";
+        return ((TimeSpan)valor).ToString(@"hh\:mm");
+    }
 }
 
 <section class="gestion">
@@ -17,4 +26,198 @@
         </div>
         <a class="btn btn-oscuro d-none d-md-inline-block" asp-page="/Perfil"><i class="bi bi-person-badge me-1"></i>Mi perfil</a>
     </div>
+
+    @if (Model.Rol == "Entrenador")
+    {
+        // ---------- Entrenador: agenda de la semana ----------
+        int clasesHoy = 0;
+        int alumnos = 0;
+        foreach (DataRow c in Model.Agenda)
+        {
+            if (Convert.ToDateTime(c["Fecha"]) == DateTime.Today)
+                clasesHoy++;
+            alumnos += Convert.ToInt32(c["Reservadas"]);
+        }
+
+        <div class="card-gestion">
+            <h4 class="titulo-card"><i class="bi bi-calendar-week"></i>&nbsp;Mi agenda: <span class="resaltado">semana del @Model.Lunes.ToString("dd/MM") al @Model.Lunes.AddDays(4).ToString("dd/MM")</span></h4>
+
+            <div class="tarjetas-resumen mb-3">
+                <div class="tarjeta"><span>Clases de la semana</span><b>@Model.Agenda.Count</b></div>
+                <div class="tarjeta verde"><span>Clases de hoy</span><b>@clasesHoy</b></div>
+                <div class="tarjeta"><span>Alumnos reservados</span><b>@alumnos</b></div>
+            </div>
+
+            <div class="agenda-semanal">
+                @for (int d = 0; d < 5; d++)
+                {
+                    var dia = Model.Lunes.AddDays(d);
+                    // Clases de este día (DiaSemana: 0 = lunes ... 4 = viernes)
+                    List<DataRow> clasesDia = new List<DataRow>();
+                    foreach (DataRow c in Model.Agenda)
+                    {
+                        if (Convert.ToInt32(c["DiaSemana"]) == d)
+                            clasesDia.Add(c);
+                    }
+
+                    <div class="agenda-dia @(dia == DateTime.Today ? "hoy" : "")">
+                        <div class="agenda-titulo">@InicioModel.Dias[d] <span>@dia.ToString("dd/MM")</span></div>
+
+                        @if (clasesDia.Count == 0)
+                        {
+                            <div class="dia-vacio">Sin clases</div>
+                        }
+                        @foreach (var c in clasesDia)
+                        {
+                            int cupo = Convert.ToInt32(c["CupoMaximo"]);
+                            int reservadas = Convert.ToInt32(c["Reservadas"]);
+                            bool lleno = reservadas >= cupo;
+
+                            <div class="agenda-clase @(lleno ? "llena" : "")">
+                                <a class="nombre" asp-page="/PaseLista" asp-route-Fecha="@dia.ToString("yyyy-MM-dd")" asp-route-IdClase="@c["IdClase"]" title="Pase de lista">@c["Nombre"]</a>
+                                <div class="hora"><i class="bi bi-clock"></i> @Hora(c["HoraInicio"]) - @Hora(c["HoraFin"])</div>
+                                <div class="detalle">@c["Salon"] · @c["Sucursal"]</div>
+                                <div class="cupo"><i class="bi bi-people"></i> @reservadas / @cupo @(lleno ? "· Lleno" : "")</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <p class="small text-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Da clic en una clase para pasar lista.</p>
+        </div>
+    }
+    else if (Model.Indicadores != null)
+    {
+        // ---------- Administrador y Recepcionista: resumen del día ----------
+        var ind = Model.Indicadores;
+        int dentro = Convert.ToInt32(ind["DentroAhora"]);
+        int aforoMaximo = Convert.ToInt32(ind["AforoMaximo"]);
+
+        <div class="card-gestion mb-4">
+            <h4 class="titulo-card"><i class="bi bi-speedometer2"></i>&nbsp;Resumen de hoy: <span class="resaltado">@(Model.EsAdministrador ? "todas las sucursales" : "mi sucursal")</span></h4>
+
+            <div class="tarjetas-resumen">
+                <div class="tarjeta"><span>Socios activos</span><b>@ind["SociosActivos"]</b></div>
+                <div class="tarjeta verde"><span>Con membresía vigente</span><b>@ind["ConMembresia"]</b></div>
+                <div class="tarjeta roja"><span>Vencen en 7 días</span><b>@ind["PorVencer"]</b></div>
+                <div class="tarjeta"><span>Dentro ahora</span><b>@dentro <small>/ @aforoMaximo</small></b></div>
+                <div class="tarjeta"><span>Entradas de hoy</span><b>@ind["EntradasHoy"]</b></div>
+                <div class="tarjeta"><span>Clases de hoy</span><b>@ind["ClasesHoy"] <small>· @ind["ReservasHoy"] reservas</small></b></div>
+                @if (Model.EsAdministrador)
+                {
+                    <div class="tarjeta verde"><span>Ventas del mes</span><b>@Convert.ToDecimal(ind["VentasMes"]).ToString("C0", cultura)</b></div>
+                }
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Clases de hoy -->
+            <div class="col-lg-6">
+                <div class="card-gestion h-100">
+                    <h5 class="titulo-card"><i class="bi bi-calendar-day"></i>&nbsp;Clases de hoy</h5>
+                    @if (Model.ClasesHoy.Count == 0)
+                    {
+                        <div class="sin-registros"><i class="bi bi-calendar-x"></i>No hay clases programadas para hoy.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive tabla-gestion">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead><tr><th>Hora</th><th>Clase</th><th>Entrenador</th><th class="text-end">Lugares</th></tr></thead>
+                                <tbody>
+                                    @foreach (DataRow c in Model.ClasesHoy)
+                                    {
+                                        int cupo = Convert.ToInt32(c["CupoMaximo"]);
+                                        int reservadas = Convert.ToInt32(c["Reservadas"]);
+                                        <tr>
+                                            <td class="text-nowrap">@Hora(c["HoraInicio"]) - @Hora(c["HoraFin"])</td>
+                                            <td>
+                                                <div class="fw-semibold">@c["Nombre"]</div>
+                                                <div class="small text-secondary">@c["Salon"] · @c["Sucursal"]</div>
+                                            </td>
+                                            <td>@c["Entrenador"]</td>
+                                            <td class="text-end text-nowrap @(reservadas >= cupo ? "text-danger fw-semibold" : "")">@reservadas / @cupo</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Membresías por vencer -->
+            <div class="col-lg-6">
+                <div class="card-gestion h-100">
+                    <h5 class="titulo-card"><i class="bi bi-hourglass-split"></i>&nbsp;Membresías por vencer (7 días)</h5>
+                    @if (Model.PorVencer.Count == 0)
+                    {
+                        <div class="sin-registros"><i class="bi bi-check2-circle"></i>Ninguna membresía vence esta semana.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive tabla-gestion">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead><tr><th>Folio</th><th>Socio</th><th>Membresía</th><th class="text-end">Vence</th></tr></thead>
+                                <tbody>
+                                    @foreach (DataRow s in Model.PorVencer)
+                                    {
+                                        int dias = Convert.ToInt32(s["Dias"]);
+                                        <tr>
+                                            <td class="fw-bold">
+                                                <a asp-page="/Suscripcion" asp-route-Busqueda="@s["Folio"]" title="Ver suscripción para renovar">@s["Folio"]</a>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">@s["Socio"]</div>
+                                                <div class="small text-secondary">@s["Telefono"]</div>
+                                            </td>
+                                            <td>@s["Membresia"]</td>
+                                            <td class="text-end text-nowrap">
+                                                @Convert.ToDateTime(s["FechaVencimiento"]).ToString("dd/MM")
+                                                <div class="small @(dias <= 2 ? "text-danger fw-semibold" : "text-secondary")">@(dias == 0 ? "Hoy" : $"En {dias} días")</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (Model.EsAdministrador)
+            {
+                <!-- Ocupación por sucursal (solo administrador) -->
+                <div class="col-12">
+                    <div class="card-gestion">
+                        <h5 class="titulo-card"><i class="bi bi-buildings"></i>&nbsp;Ocupación por sucursal</h5>
+                        <div class="table-responsive tabla-gestion">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead><tr><th>Sucursal</th><th>Horario</th><th class="text-center">Empleados</th><th>Ocupación actual</th></tr></thead>
+                                <tbody>
+                                    @foreach (DataRow s in Model.Sucursales)
+                                    {
+                                        int ocupacion = Convert.ToInt32(s["Ocupacion"]);
+                                        int aforo = Convert.ToInt32(s["AforoMaximo"]);
+                                        int porcentaje = aforo == 0 ? 0 : ocupacion * 100 / aforo;
+                                        <tr>
+                                            <td class="fw-semibold">@s["Nombre"]</td>
+                                            <td class="text-nowrap">@Hora(s["HoraApertura"]) - @Hora(s["HoraCierre"])</td>
+                                            <td class="text-center">@s["TotalEmpleados"]</td>
+                                            <td style="min-width: 180px">
+                                                <div class="d-flex justify-content-between small"><span>@ocupacion / @aforo</span><span>@porcentaje%</span></div>
+                                                <div class="progress" style="height: 6px">
+                                                    <div class="progress-bar @(porcentaje >= 90 ? "bg-danger" : "bg-success")" style="width: @porcentaje%"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </section>
