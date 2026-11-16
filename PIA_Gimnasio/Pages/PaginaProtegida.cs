@@ -19,6 +19,9 @@ namespace PIA_Gimnasio.Pages
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
 
+        // Página a la que regresa al dar Aceptar en el aviso (vacío = se queda en la misma)
+        public string RegresarA { get; set; } = "";
+
         public override void OnPageHandlerExecuting(PageHandlerExecutingContext context)
         {
             // Si no hay IdUsuario en la sesión, lo manda al Login

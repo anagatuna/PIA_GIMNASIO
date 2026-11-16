@@ -12,13 +12,11 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaEmpleado _logica;
         private readonly logicaSucursal _logicaSucursal;
-        private readonly logicaEjercicio _logicaEstatus;   // Reutiliza el combo Activo / Inactivo
 
-        public EmpleadoModel(logicaEmpleado logica, logicaSucursal logicaSucursal, logicaEjercicio logicaEstatus)
+        public EmpleadoModel(logicaEmpleado logica, logicaSucursal logicaSucursal)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            _logicaEstatus = logicaEstatus;
             RolesPermitidos = new string[] { "Administrador" };
         }
 
@@ -34,12 +32,8 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdPuesto { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public int? BusquedaIdEstatus { get; set; }
-
         public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Puestos { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Especialidades { get; set; } = new List<SelectListItem>();
         public List<DataRow> Empleados { get; set; } = new List<DataRow>();
 
@@ -75,6 +69,9 @@ namespace PIA_Gimnasio.Pages
         public IActionResult OnPostGuardar()
         {
             Cargar();
+
+            // El estatus no se captura: siempre Activo (solo pasa a Inactivo con la baja lógica)
+            Empleado.IdEstatus = 1;
 
             // Las especialidades solo aplican al puesto Entrenador
             if (!EsPuestoEntrenador)
@@ -128,10 +125,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, BusquedaIdEstatus);
+            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, null);
             return ExportarExcel(dt, "Empleados",
-                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Teléfono", "CURP", "RFC", "Fecha de contratación", "Cuenta de usuario", "Estatus" },
-                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Telefono", "CURP", "RFC", "FechaContratacion", "Cuenta", "Estatus" });
+                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Teléfono", "CURP", "RFC", "Fecha de contratación", "Cuenta de usuario" },
+                new string[] { "Empleado", "Puesto", "Especialidades", "Sucursal", "Correo", "Telefono", "CURP", "RFC", "FechaContratacion", "Cuenta" });
         }
 
         // Llena combos y tabla
@@ -141,7 +138,6 @@ namespace PIA_Gimnasio.Pages
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
                 Puestos = CargarCombo(_logica.ConsultarPuestos(), "IdPuesto", "Nombre");
-                Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
                 Especialidades = CargarCombo(_logica.ConsultarEspecialidades(), "IdEspecialidad", "Nombre");
 
                 // Busca el Id del puesto Entrenador
@@ -151,7 +147,7 @@ namespace PIA_Gimnasio.Pages
                         IdPuestoEntrenador = Convert.ToInt32(p.Value);
                 }
 
-                Empleados = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, BusquedaIdEstatus));
+                Empleados = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdSucursal, BusquedaIdPuesto, null));
             }
             catch (Exception)
             {
@@ -200,8 +196,6 @@ namespace PIA_Gimnasio.Pages
             if (EsPuestoEntrenador && Empleado.Especialidades.Count == 0)
                 return "Selecciona al menos una especialidad para el entrenador.";
 
-            if (Empleado.IdEstatus == null)
-                return "Selecciona el estatus.";
 
             return "";
         }

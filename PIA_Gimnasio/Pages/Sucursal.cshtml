@@ -96,20 +96,13 @@
                         <label asp-for="Sucursal.Municipio">Ciudad / municipio<span class="asterisco"> *</span></label>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                        @* El estatus no se captura: siempre es Activa y solo pasa a Inactiva con la baja lógica *@
+                        <div class="col-12 mb-3">
                             <div class="form-floating">
                                 <select asp-for="Sucursal.IdEstado" asp-items="Model.Estados" class="form-select" required>
                                     <option value="">Selecciona...</option>
                                 </select>
                                 <label asp-for="Sucursal.IdEstado">Estado<span class="asterisco"> *</span></label>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="Sucursal.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
-                                    <option value="">Selecciona...</option>
-                                </select>
-                                <label asp-for="Sucursal.IdEstatus">Estatus<span class="asterisco"> *</span></label>
                             </div>
                         </div>
                     </div>
@@ -137,26 +130,18 @@
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
                 <form method="get" id="formBusqueda">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="form-floating">
                                 <input asp-for="BusquedaNombre" class="form-control" placeholder="Búsqueda por nombre" maxlength="50" />
                                 <label asp-for="BusquedaNombre">Búsqueda por nombre</label>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="form-floating">
                                 <select asp-for="BusquedaIdEstado" asp-items="Model.Estados" class="form-select">
                                     <option value="">Todos</option>
                                 </select>
                                 <label asp-for="BusquedaIdEstado">Estado</label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
-                                    <option value="">Todos</option>
-                                </select>
-                                <label asp-for="BusquedaIdEstatus">Estatus</label>
                             </div>
                         </div>
                         <div class="col-12 mb-4">
@@ -183,14 +168,12 @@
                                     <th>Horario</th>
                                     <th>Aforo</th>
                                     <th class="text-center">Empleados</th>
-                                    <th>Estatus</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (DataRow fila in Model.Sucursales)
                                 {
                                     var id = fila["IdSucursal"];
-                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
                                     int aforo = Convert.ToInt32(fila["AforoMaximo"]);
                                     int ocupacion = Convert.ToInt32(fila["Ocupacion"]);
                                     int porcentaje = aforo == 0 ? 0 : Math.Min(100, ocupacion * 100 / aforo);
@@ -219,7 +202,6 @@
                                             <div class="barra-aforo"><span class="@(porcentaje >= 100 ? "lleno" : porcentaje >= 80 ? "alto" : "")" style="width: @porcentaje%"></span></div>
                                         </td>
                                         <td class="text-center">@fila["TotalEmpleados"]</td>
-                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
                                     </tr>
                                 }
                             </tbody>

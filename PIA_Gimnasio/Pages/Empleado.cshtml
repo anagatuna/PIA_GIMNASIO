@@ -121,12 +121,8 @@
                         </small>
                     </fieldset>
 
-                    <div class="form-floating mb-3 mt-3">
-                        <select asp-for="Empleado.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
-                            <option value="">Selecciona...</option>
-                        </select>
-                        <label asp-for="Empleado.IdEstatus">Estatus<span class="asterisco"> *</span></label>
-                    </div>
+                    @* El estatus no se captura: siempre es Activo y solo pasa a Inactivo con la baja lógica *@
+                    <div class="mt-3"></div>
 
                     <div class="nota">
                         <strong>Nota:</strong> Los campos obligatorios están marcados con
@@ -151,13 +147,13 @@
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
                 <form method="get" id="formBusqueda">
                     <div class="row">
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <div class="form-floating">
                                 <input asp-for="BusquedaNombre" class="form-control" placeholder="Búsqueda por nombre" maxlength="50" />
                                 <label asp-for="BusquedaNombre">Búsqueda por nombre</label>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <div class="form-floating">
                                 <select asp-for="BusquedaIdSucursal" asp-items="Model.Sucursales" class="form-select">
                                     <option value="">Todas</option>
@@ -165,20 +161,12 @@
                                 <label asp-for="BusquedaIdSucursal">Sucursal</label>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <div class="form-floating">
                                 <select asp-for="BusquedaIdPuesto" asp-items="Model.Puestos" class="form-select">
                                     <option value="">Todos</option>
                                 </select>
                                 <label asp-for="BusquedaIdPuesto">Puesto</label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
-                                    <option value="">Todos</option>
-                                </select>
-                                <label asp-for="BusquedaIdEstatus">Estatus</label>
                             </div>
                         </div>
                         <div class="col-12 mb-4">
@@ -205,14 +193,12 @@
                                     <th>Puesto</th>
                                     <th>Sucursal</th>
                                     <th>Cuenta</th>
-                                    <th>Estatus</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (DataRow fila in Model.Empleados)
                                 {
                                     var id = fila["IdEmpleado"];
-                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
 
                                     <tr class="@(Model.Empleado.IdEmpleado.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
@@ -250,7 +236,6 @@
                                                 <span class="text-secondary small">Sin cuenta</span>
                                             }
                                         </td>
-                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
                                     </tr>
                                 }
                             </tbody>

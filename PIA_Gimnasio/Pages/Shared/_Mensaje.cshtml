@@ -38,5 +38,16 @@
 </div>
 <script>
     // Abre la ventana en cuanto carga la página
-    new bootstrap.Modal(document.getElementById('modalMensaje')).show();
+    var ventanaMensaje = document.getElementById('modalMensaje');
+    new bootstrap.Modal(ventanaMensaje).show();
+
+    @if (Model.RegresarA != "")
+    {
+        <text>
+        // Al cerrar el aviso regresa a la pestaña de origen
+        ventanaMensaje.addEventListener('hidden.bs.modal', function () {
+            window.location.href = '@Url.Page(Model.RegresarA)';
+        });
+        </text>
+    }
 </script>

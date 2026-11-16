@@ -13,13 +13,13 @@ namespace PIA_Gimnasio.Pages
     {
         private readonly logicaSocio _logica;
         private readonly logicaSucursal _logicaSucursal;
-        private readonly logicaEjercicio _logicaEstatus;   // Reutiliza el combo Activo / Inactivo
+        private readonly logicaMembresia _logicaMembresia;
 
-        public SocioModel(logicaSocio logica, logicaSucursal logicaSucursal, logicaEjercicio logicaEstatus)
+        public SocioModel(logicaSocio logica, logicaSucursal logicaSucursal, logicaMembresia logicaMembresia)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            _logicaEstatus = logicaEstatus;
+            _logicaMembresia = logicaMembresia;
             RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
         }
 
@@ -36,12 +36,13 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdSucursal { get; set; }
 
+        // Filtro de membresía (-1 = con membresía, 0 = sin membresía, o el tipo)
         [BindProperty(SupportsGet = true)]
-        public int? BusquedaIdEstatus { get; set; }
+        public int? BusquedaIdTipoMembresia { get; set; }
 
         public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> TiposSangre { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> Membresias { get; set; } = new List<SelectListItem>();
         public List<DataRow> Socios { get; set; } = new List<DataRow>();
 
         public bool PuedeEliminar
@@ -74,6 +75,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // El estatus no se captura: siempre Activo (solo pasa a Inactivo con la baja lógica)
+            bool esNuevo = Socio.IdCliente == 0;
+            Socio.IdEstatus = 1;
+
             Mensaje = Validar();
             if (Mensaje != "")
             {
@@ -88,6 +93,10 @@ namespace PIA_Gimnasio.Pages
                 bdRespuesta r = _logica.Guardar(Socio, Expediente, IdUsuarioSesion());
                 Mensaje = r.Mensaje;
                 TipoMensaje = r.TipoMensaje;
+
+                // La membresía es obligatoria: el socio nuevo pasa a Suscripción ya seleccionado
+                if (r.TipoMensaje == "success" && esNuevo && r.Id > 0)
+                    return RedirectToPage("/Suscripcion", new { idCliente = r.Id, nuevo = true });
 
                 if (r.TipoMensaje == "success")
                     Limpiar();
@@ -130,10 +139,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            DataTable dt = _logica.Consultar(Busqueda, BusquedaIdSucursal, BusquedaIdEstatus);
+            DataTable dt = _logica.Consultar(Busqueda, BusquedaIdSucursal, null, BusquedaIdTipoMembresia);
             return ExportarExcel(dt, "Socios",
-                new string[] { "Folio", "Socio", "Correo", "Teléfono", "Sucursal", "Membresía", "Vencimiento", "Inscripción", "Estatus" },
-                new string[] { "Folio", "Socio", "Correo", "Telefono", "Sucursal", "Membresia", "FechaVencimiento", "FechaInscripcion", "Estatus" });
+                new string[] { "Folio", "Socio", "Correo", "Teléfono", "Sucursal", "Membresía", "Vencimiento", "Inscripción" },
+                new string[] { "Folio", "Socio", "Correo", "Telefono", "Sucursal", "Membresia", "FechaVencimiento", "FechaInscripcion" });
         }
 
         // Llena combos y tabla
@@ -143,8 +152,8 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
-                Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
-                Socios = Paginar(_logica.Consultar(Busqueda, BusquedaIdSucursal, BusquedaIdEstatus));
+                Membresias = CargarCombo(_logicaMembresia.Consultar(), "IdTipoMembresia", "Nombre");
+                Socios = Paginar(_logica.Consultar(Busqueda, BusquedaIdSucursal, null, BusquedaIdTipoMembresia));
             }
             catch (Exception)
             {
@@ -171,8 +180,6 @@ namespace PIA_Gimnasio.Pages
 
             if (Socio.IdSucursal == null)
                 return "Selecciona la sucursal de inscripción.";
-            if (Socio.IdEstatus == null)
-                return "Selecciona el estatus.";
 
             // Expediente médico obligatorio al registrar
             if (Socio.IdCliente == 0 && string.IsNullOrEmpty(Expediente.TipoSangre))

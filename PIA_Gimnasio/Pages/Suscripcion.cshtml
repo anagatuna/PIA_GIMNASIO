@@ -17,6 +17,7 @@
                 <h4 class="titulo-card text-center"><i class="bi bi-credit-card-2-front"></i>&nbsp;Nueva suscripción</h4>
 
                 <form method="post" asp-page-handler="Guardar">
+                    <input type="hidden" asp-for="Nuevo" />
                     <h6 class="subtitulo-seccion">Venta</h6>
                     <div class="form-floating mb-1">
                         <select asp-for="Suscripcion.IdCliente" asp-items="Model.Socios" class="form-select" required>
@@ -51,8 +52,8 @@
                     </div>
 
                     <div class="nota">
-                        <strong>Regla:</strong> un socio solo puede tener <b>1 suscripción activa</b>.
-                        Para cambiar de plan, cancela la actual primero.
+                        <strong>Regla:</strong> un socio solo puede tener <b>1 suscripción vigente</b>.
+                        Para agregarle otro mes usa <b>Renovar</b> en la tabla.
                     </div>
 
                     <div class="d-flex justify-content-center gap-2 mt-4">
@@ -65,8 +66,9 @@
                 <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Información</h5>
                 <div class="info">
                     La vigencia se calcula automáticamente: <b>1 mes</b> a partir de la fecha de inicio.
-                    Al pasar la fecha de vencimiento la suscripción cambia sola a <b>Vencida</b> y
-                    aparece el botón <b>Renovar</b>.
+                    <b>Renovar</b> se puede en cualquier momento con el mismo plan: si sigue activa, el nuevo mes
+                    empieza al terminar el actual; si se canceló y aún le quedan días, se reanuda; si ya venció,
+                    empieza hoy.
                 </div>
             </div>
         </div>
@@ -132,12 +134,13 @@
                                 {
                                     int estatus = Convert.ToInt32(fila["IdEstatus"]);
                                     int dias = Convert.ToInt32(fila["DiasRestantes"]);
+                                    bool programada = Convert.ToInt32(fila["Programada"]) == 1;
                                     string clase = "etiqueta-inactivo";
                                     if (estatus == 1) clase = "etiqueta-activo";
                                     else if (estatus == 3) clase = "etiqueta-avanzado";
 
                                     <tr>
-                                        <td class="col-accion">
+                                        <td class="col-accion text-nowrap">
                                             @if (estatus == 1)
                                             {
                                                 <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Cancelar"
@@ -146,12 +149,14 @@
                                                     <i class="bi bi-x-lg"></i>
                                                 </button>
                                             }
-                                            else if (Convert.ToInt32(fila["PuedeRenovar"]) == 1)
+                                            @if (Convert.ToInt32(fila["PuedeRenovar"]) == 1)
                                             {
-                                                <a class="btn-circulo btn-sm-circulo btn-verde" title="Renovar"
-                                                   asp-page="/Suscripcion" asp-route-idCliente="@fila["IdCliente"]" asp-route-idTipoMembresia="@fila["IdTipoMembresia"]">
-                                                    <i class="bi bi-arrow-repeat"></i>
-                                                </a>
+                                                <form method="post" asp-page-handler="Renovar" asp-route-id="@fila["IdSuscripcion"]" class="d-inline">
+                                                    <button type="submit" class="btn-circulo btn-sm-circulo btn-verde"
+                                                            title="@(estatus == 4 && dias >= 0 ? "Reanudar" : "Renovar 1 mes")">
+                                                        <i class="bi bi-arrow-repeat"></i>
+                                                    </button>
+                                                </form>
                                             }
                                         </td>
                                         <td class="fw-bold">@fila["Folio"]</td>
@@ -162,7 +167,11 @@
                                         </td>
                                         <td class="text-nowrap">
                                             @Convert.ToDateTime(fila["FechaInicio"]).ToString("dd/MM/yyyy") – @Convert.ToDateTime(fila["FechaVencimiento"]).ToString("dd/MM/yyyy")
-                                            @if (estatus == 1)
+                                            @if (programada)
+                                            {
+                                                <div class="small text-secondary">Renovación: inicia el @Convert.ToDateTime(fila["FechaInicio"]).ToString("dd/MM/yyyy")</div>
+                                            }
+                                            else if (estatus == 1)
                                             {
                                                 <div class="small @(dias <= 5 ? "text-danger fw-semibold" : "text-secondary")">
                                                     @(dias == 0 ? "Vence hoy" : $"Quedan {dias} días")

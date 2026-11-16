@@ -11,12 +11,10 @@ namespace PIA_Gimnasio.Pages
     public class SucursalModel : PaginaProtegida
     {
         private readonly logicaSucursal _logica;
-        private readonly logicaEjercicio _logicaEstatus;   // Reutiliza el combo Activo / Inactivo
 
-        public SucursalModel(logicaSucursal logica, logicaEjercicio logicaEstatus)
+        public SucursalModel(logicaSucursal logica)
         {
             _logica = logica;
-            _logicaEstatus = logicaEstatus;
             RolesPermitidos = new string[] { "Administrador" };
         }
 
@@ -33,11 +31,7 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdEstado { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public int? BusquedaIdEstatus { get; set; }
-
         public List<SelectListItem> Estados { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<DataRow> Sucursales { get; set; } = new List<DataRow>();
 
         public void OnGet()
@@ -63,6 +57,9 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // El estatus no se captura: siempre Activa (solo pasa a Inactiva con la baja lógica)
+            Sucursal.IdEstatus = 1;
+
             Mensaje = Validar();
             if (Mensaje != "")
             {
@@ -110,10 +107,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdEstado, BusquedaIdEstatus);
+            DataTable dt = _logica.Consultar(BusquedaNombre, BusquedaIdEstado, null);
             return ExportarExcel(dt, "Sucursales",
-                new string[] { "Sucursal", "Dirección", "Teléfono", "Aforo máximo", "Ocupación actual", "Apertura", "Cierre", "Empleados", "Estatus" },
-                new string[] { "Nombre", "Direccion", "Telefono", "AforoMaximo", "Ocupacion", "HoraApertura", "HoraCierre", "TotalEmpleados", "Estatus" });
+                new string[] { "Sucursal", "Dirección", "Teléfono", "Aforo máximo", "Ocupación actual", "Apertura", "Cierre", "Empleados" },
+                new string[] { "Nombre", "Direccion", "Telefono", "AforoMaximo", "Ocupacion", "HoraApertura", "HoraCierre", "TotalEmpleados" });
         }
 
         // Llena combos y tabla
@@ -122,8 +119,7 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Estados = CargarCombo(_logica.ConsultarEstados(), "IdEstado", "Descripcion");
-                Estatus = CargarCombo(_logicaEstatus.ConsultarEstatus(), "IdEstatus", "Descripcion");
-                Sucursales = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdEstado, BusquedaIdEstatus));
+                Sucursales = Paginar(_logica.Consultar(BusquedaNombre, BusquedaIdEstado, null));
             }
             catch (Exception)
             {
@@ -152,8 +148,6 @@ namespace PIA_Gimnasio.Pages
                 return "Selecciona el estado.";
             if (string.IsNullOrWhiteSpace(Sucursal.CodigoPostal) || !Regex.IsMatch(Sucursal.CodigoPostal.Trim(), @"^\d{5}$"))
                 return "El código postal debe tener 5 dígitos.";
-            if (Sucursal.IdEstatus == null)
-                return "Selecciona el estatus.";
             return "";
         }
 

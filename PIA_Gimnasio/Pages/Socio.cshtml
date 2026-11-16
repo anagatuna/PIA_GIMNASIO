@@ -76,20 +76,13 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                        @* El estatus no se captura: siempre es Activo y solo pasa a Inactivo con la baja lógica *@
+                        <div class="col-12 mb-3">
                             <div class="form-floating">
                                 <select asp-for="Socio.IdSucursal" asp-items="Model.Sucursales" class="form-select" required>
                                     <option value="">Selecciona...</option>
                                 </select>
                                 <label asp-for="Socio.IdSucursal">Sucursal<span class="asterisco"> *</span></label>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="Socio.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
-                                    <option value="">Selecciona...</option>
-                                </select>
-                                <label asp-for="Socio.IdEstatus">Estatus<span class="asterisco"> *</span></label>
                             </div>
                         </div>
                     </div>
@@ -170,10 +163,12 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="form-floating">
-                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
-                                    <option value="">Todos</option>
+                                <select asp-for="BusquedaIdTipoMembresia" asp-items="Model.Membresias" class="form-select">
+                                    <option value="">Todas</option>
+                                    <option value="-1">Con membresía</option>
+                                    <option value="0">Sin membresía</option>
                                 </select>
-                                <label asp-for="BusquedaIdEstatus">Estatus</label>
+                                <label asp-for="BusquedaIdTipoMembresia">Membresía</label>
                             </div>
                         </div>
                         <div class="col-12 mb-4">
@@ -203,14 +198,12 @@
                                     <th>Socio</th>
                                     <th>Membresía</th>
                                     <th class="text-center">Expediente</th>
-                                    <th>Estatus</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (DataRow fila in Model.Socios)
                                 {
                                     var id = fila["IdCliente"];
-                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
                                     bool tieneExpediente = Convert.ToInt32(fila["TieneExpediente"]) == 1;
 
                                     <tr class="@(Model.Socio.IdCliente.ToString() == id.ToString() ? "fila-seleccionada" : "")">
@@ -252,7 +245,6 @@
                                                 <i class="bi @(tieneExpediente ? "bi-heart-pulse" : "bi-exclamation-lg")"></i>
                                             </a>
                                         </td>
-                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
                                     </tr>
                                 }
                             </tbody>

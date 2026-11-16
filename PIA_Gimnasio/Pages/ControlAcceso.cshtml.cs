@@ -123,6 +123,29 @@ namespace PIA_Gimnasio.Pages
 
             try
             {
+                // No se deja entrar fuera del horario de la sucursal (el SP también lo valida)
+                if (esEntrada)
+                {
+                    DataRow? datos = _logica.ObtenerAforo(sucursal.Value);
+                    if (datos == null)
+                        return new JsonResult(new { resultado = "Denegado", mensaje = "La sucursal no está activa." });
+
+                    TimeSpan abre = (TimeSpan)datos["HoraApertura"];
+                    TimeSpan cierra = (TimeSpan)datos["HoraCierre"];
+                    TimeSpan ahora = DateTime.Now.TimeOfDay;
+                    if (ahora < abre || ahora > cierra)
+                    {
+                        return new JsonResult(new
+                        {
+                            resultado = "Denegado",
+                            mensaje = "La sucursal está cerrada. Horario: " + abre.ToString(@"hh\:mm") + " - " + cierra.ToString(@"hh\:mm") + ".",
+                            folio = numeroFolio,
+                            ocupacion = Convert.ToInt32(datos["Ocupacion"]),
+                            aforoMaximo = Convert.ToInt32(datos["AforoMaximo"])
+                        });
+                    }
+                }
+
                 DataRow r;
                 if (esEntrada)
                     r = _logica.RegistrarEntrada(sucursal.Value, numeroFolio, IdUsuarioSesion());

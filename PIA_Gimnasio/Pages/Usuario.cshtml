@@ -66,20 +66,13 @@
                     <!-- Permisos -->
                     <h6 class="subtitulo-seccion">Permisos</h6>
                     <div class="row">
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
+                        @* El estatus no se captura: siempre es Activa y solo pasa a Inactiva con la baja lógica *@
+                        <div class="col-12 mb-3">
                             <div class="form-floating">
                                 <select asp-for="Usuario.IdRol" asp-items="Model.Roles" class="form-select" required>
                                     <option value="">Selecciona...</option>
                                 </select>
                                 <label asp-for="Usuario.IdRol">Rol<span class="asterisco"> *</span></label>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-12 col-xl-6 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="Usuario.IdEstatus" asp-items="Model.Estatus" class="form-select" required>
-                                    <option value="">Selecciona...</option>
-                                </select>
-                                <label asp-for="Usuario.IdEstatus">Estatus<span class="asterisco"> *</span></label>
                             </div>
                         </div>
                     </div>
@@ -120,26 +113,18 @@
                 <p class="mb-2"><strong><i class="bi bi-funnel"></i>&nbsp;Área de búsqueda</strong></p>
                 <form method="get" id="formBusqueda">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="form-floating">
                                 <input asp-for="BusquedaCuenta" class="form-control" placeholder="Búsqueda por cuenta" maxlength="50" />
                                 <label asp-for="BusquedaCuenta">Búsqueda por cuenta</label>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="form-floating">
                                 <select asp-for="BusquedaIdRol" asp-items="Model.Roles" class="form-select">
                                     <option value="">Todos</option>
                                 </select>
                                 <label asp-for="BusquedaIdRol">Rol</label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="form-floating">
-                                <select asp-for="BusquedaIdEstatus" asp-items="Model.Estatus" class="form-select">
-                                    <option value="">Todos</option>
-                                </select>
-                                <label asp-for="BusquedaIdEstatus">Estatus</label>
                             </div>
                         </div>
 
@@ -174,7 +159,6 @@
                                     <th>Empleado</th>
                                     <th>Cuenta</th>
                                     <th>Rol</th>
-                                    <th>Estatus</th>
                                     <th>Registro</th>
                                 </tr>
                             </thead>
@@ -183,7 +167,6 @@
                                 {
                                     var id = fila["IdUsuario"];
                                     var empleado = fila["Empleado"]?.ToString();
-                                    bool activo = Convert.ToInt32(fila["IdEstatus"]) == 1;
 
                                     <tr class="@(Model.Usuario.IdUsuario.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
@@ -202,7 +185,6 @@
                                         <td class="fw-semibold">@(string.IsNullOrWhiteSpace(empleado) ? "Sin empleado ligado" : empleado)</td>
                                         <td>@fila["Cuenta"]</td>
                                         <td><span class="etiqueta etiqueta-rol">@fila["Rol"]</span></td>
-                                        <td><span class="etiqueta @(activo ? "etiqueta-activo" : "etiqueta-inactivo")">@fila["Estatus"]</span></td>
                                         <td class="text-nowrap">@Convert.ToDateTime(fila["FechaRegistro"]).ToString("dd/MM/yyyy")</td>
                                     </tr>
                                 }

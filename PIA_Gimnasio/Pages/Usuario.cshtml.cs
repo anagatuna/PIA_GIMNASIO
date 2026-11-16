@@ -28,12 +28,8 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? BusquedaIdRol { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public int? BusquedaIdEstatus { get; set; }
-
         // Para los combos y la tabla
         public List<SelectListItem> Roles { get; set; } = new List<SelectListItem>();
-        public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Empleados { get; set; } = new List<SelectListItem>();
         public List<DataRow> Usuarios { get; set; } = new List<DataRow>();
 
@@ -60,6 +56,9 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // El estatus no se captura: siempre Activa (solo pasa a Inactiva con la baja lógica)
+            Usuario.IdEstatus = 1;
+
             Mensaje = Validar();
             if (Mensaje != "")
             {
@@ -116,10 +115,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            DataTable dt = _logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus);
+            DataTable dt = _logica.Consultar(BusquedaCuenta, BusquedaIdRol, null);
             return ExportarExcel(dt, "Usuarios",
-                new string[] { "Cuenta", "Empleado", "Rol", "Estatus", "Fecha de registro" },
-                new string[] { "Cuenta", "Empleado", "Rol", "Estatus", "FechaRegistro" });
+                new string[] { "Cuenta", "Empleado", "Rol", "Fecha de registro" },
+                new string[] { "Cuenta", "Empleado", "Rol", "FechaRegistro" });
         }
 
         // Llena combos y tabla
@@ -128,12 +127,11 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Roles = CargarCombo(_logica.ConsultarRoles(), "IdRol", "Descripcion");
-                Estatus = CargarCombo(_logica.ConsultarEstatus(), "IdEstatus", "Descripcion");
 
                 // Empleados activos sin cuenta (si se edita, incluye el empleado de ese usuario)
                 Empleados = CargarCombo(_logica.ConsultarEmpleadosDisponibles(Usuario.IdUsuario), "IdEmpleado", "Empleado");
 
-                Usuarios = Paginar(_logica.Consultar(BusquedaCuenta, BusquedaIdRol, BusquedaIdEstatus));
+                Usuarios = Paginar(_logica.Consultar(BusquedaCuenta, BusquedaIdRol, null));
             }
             catch (Exception)
             {
@@ -162,12 +160,10 @@ namespace PIA_Gimnasio.Pages
 
             if (Usuario.IdRol == null)
                 return "Selecciona el rol.";
-            if (Usuario.IdEstatus == null)
-                return "Selecciona el estatus.";
 
             // Evita que el administrador se quite el acceso a sí mismo
-            if (!esNuevo && Usuario.IdUsuario == IdUsuarioSesion() && (Usuario.IdEstatus != 1 || Usuario.IdRol != 1))
-                return "No puedes cambiar tu propio rol ni desactivar tu propio usuario.";
+            if (!esNuevo && Usuario.IdUsuario == IdUsuarioSesion() && Usuario.IdRol != 1)
+                return "No puedes cambiar tu propio rol.";
 
             return "";
         }

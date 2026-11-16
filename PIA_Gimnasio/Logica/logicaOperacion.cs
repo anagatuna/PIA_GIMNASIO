@@ -51,6 +51,17 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spSuscripcion", p));
         }
 
+        // Accion 6: renovar (encadena otro mes o reanuda la cancelada que todavía tiene días)
+        public bdRespuesta Renovar(int idSuscripcion, int usuarioSesion)
+        {
+            SqlParameter[] p = {
+                new SqlParameter("@Accion", 6),
+                new SqlParameter("@IdSuscripcion", idSuscripcion),
+                new SqlParameter("@UsuarioSesion", usuarioSesion)
+            };
+            return Respuesta(_bd.EjecutarStoredProcedure("spSuscripcion", p));
+        }
+
         // Accion 5: combo de estatus (Activa, Vencida, Cancelada)
         public DataTable ConsultarEstatus()
         {
@@ -296,12 +307,13 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spReserva", p);
         }
 
-        // Accion 5: plan del socio y clases reservadas en la semana actual
-        public DataRow? ObtenerResumenSocio(int idCliente)
+        // Accion 5: plan del socio y clases reservadas en la semana de la clase (sin clase, la semana actual)
+        public DataRow? ObtenerResumenSocio(int idCliente, int? idClase)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 5),
                 new SqlParameter("@IdCliente", idCliente),
+                new SqlParameter("@IdClase", Valor(idClase)),
                 new SqlParameter("@Fecha", DBNull.Value)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spReserva", p);

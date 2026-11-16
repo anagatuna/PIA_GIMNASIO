@@ -34,12 +34,12 @@
                     <div id="resumenSocio" class="resumen-plan d-none mb-3"></div>
 
                     <div class="form-floating mb-1">
-                        <select asp-for="Reserva.IdClase" asp-items="Model.Clases" class="form-select" required>
+                        <select asp-for="Reserva.IdClase" asp-items="Model.Clases" class="form-select" id="selClase" required>
                             <option value="">Selecciona...</option>
                         </select>
                         <label asp-for="Reserva.IdClase">Clase<span class="asterisco"> *</span></label>
                     </div>
-                    <small class="ayuda">Solo aparecen clases futuras con lugares disponibles.</small>
+                    <small class="ayuda">Solo aparecen clases futuras con lugares disponibles (también de las semanas siguientes).</small>
 
                     <div class="d-flex justify-content-center gap-2 mt-4">
                         <button type="submit" class="btn btn-naranja"><i class="bi bi-bookmark-check me-1"></i>Reservar</button>
@@ -161,9 +161,10 @@
 
 @section Scripts {
     <script>
-        // Al elegir socio muestra su plan y cuántas clases lleva en la semana
+        // Al elegir socio (y clase) muestra su plan y cuántas clases lleva en la semana de esa clase
         function mostrarResumen() {
             var socio = document.getElementById('selSocio');
+            var clase = document.getElementById('selClase');
             var resumen = document.getElementById('resumenSocio');
 
             if (socio.value == '') {
@@ -172,7 +173,7 @@
             }
 
             // Pide el resumen a la página (handler Resumen)
-            fetch('?handler=Resumen&idCliente=' + socio.value)
+            fetch('?handler=Resumen&idCliente=' + socio.value + '&idClase=' + clase.value)
                 .then(function (respuesta) { return respuesta.json(); })
                 .then(function (r) {
                     resumen.classList.remove('d-none');
@@ -181,7 +182,7 @@
 
                     if (!r.tienePlan) {
                         resumen.classList.add('sin-plan');
-                        resumen.innerHTML = '<i class="bi bi-x-octagon"></i> Sin membresía vigente: no puede reservar.';
+                        resumen.innerHTML = '<i class="bi bi-x-octagon"></i> Sin membresía vigente ' + (clase.value == '' ? 'hoy' : 'en la fecha de la clase') + ': no puede reservar.';
                         return;
                     }
 
@@ -198,7 +199,7 @@
                     if (r.maximo == 0)
                         texto += 'Su plan no incluye clases grupales.';
                     else
-                        texto += 'Esta semana: <b>' + r.usadas + ' de ' + r.maximo + '</b> clases · le quedan <b>' + disponibles + '</b>';
+                        texto += (clase.value == '' ? 'Esta semana' : 'Semana del ' + r.lunes) + ': <b>' + r.usadas + ' de ' + r.maximo + '</b> clases · le quedan <b>' + disponibles + '</b>';
                     resumen.innerHTML = texto;
                 })
                 .catch(function () {
@@ -207,6 +208,7 @@
         }
 
         document.getElementById('selSocio').addEventListener('change', mostrarResumen);
+        document.getElementById('selClase').addEventListener('change', mostrarResumen);
         mostrarResumen();
     </script>
 }

@@ -42,12 +42,12 @@ namespace PIA_Gimnasio.Pages
             Cargar();
         }
 
-        // Plan del socio y clases usadas en la semana (lo usa el JavaScript al elegir socio)
-        public IActionResult OnGetResumen(int idCliente)
+        // Plan del socio y clases usadas en la semana de la clase elegida (lo usa el JavaScript)
+        public IActionResult OnGetResumen(int idCliente, int? idClase)
         {
             try
             {
-                DataRow? r = _logica.ObtenerResumenSocio(idCliente);
+                DataRow? r = _logica.ObtenerResumenSocio(idCliente, idClase);
                 if (r == null || r["Membresia"] == DBNull.Value)
                     return new JsonResult(new { tienePlan = false });
 
@@ -57,6 +57,7 @@ namespace PIA_Gimnasio.Pages
                     membresia = r["Membresia"].ToString(),
                     maximo = Convert.ToInt32(r["MaxClasesSemana"]),
                     usadas = Convert.ToInt32(r["Usadas"]),
+                    lunes = Convert.ToDateTime(r["Lunes"]).ToString("dd/MM/yyyy"),
                     vence = Convert.ToDateTime(r["FechaVencimiento"]).ToString("dd/MM/yyyy")
                 });
             }

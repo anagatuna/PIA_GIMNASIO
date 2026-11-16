@@ -110,16 +110,29 @@
                                 {
                                     var idReserva = p["IdReserva"];
                                     int estatus = Convert.ToInt32(p["IdEstatus"]);
+                                    // Solo puede marcarse "Asistió" si el socio registró su entrada ese día en la sucursal
+                                    bool tuvoEntrada = Convert.ToInt32(p["TuvoEntrada"]) == 1;
                                     <div class="fila-asistencia">
                                         <div class="flex-grow-1">
                                             <div class="fw-semibold">@p["Socio"]</div>
-                                            <div class="small text-secondary">Folio @p["Folio"]</div>
+                                            <div class="small text-secondary">
+                                                Folio @p["Folio"] ·
+                                                @if (tuvoEntrada)
+                                                {
+                                                    <span class="text-success"><i class="bi bi-door-open"></i> Con entrada</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-danger"><i class="bi bi-door-closed"></i> Sin entrada registrada</span>
+                                                }
+                                            </div>
                                         </div>
                                         <div class="opciones-asistencia" role="radiogroup">
                                             @foreach (var o in opciones)
                                             {
-                                                <label class="opcion @o.Clase" title="@o.Texto">
-                                                    <input type="radio" name="Asistencia[@idReserva]" value="@o.Valor" checked="@(estatus == o.Valor)" disabled="@(!puedePasarLista)" />
+                                                bool bloqueada = !puedePasarLista || (o.Valor == logicaPaseLista.Asistio && !tuvoEntrada);
+                                                <label class="opcion @o.Clase" title="@(bloqueada && puedePasarLista ? "Sin entrada registrada" : o.Texto)">
+                                                    <input type="radio" name="Asistencia[@idReserva]" value="@o.Valor" checked="@(estatus == o.Valor)" disabled="@bloqueada" />
                                                     <span><i class="bi @o.Icono"></i> <span class="d-none d-sm-inline">@o.Texto</span></span>
                                                 </label>
                                             }
@@ -151,7 +164,9 @@
             botonTodos.addEventListener('click', function () {
                 var opciones = document.querySelectorAll('.opcion.asistio input');
                 for (var i = 0; i < opciones.length; i++) {
-                    opciones[i].checked = true;
+                    // Se salta a los socios sin entrada registrada (su opción "Asistió" está deshabilitada)
+                    if (!opciones[i].disabled)
+                        opciones[i].checked = true;
                 }
             });
         }

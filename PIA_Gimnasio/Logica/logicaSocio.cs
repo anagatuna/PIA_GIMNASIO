@@ -72,14 +72,15 @@ namespace PIA_Gimnasio.Logica
             };
         }
 
-        // Accion 3: consulta general (búsqueda por folio o nombre)
-        public DataTable Consultar(string? busqueda, int? idSucursal, int? idEstatus)
+        // Accion 3: consulta general (búsqueda por folio o nombre; membresía 0 = sin membresía)
+        public DataTable Consultar(string? busqueda, int? idSucursal, int? idEstatus, int? idTipoMembresia)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
                 new SqlParameter("@Nombre", Valor(busqueda)),
                 new SqlParameter("@IdSucursal", Valor(idSucursal)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@IdEstatus", Valor(idEstatus)),
+                new SqlParameter("@IdTipoMembresia", Valor(idTipoMembresia))
             };
             return _bd.EjecutarStoredProcedure("spSocio", p);
         }
@@ -102,14 +103,18 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spSocio", p);
         }
 
-        // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta
+        // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta.
+        // Al registrar, el SP también regresa el IdCliente del socio nuevo.
         private bdRespuesta Respuesta(DataTable dt)
         {
-            return new bdRespuesta
+            bdRespuesta r = new bdRespuesta
             {
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
+            if (dt.Columns.Contains("IdCliente"))
+                r.Id = Convert.ToInt32(dt.Rows[0]["IdCliente"]);
+            return r;
         }
 
         // Manda NULL a SQL cuando el texto viene vacío

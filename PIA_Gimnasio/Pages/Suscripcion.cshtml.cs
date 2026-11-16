@@ -40,12 +40,38 @@ namespace PIA_Gimnasio.Pages
         public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<DataRow> Suscripciones { get; set; } = new List<DataRow>();
 
-        // idCliente / idTipoMembresia llegan desde "Vender" (Socios) o "Renovar" (tabla)
-        public void OnGet(int? idCliente, int? idTipoMembresia)
+        // true cuando viene de registrar un socio nuevo: al vender su membresía regresa a Socios
+        [BindProperty(SupportsGet = true)]
+        public bool Nuevo { get; set; }
+
+        // idCliente llega desde "Vender" o desde el registro de un socio nuevo (Socios)
+        public void OnGet(int? idCliente)
         {
             Suscripcion.IdCliente = idCliente;
-            Suscripcion.IdTipoMembresia = idTipoMembresia;
+            if (Nuevo)
+            {
+                Mensaje = "Socio registrado correctamente. La membresía es obligatoria: registra ahora su suscripción.";
+                TipoMensaje = "success";
+            }
             Cargar();
+        }
+
+        // Botón Renovar (tabla)
+        public IActionResult OnPostRenovar(int id)
+        {
+            try
+            {
+                bdRespuesta r = _logica.Renovar(id, IdUsuarioSesion());
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+            }
+            catch (Exception)
+            {
+                Mensaje = "Ocurrió un error al renovar la suscripción.";
+                TipoMensaje = "danger";
+            }
+            Cargar();
+            return Page();
         }
 
         // Botón Registrar
@@ -80,6 +106,10 @@ namespace PIA_Gimnasio.Pages
                 {
                     ModelState.Clear();
                     Suscripcion = new bdSuscripcion();
+
+                    // Socio recién registrado: al aceptar el aviso vuelve a la pestaña de Socios
+                    if (Nuevo)
+                        RegresarA = "/Socio";
                 }
             }
             catch (Exception)
