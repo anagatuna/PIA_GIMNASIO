@@ -47,7 +47,17 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@Folio", folio),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
-            return _bd.EjecutarStoredProcedure("spControlAcceso", p).Rows[0];
+            DataRow fila = _bd.EjecutarStoredProcedure("spControlAcceso", p).Rows[0];
+
+            // Si se registró la salida, se calculan los minutos de permanencia (salida menos entrada)
+            if (fila["Resultado"].ToString() == "Salida")
+            {
+                TimeSpan permanencia = Convert.ToDateTime(fila["FechaSalida"]) - Convert.ToDateTime(fila["FechaEntrada"]);
+                int minutos = (int)permanencia.TotalMinutes;
+                fila["Minutos"] = minutos;
+                fila["Mensaje"] = "Salida registrada. Permanencia: " + minutos + " minutos.";
+            }
+            return fila;
         }
 
         // Accion 4: movimientos de hoy en la sucursal
@@ -57,7 +67,26 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@Accion", 4),
                 new SqlParameter("@IdSucursal", idSucursal)
             };
-            return _bd.EjecutarStoredProcedure("spControlAcceso", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spControlAcceso", p);
+            AgregarMinutos(dt);
+            return dt;
+        }
+
+        // Agrega la columna "Minutos": tiempo de permanencia de cada entrada.
+        // Si el socio no ha salido, se cuenta hasta este momento. La usa también el reporte de control de acceso.
+        public static void AgregarMinutos(DataTable dt)
+        {
+            dt.Columns.Add("Minutos", typeof(int));
+            foreach (DataRow fila in dt.Rows)
+            {
+                DateTime entrada = Convert.ToDateTime(fila["FechaEntrada"]);
+                DateTime salida = DateTime.Now;
+                if (fila["FechaSalida"] != DBNull.Value)
+                    salida = Convert.ToDateTime(fila["FechaSalida"]);
+
+                TimeSpan permanencia = salida - entrada;
+                fila["Minutos"] = (int)permanencia.TotalMinutes;
+            }
         }
     }
 }

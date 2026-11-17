@@ -18,7 +18,8 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
-                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal))
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@FechaLimite", DateTime.Today.AddDays(7))
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spInicio", p);
 
@@ -30,9 +31,19 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 2),
-                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal))
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@FechaLimite", DateTime.Today.AddDays(7))
             };
-            return _bd.EjecutarStoredProcedure("spInicio", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spInicio", p);
+
+            // Días que le faltan a cada membresía para vencer
+            dt.Columns.Add("Dias", typeof(int));
+            foreach (DataRow fila in dt.Rows)
+            {
+                TimeSpan faltan = Convert.ToDateTime(fila["FechaVencimiento"]) - DateTime.Today;
+                fila["Dias"] = faltan.Days;
+            }
+            return dt;
         }
     }
 }

@@ -56,7 +56,9 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@FechaDesde", bdConexion.Valor(desde)),
                 new SqlParameter("@FechaHasta", bdConexion.Valor(hasta))
             };
-            return _bd.EjecutarStoredProcedure("spReporte", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spReporte", p);
+            logicaControlAcceso.AgregarMinutos(dt);
+            return dt;
         }
 
         // Accion 4: clases grupales, reservas y asistencia
