@@ -1,5 +1,5 @@
 ﻿:root {
-    --naranja: #ff9500; /* naranja de sistema iOS */
+    --naranja: #ff9500; 
     --naranja-hover: #f08a00;
     --error: #ff3b30;
 }
@@ -13,7 +13,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/*  Fondo con la foto  */
+/* Fondo con la foto */
 .fondo {
     position: fixed;
     inset: 0;
@@ -31,7 +31,7 @@ body {
     background: linear-gradient(90deg, rgba(0, 0, 0, .65) 0%, rgba(0, 0, 0, .25) 55%, rgba(0, 0, 0, .05) 100%);
 }
 
-/*  Layout: texto izquierda, login derecha  */
+/* Layout: texto izquierda, login derecha */
 .contenedor {
     min-height: 100vh;
     max-width: 1200px;
@@ -76,7 +76,7 @@ body {
     margin: 0;
 }
 
-/*  Card de vidrio claro  */
+/* Card de vidrio claro */
 .login-col {
     width: 100%;
     max-width: 440px;

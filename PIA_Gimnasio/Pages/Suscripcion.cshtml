@@ -6,7 +6,7 @@
     ViewData["EliminarTitulo"] = "¿Cancelar suscripción?";
     ViewData["EliminarDescripcion"] = "perderá el acceso al gimnasio y a las clases. Después se le puede vender una nueva.";
 
-    // Vencimiento que se muestra junto a la fecha de inicio (lo calcula C#)
+    // Vencimiento que se muestra junto a la fecha de inicio
     string vence = "";
     if (Model.Suscripcion.FechaInicio != null)
         vence = PIA_Gimnasio.Entidades.bdSuscripcion.CalcularVencimiento(Model.Suscripcion.FechaInicio.Value).ToString("dd/MM/yyyy");
@@ -205,7 +205,7 @@
 
 @section Scripts {
     <script>
-        // Al cambiar la fecha de inicio se manda el formulario al handler Vencimiento (C# calcula la fecha, no guarda)
+        // Al cambiar la fecha de inicio se manda el formulario al handler Vencimiento
         function calcularVencimiento(formulario) {
             formulario.action = '?handler=Vencimiento';
             formulario.submit();

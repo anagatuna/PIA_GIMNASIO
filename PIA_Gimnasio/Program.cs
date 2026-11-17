@@ -12,7 +12,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AddPageRoute("/Inicio", "");   // La raíz del sitio abre el inicio
 });
 
-// Sesión: guarda el usuario que inició sesión (ver Login.cshtml.cs)
+// Sesión: guarda el usuario que inició sesión
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(8);

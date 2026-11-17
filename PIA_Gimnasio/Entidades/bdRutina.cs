@@ -8,6 +8,6 @@ namespace PIA_Gimnasio.Entidades
         public string? Nombre { get; set; }
         public string? Objetivo { get; set; }
         public DateTime? FechaAsignacion { get; set; } = DateTime.Today;
-        public List<bdDetalleRutina> Detalles { get; set; } = new List<bdDetalleRutina>();   // Matriz semanal
+        public List<bdDetalleRutina> Detalles { get; set; } = new List<bdDetalleRutina>();   // Agenda semanal
     }
 }

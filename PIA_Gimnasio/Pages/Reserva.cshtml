@@ -30,7 +30,7 @@
                         <label asp-for="Reserva.IdCliente">Socio<span class="asterisco"> *</span></label>
                     </div>
 
-                    <!-- Plan del socio y uso semanal (lo calcula el servidor al elegir socio o clase) -->
+                    <!-- Plan del socio y uso semanal -->
                     @if (Model.Reserva.IdCliente == null)
                     {
                         <div class="resumen-plan mb-3"><i class="bi bi-info-circle"></i> Elige un socio para ver cuántas clases le quedan en la semana.</div>
@@ -178,7 +178,7 @@
                                             }
                                             else
                                             {
-                                                // Clases disponibles esa semana (lunes a domingo): máximo del plan - reservas que cuentan
+                                                // Clases que le quedan esa semana (lunes a domingo): el máximo del plan menos las reservas que cuentan
                                                 int maximo = Convert.ToInt32(fila["MaxClasesSemana"]);
                                                 int quedan = maximo - Convert.ToInt32(fila["UsadasSemana"]);
                                                 if (quedan < 0)

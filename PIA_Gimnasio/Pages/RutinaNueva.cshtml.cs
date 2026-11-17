@@ -145,7 +145,7 @@ namespace PIA_Gimnasio.Pages
         // Llena combos, ejercicios, el expediente del socio elegido y sus alertas
         private void Cargar()
         {
-            // Fecha fuera de rango = vacía (la validación pide capturarla)
+            // La fecha fuera de rango se toma como vacía (la validación pide capturarla)
             Rutina.FechaAsignacion = FechaValida(Rutina.FechaAsignacion);
 
             // El entrenador solo asigna rutinas a su nombre

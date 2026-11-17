@@ -4,10 +4,8 @@ using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Pantalla de inicio según el rol:
-    //   Administrador -> resumen de todas las sucursales (con ocupación por sucursal)
-    //   Recepcionista -> resumen de su sucursal
-    //   Entrenador    -> su agenda de la semana
+    // Pantalla de inicio según el rol: el administrador ve el resumen de todas las sucursales,
+    // la recepcionista el resumen de su sucursal y el entrenador su agenda de la semana.
     public class InicioModel : PaginaProtegida
     {
         private readonly logicaInicio _logica;

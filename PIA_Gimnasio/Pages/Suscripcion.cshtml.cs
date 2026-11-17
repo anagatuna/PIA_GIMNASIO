@@ -84,7 +84,6 @@ namespace PIA_Gimnasio.Pages
         // Botón Registrar
         public IActionResult OnPostGuardar()
         {
-            // Fecha fuera de rango = vacía (la validación pide capturarla)
             Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
 
             if (Suscripcion.IdCliente == null)
@@ -161,7 +160,7 @@ namespace PIA_Gimnasio.Pages
         // Llena combos y tabla
         private void Cargar()
         {
-            // Fecha fuera de rango = vacía (con cualquier botón; así el vencimiento siempre se puede calcular)
+            // La fecha fuera de rango se toma como vacía, así el vencimiento siempre se puede calcular
             Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
 
             try

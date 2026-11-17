@@ -46,7 +46,7 @@ namespace PIA_Gimnasio.Pages
 
         public void OnGet()
         {
-            // Fechas fuera de rango se toman como vacías
+            // Las fechas fuera de rango se toman como vacías
             Desde = FechaValida(Desde);
             Hasta = FechaValida(Hasta);
 
@@ -105,7 +105,6 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel: un renglón por ejercicio con los datos de su rutina
         public IActionResult OnGetExportar()
         {
-            // Fechas fuera de rango se toman como vacías
             Desde = FechaValida(Desde);
             Hasta = FechaValida(Hasta);
 

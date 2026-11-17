@@ -8,7 +8,6 @@
     bool esEdicion = Model.Usuario.IdUsuario > 0;
 }
 
-<!-- Contenedor Principal -->
 <section class="gestion">
     <div class="row g-4">
 
@@ -22,7 +21,7 @@
                 <form method="post" asp-page-handler="Guardar">
                     <input type="hidden" asp-for="Usuario.IdUsuario" />
 
-                    <!-- Empleado (relación 1:1) -->
+                    <!-- Empleado -->
                     <h6 class="subtitulo-seccion">Empleado</h6>
                     <div class="form-floating mb-1">
                         @if (esEdicion)
@@ -90,7 +89,6 @@
                     </div>
                 </form>
 
-                <!-- Área de información -->
                 <hr />
                 <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Información</h5>
                 <div class="info">
@@ -99,10 +97,8 @@
                     El rol determina las opciones que verá cada usuario y solo los usuarios con estatus
                     <b>Activo</b> pueden iniciar sesión.
                 </div>
-                <!-- Fin Área de información -->
             </div>
         </div>
-        <!-- Fin Gestión de información -->
 
         <!-- Consulta de registros -->
         <div class="col-lg-8">
@@ -142,12 +138,9 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Fin Botones -->
                     </div>
                 </form>
-                <!-- Fin Filtros -->
 
-                <!-- Tabla para mostrar la información -->
                 @if (Model.Usuarios.Count > 0)
                 {
                     <div class="table-responsive tabla-gestion">
@@ -201,11 +194,8 @@
                         No se encontraron registros con los parámetros solicitados.
                     </div>
                 }
-                <!-- Fin Tabla para mostrar la información -->
             </div>
         </div>
-        <!-- Fin Consulta de registros -->
 
     </div>
 </section>
-<!-- Fin Contenedor Principal -->

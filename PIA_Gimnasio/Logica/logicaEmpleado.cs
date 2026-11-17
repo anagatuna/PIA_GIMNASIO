@@ -5,7 +5,6 @@ using PIA_Gimnasio.Entidades;
 
 namespace PIA_Gimnasio.Logica
 {
-    // Empleados y sus especialidades (spEmpleado)
     public class logicaEmpleado
     {
         private readonly bdConexion _bd;
@@ -15,8 +14,7 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1 (registrar) o 4 (modificar). Si sale bien, guarda cada especialidad marcada (Accion 7);
-        // el SP solo las guarda si el puesto es Entrenador.
+        // Accion 1 (registrar) o 4 (modificar). 
         public bdRespuesta Guardar(bdEmpleado e, int usuarioSesion)
         {
             int accion = e.IdEmpleado == 0 ? 1 : 4;
@@ -115,7 +113,7 @@ namespace PIA_Gimnasio.Logica
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spEmpleado", p);
 
-            // Columna "Especialidades" con los nombres separados por coma (ej. "Pesas, Yoga")
+            // Columna "Especialidades" con los nombres separados por coma
             AgregarEspecialidades(dt, ConsultarEspecialidades(null));
             return dt;
         }
@@ -131,7 +129,7 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spEmpleado", p));
         }
 
-        // Accion 6: especialidades de los empleados, un renglón por especialidad (idEmpleado null = de todos)
+        // Accion 6: especialidades de los empleados, un renglón por especialidad 
         public DataTable ConsultarEspecialidades(int? idEmpleado)
         {
             SqlParameter[] p = {
@@ -142,7 +140,7 @@ namespace PIA_Gimnasio.Logica
         }
 
         // Accion 8: entrenadores activos (combos de clases y reportes).
-        // Al nombre se le agregan sus especialidades: "CARLOS RAMIREZ (Pesas, CrossFit)"
+        // Al nombre se le agregan sus especialidades
         public DataTable ConsultarEntrenadores()
         {
             SqlParameter[] p = {
@@ -161,8 +159,7 @@ namespace PIA_Gimnasio.Logica
             return dt;
         }
 
-        // Agrega a la tabla la columna "Especialidades" (nombres separados por coma; vacía = NULL).
-        // La tabla debe traer la columna IdEmpleado. La usa también el reporte de empleados.
+        // Agrega a la tabla la columna "Especialidades". La tabla debe traer la columna IdEmpleado. La usa también el reporte de empleados.
         public static void AgregarEspecialidades(DataTable dt, DataTable especialidades)
         {
             dt.Columns.Add("Especialidades", typeof(string));
@@ -176,7 +173,7 @@ namespace PIA_Gimnasio.Logica
             }
         }
 
-        // Junta los nombres de las especialidades de un empleado: "Pesas, Yoga"
+        // Junta los nombres de las especialidades de un empleado
         private static string JuntarEspecialidades(DataTable especialidades, int idEmpleado)
         {
             string lista = "";

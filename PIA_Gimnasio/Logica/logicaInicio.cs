@@ -4,7 +4,6 @@ using PIA_Gimnasio.Datos;
 
 namespace PIA_Gimnasio.Logica
 {
-    // Resumen de la pantalla de inicio (spInicio). idSucursal NULL = todas las sucursales.
     public class logicaInicio
     {
         private readonly bdConexion _bd;
@@ -14,7 +13,7 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1: indicadores del día (un solo renglón)
+        // Accion 1: indicadores del día
         public DataRow? ObtenerIndicadores(int? idSucursal)
         {
             SqlParameter[] p = {

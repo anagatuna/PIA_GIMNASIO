@@ -22,7 +22,7 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? IdClase { get; set; }
 
-        // IdReserva -> estatus (6 Asistió, 7 Falta). Se llena en OnPostGuardar con los socios que se marcaron.
+        // Estatus de cada reserva (6 Asistió, 7 Falta). Se llena en OnPostGuardar con los socios que se marcaron.
         public Dictionary<int, int> Asistencia { get; set; } = new Dictionary<int, int>();
 
         public List<DataRow> Clases { get; set; } = new List<DataRow>();

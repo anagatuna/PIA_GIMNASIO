@@ -69,7 +69,7 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
-            // Fechas fuera de rango = vacías (la validación pide capturarlas)
+            // Las fechas fuera de rango se toman como vacías (la validación pide capturarlas)
             Empleado.FechaNacimiento = FechaValida(Empleado.FechaNacimiento);
             Empleado.FechaContratacion = FechaValida(Empleado.FechaContratacion);
 

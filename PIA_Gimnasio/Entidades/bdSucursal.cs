@@ -5,7 +5,7 @@ namespace PIA_Gimnasio.Entidades
         public int IdSucursal { get; set; }
         public string? Nombre { get; set; }
         public string? Telefono { get; set; }
-        public int? AforoMaximo { get; set; }           // Campo crítico: bloquea entradas en Control de acceso
+        public int? AforoMaximo { get; set; }           // Bloquea entradas en Control de acceso
         public TimeSpan? HoraApertura { get; set; }
         public TimeSpan? HoraCierre { get; set; }
         public string? Calle { get; set; }

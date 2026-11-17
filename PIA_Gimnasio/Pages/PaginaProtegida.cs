@@ -8,19 +8,17 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Las páginas que hereden de esta clase solo se abren con sesión iniciada
-    // y, si la página lo indica, solo con ciertos roles.
+    // Las páginas que hereden de esta clase solo se abren con sesión iniciada y, si la página lo indica, solo con ciertos roles.
     public class PaginaProtegida : PageModel
     {
-        // Roles que pueden abrir la página (se llena en el constructor de cada página).
-        // Si se deja vacío, cualquier usuario con sesión puede entrar.
+        // Roles que pueden abrir la página
         protected string[] RolesPermitidos = { };
 
         // Mensaje que se muestra en la ventana de aviso (success, warning, danger)
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
 
-        // Página a la que regresa al dar Aceptar en el aviso (vacío = se queda en la misma)
+        // Página a la que regresa al dar Aceptar en el aviso
         public string RegresarA { get; set; } = "";
 
         public override void OnPageHandlerExecuting(PageHandlerExecutingContext context)
@@ -46,8 +44,7 @@ namespace PIA_Gimnasio.Pages
                     context.Result = RedirectToPage("/AccesoDenegado");
             }
 
-            // Si llegó un valor con formato inválido (ej. letras en un número o una fecha),
-            // se descarta: el campo queda vacío y las validaciones de la página avisan.
+            // Si llegó un valor con formato inválido, se descarta: el campo queda vacío y las validaciones de la página avisan.
             List<string> invalidos = new List<string>();
             foreach (string clave in ModelState.Keys)
             {
@@ -62,7 +59,6 @@ namespace PIA_Gimnasio.Pages
         }
 
         // Fechas fuera del rango 1900 - 2100 se toman como vacías
-        // (evita errores al calcular semanas o vencimientos y al mandarlas a SQL Server)
         protected DateTime? FechaValida(DateTime? fecha)
         {
             if (fecha == null)
@@ -72,9 +68,7 @@ namespace PIA_Gimnasio.Pages
             return fecha;
         }
 
-        // ---------- Validaciones de formato ----------
-
-        // true si el texto tiene exactamente "largo" caracteres y todos son números (teléfono, código postal)
+        // true si el texto tiene exactamente "largo" caracteres y todos son números
         protected bool SoloNumeros(string texto, int largo)
         {
             if (texto.Length != largo)
@@ -126,8 +120,7 @@ namespace PIA_Gimnasio.Pages
             return true;
         }
 
-        // ---------- Datos de la sesión ----------
-
+        // Datos del usuario que inició sesión
         protected int IdUsuarioSesion()
         {
             return HttpContext.Session.GetInt32("IdUsuario") ?? 0;
@@ -165,8 +158,6 @@ namespace PIA_Gimnasio.Pages
             get { return RolSesion() == "RECEPCIONISTA"; }
         }
 
-        // ---------- Combos ----------
-
         // Llena un combo con lo que regresa un SP
         protected List<SelectListItem> CargarCombo(DataTable dt, string columnaValor, string columnaTexto)
         {
@@ -182,7 +173,7 @@ namespace PIA_Gimnasio.Pages
             return lista;
         }
 
-        // Llena un combo con una lista fija (objetivos, días, tipos de sangre...)
+        // Llena un combo con una lista fija
         protected List<SelectListItem> CargarCombo(List<string> valores)
         {
             List<SelectListItem> lista = new List<SelectListItem>();
@@ -193,7 +184,7 @@ namespace PIA_Gimnasio.Pages
             return lista;
         }
 
-        // ---------- Paginación de las tablas ----------
+        // Paginación de las tablas (10 registros por página)
 
         [BindProperty(SupportsGet = true)]
         public int Pagina { get; set; } = 1;
@@ -224,8 +215,6 @@ namespace PIA_Gimnasio.Pages
             return filas;
         }
 
-        // ---------- Exportar a Excel ----------
-
         // Arma un archivo CSV (se abre con Excel) con las columnas indicadas
         protected IActionResult ExportarExcel(DataTable dt, string nombre, string[] encabezados, string[] columnas)
         {
@@ -248,7 +237,7 @@ namespace PIA_Gimnasio.Pages
                 csv = csv + string.Join(",", valores) + "\r\n";
             }
 
-            // El carácter ﻿ al inicio le indica a Excel que el archivo es UTF-8 (así respeta los acentos)
+            // Se agrega al inicio un carácter especial (BOM) para que Excel lea el archivo como UTF-8 y respete los acentos
             byte[] archivo = Encoding.UTF8.GetBytes("﻿" + csv);
             return File(archivo, "text/csv", nombre + "_" + DateTime.Now.ToString("dd-MM-yyyy") + ".csv");
         }

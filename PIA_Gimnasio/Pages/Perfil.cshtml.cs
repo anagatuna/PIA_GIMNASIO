@@ -17,14 +17,7 @@ namespace PIA_Gimnasio.Pages
 
         // Formulario de cambio de contraseña
         [BindProperty]
-        public CambioContrasenia Cambio { get; set; } = new CambioContrasenia();
-
-        public class CambioContrasenia
-        {
-            public string? Actual { get; set; }
-            public string? Nueva { get; set; }
-            public string? Confirmacion { get; set; }
-        }
+        public bdCambioContrasenia Cambio { get; set; } = new bdCambioContrasenia();
 
         // Datos para la vista
         public DataRow? Perfil { get; set; }
@@ -65,7 +58,7 @@ namespace PIA_Gimnasio.Pages
                 if (r.TipoMensaje == "success")
                 {
                     ModelState.Clear();
-                    Cambio = new CambioContrasenia();
+                    Cambio = new bdCambioContrasenia();
                 }
             }
             catch (Exception)

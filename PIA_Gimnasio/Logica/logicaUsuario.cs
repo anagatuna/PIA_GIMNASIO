@@ -14,7 +14,7 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1: login (regresa el usuario con su rol, estatus y empleado, o null si no coincide)
+        // Accion 1: login (regresa el usuario con su rol, estatus y empleado)
         public DataRow? IniciarSesion(string cuenta, string contrasenia)
         {
             SqlParameter[] p = {
@@ -39,7 +39,7 @@ namespace PIA_Gimnasio.Logica
             return dt.Rows.Count == 0 ? null : dt.Rows[0];
         }
 
-        // Accion 3: consulta general (filtra por cuenta, rol y estatus si se mandan)
+        // Accion 3: consulta general
         public DataTable Consultar(string? cuenta, int? idRol, int? idEstatus)
         {
             SqlParameter[] p = {
@@ -51,7 +51,7 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spUsuario", p);
         }
 
-        // Accion 4: leer un registro (no trae la contraseña)
+        // Accion 4: leer un registro 
         public bdUsuario? Obtener(int id)
         {
             SqlParameter[] p = {
@@ -79,7 +79,7 @@ namespace PIA_Gimnasio.Logica
         {
             int accion = usuario.IdUsuario == 0 ? 5 : 6;
 
-            // La contraseña se manda tal cual (sin recortar espacios); vacía = NULL
+            // La contraseña se manda tal cual (sin recortar espacios)
             object contrasenia = DBNull.Value;
             if (!string.IsNullOrEmpty(usuario.Contrasenia))
                 contrasenia = usuario.Contrasenia;
@@ -108,24 +108,21 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spUsuario", p));
         }
 
-
-
-
-        // Accion 11: empleados activos sin cuenta (al editar incluye al empleado del usuario)
+        // Accion 8: empleados activos sin cuenta
         public DataTable ConsultarEmpleadosDisponibles(int idUsuario)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 11),
+                new SqlParameter("@Accion", 8),
                 new SqlParameter("@IdUsuario", idUsuario)
             };
             return _bd.EjecutarStoredProcedure("spUsuario", p);
         }
 
-        // Accion 12: cambiar contraseña desde el perfil
+        // Accion 9: cambiar contraseña desde el perfil
         public bdRespuesta CambiarContrasenia(int idUsuario, string actual, string nueva)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 12),
+                new SqlParameter("@Accion", 9),
                 new SqlParameter("@IdUsuario", idUsuario),
                 new SqlParameter("@Contrasenia", actual),
                 new SqlParameter("@ContraseniaNueva", nueva)

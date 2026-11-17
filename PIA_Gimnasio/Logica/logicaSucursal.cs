@@ -5,7 +5,6 @@ using PIA_Gimnasio.Entidades;
 
 namespace PIA_Gimnasio.Logica
 {
-    // Sucursales (spSucursal)
     public class logicaSucursal
     {
         private readonly bdConexion _bd;

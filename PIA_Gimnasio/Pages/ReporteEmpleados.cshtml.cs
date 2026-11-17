@@ -32,12 +32,12 @@ namespace PIA_Gimnasio.Pages
         public List<SelectListItem> Especialidades { get; set; } = new List<SelectListItem>();
         public List<DataRow> Filas { get; set; } = new List<DataRow>();
 
-        // Cantidad de empleados por sucursal: nombre de la sucursal -> total
+        // Cantidad de empleados de cada sucursal (nombre de la sucursal y su total)
         public Dictionary<string, int> PorSede { get; set; } = new Dictionary<string, int>();
 
         public void OnGet()
         {
-            // Fechas fuera de rango se toman como vacías
+            // Las fechas fuera de rango se toman como vacías
             Desde = FechaValida(Desde);
             Hasta = FechaValida(Hasta);
 
@@ -78,7 +78,6 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
-            // Fechas fuera de rango se toman como vacías
             Desde = FechaValida(Desde);
             Hasta = FechaValida(Hasta);
 

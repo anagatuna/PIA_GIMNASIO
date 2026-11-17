@@ -34,7 +34,7 @@ body {
     background: #f5f5f7;
 }
 
-/*  Barra superior  */
+/* Barra superior */
 .topbar {
     background: #fff;
     border-bottom: 1px solid #e5e5ea;
@@ -78,7 +78,7 @@ body {
     color: #6e6e73;
 }
 
-/*  Menú lateral  */
+/* Menú lateral */
 .menu-lateral {
     background: var(--menu-bg);
     color: #fff;
@@ -289,7 +289,7 @@ abbr.asterisco {
     text-align: justify;
 }
 
-/*  Botones  */
+/* Botones */
 .btn-naranja, .btn-oscuro, .btn-verde, .btn-rojo, .btn-amarillo {
     border: none;
     color: #fff;
@@ -369,7 +369,7 @@ abbr.asterisco {
         font-size: .85rem;
     }
 
-/*  Tabla  */
+/* Tabla */
 .tabla-gestion {
     border: 1px solid #e5e5ea;
     border-radius: 16px;
@@ -441,7 +441,7 @@ abbr.asterisco {
         margin-bottom: 8px;
     }
 
-/*  Paginación  */
+/* Paginación */
 .paginacion .page-link {
     border: none;
     color: #1c1c1e;
@@ -461,7 +461,7 @@ abbr.asterisco {
     font-size: .85rem;
 }
 
-/*  Modal y mensajes  */
+/* Modal y mensajes */
 .modal-gestion {
     border: none;
     border-radius: 22px;
@@ -500,7 +500,7 @@ abbr.asterisco {
     color: #d70015;
 }
 
-/*  Perfil de usuario y expediente médico */
+/* Perfil de usuario y expediente médico */
 .perfil-encabezado {
     display: flex;
     align-items: center;
@@ -571,9 +571,7 @@ abbr.asterisco {
         color: #d70015;
     }
 
-/* =====================================================
-   Diseñador de rutinas: matriz semanal
-   ===================================================== */
+/* Diseñador de rutinas: matriz semanal */
 .btn-sm-pill {
     padding: 7px 16px;
     font-size: .9rem;
@@ -717,13 +715,12 @@ abbr.asterisco {
     font-weight: 500;
 }
 
-/* Panel de inicio */
-/* En Inicio ninguna tarjeta ocupa el alto de la ventana: cada una mide lo que su contenido */
+/* Panel de inicio: ninguna tarjeta ocupa el alto de la ventana, cada una mide lo que su contenido */
 .gestion.inicio .card-gestion {
     min-height: 0;
 }
 
-/*  Módulos 2 a 6: catálogos, personal, socios y operación */
+/* Pantallas de catálogos, personal, socios y operación */
 
 /* Campo crítico (aforo máximo) */
 .campo-critico { border-color: var(--naranja); font-weight: 700; }

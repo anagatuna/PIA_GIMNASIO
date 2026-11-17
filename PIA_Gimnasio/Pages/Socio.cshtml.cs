@@ -82,7 +82,7 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
-            // Fecha fuera de rango = vacía (la validación pide capturarla)
+            // La fecha fuera de rango se toma como vacía (la validación pide capturarla)
             Socio.FechaNacimiento = FechaValida(Socio.FechaNacimiento);
 
             // El estatus no se captura: siempre Activo (solo pasa a Inactivo con la baja lógica)
@@ -103,7 +103,7 @@ namespace PIA_Gimnasio.Pages
 
             try
             {
-                // El SP genera el folio y guarda el expediente en la misma transacción
+                // El SP genera el folio y también guarda el expediente médico
                 bdRespuesta r = _logica.Guardar(Socio, Expediente, IdUsuarioSesion());
                 Mensaje = r.Mensaje;
                 TipoMensaje = r.TipoMensaje;

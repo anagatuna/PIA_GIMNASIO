@@ -14,9 +14,7 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Registrar la rutina con sus ejercicios. La página ya validó los datos (Validar).
-        // El SP valida la cabecera (socio activo, entrenador) y la guarda (Accion 1);
-        // si se guardó, se agrega cada ejercicio (Accion 10).
+        // Registrar la rutina con sus ejercicios. 
         public bdRespuesta Guardar(bdRutina rutina, int usuarioSesion)
         {
             if (rutina.Detalles.Count == 0)
@@ -52,11 +50,11 @@ namespace PIA_Gimnasio.Logica
             return r;
         }
 
-        // Accion 10: agrega un ejercicio al detalle de la rutina
+        // Accion 9: agrega un ejercicio al detalle de la rutina
         private bdRespuesta GuardarEjercicio(int idRutina, bdDetalleRutina d)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 10),
+                new SqlParameter("@Accion", 9),
                 new SqlParameter("@IdRutina", idRutina),
                 new SqlParameter("@IdEjercicio", d.IdEjercicio),
                 new SqlParameter("@DiaSemana", bdConexion.Valor(d.DiaSemana)),
@@ -91,46 +89,46 @@ namespace PIA_Gimnasio.Logica
             return _bd.EjecutarStoredProcedure("spRutina", p);
         }
 
-        // Accion 5: eliminar (baja lógica)
+        // Accion 4: eliminar (baja lógica)
         public bdRespuesta Eliminar(int id, int usuarioSesion)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 5),
+                new SqlParameter("@Accion", 4),
                 new SqlParameter("@IdRutina", id),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spRutina", p));
         }
 
-        // Accion 6: ejercicios de una rutina (de Lunes a Domingo)
+        // Accion 5: ejercicios de una rutina (de Lunes a Domingo)
         public DataTable ConsultarDetalle(int id)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 6),
+                new SqlParameter("@Accion", 5),
                 new SqlParameter("@IdRutina", id)
             };
             return _bd.EjecutarStoredProcedure("spRutina", p);
         }
 
-        // Accion 7: socios activos (con bandera de expediente médico)
+        // Accion 6: socios activos 
         public DataTable ConsultarSocios()
+        {
+            SqlParameter[] p = { new SqlParameter("@Accion", 6) };
+            return _bd.EjecutarStoredProcedure("spRutina", p);
+        }
+
+        // Accion 7: entrenadores activos
+        public DataTable ConsultarEntrenadores()
         {
             SqlParameter[] p = { new SqlParameter("@Accion", 7) };
             return _bd.EjecutarStoredProcedure("spRutina", p);
         }
 
-        // Accion 8: entrenadores activos
-        public DataTable ConsultarEntrenadores()
-        {
-            SqlParameter[] p = { new SqlParameter("@Accion", 8) };
-            return _bd.EjecutarStoredProcedure("spRutina", p);
-        }
-
-        // Accion 9: expediente médico del socio (null si no tiene)
+        // Accion 8: expediente médico del socio 
         public DataRow? ObtenerExpediente(int idCliente)
         {
             SqlParameter[] p = {
-                new SqlParameter("@Accion", 9),
+                new SqlParameter("@Accion", 8),
                 new SqlParameter("@IdCliente", idCliente)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spRutina", p);
@@ -138,21 +136,19 @@ namespace PIA_Gimnasio.Logica
             return dt.Rows.Count == 0 ? null : dt.Rows[0];
         }
 
-        // ---------- Verificación médica ----------
-        // Compara la contraindicación de cada ejercicio contra el expediente del socio.
-        // Ejemplo: el ejercicio dice "RODILLA, LUMBAR" y el socio tiene en lesiones previas "LESION DE RODILLA".
+        // Verificación médica: compara la contraindicación de cada ejercicio contra el expediente del socio.
 
         // Campos del expediente que se revisan y cómo se nombran en la alerta
         private static string[] CamposMedicos = { "PadecimientosCronicos", "LesionesPrevias", "Alergias", "CondicionRiesgo" };
         private static string[] NombresCampos = { "padecimientos crónicos", "lesiones previas", "alergias", "condición de riesgo" };
 
-        // Regresa el texto de la alerta si el ejercicio está contraindicado para el socio; si no, null.
+        // Regresa el texto de la alerta si el ejercicio está contraindicado para el socio
         public static string? RevisarContraindicacion(DataRow? expediente, string ejercicio, string? contraIndicacion)
         {
             if (expediente == null || string.IsNullOrWhiteSpace(contraIndicacion))
                 return null;
 
-            // La contraindicación viene separada por comas: "RODILLA, LUMBAR"
+            // La contraindicación viene separada por comas
             foreach (string parte in contraIndicacion.Split(','))
             {
                 string termino = parte.Trim().ToUpper();

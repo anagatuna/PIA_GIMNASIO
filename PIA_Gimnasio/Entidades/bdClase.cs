@@ -1,6 +1,5 @@
 namespace PIA_Gimnasio.Entidades
 {
-    // Clase grupal programada (tabla CLASE), de lunes a viernes
     public class bdClase
     {
         public int IdClase { get; set; }
@@ -11,6 +10,6 @@ namespace PIA_Gimnasio.Entidades
         public string? Salon { get; set; }
         public int? CupoMaximo { get; set; }
         public int? IdSucursal { get; set; }
-        public int? IdEmpleado { get; set; }            // Entrenador asignado
+        public int? IdEmpleado { get; set; }  // Entrenador asignado
     }
 }

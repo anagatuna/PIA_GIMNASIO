@@ -3,7 +3,7 @@ namespace PIA_Gimnasio.Entidades
     public class bdSocio
     {
         public int IdCliente { get; set; }
-        public int? Folio { get; set; }                 // Lo genera el SP: Año actual + consecutivo (ej. 20260001)
+        public int? Folio { get; set; }                 // Lo genera desde el SP: Año actual + num consecutivo 
         public string? Nombre { get; set; }
         public string? PrimerApellido { get; set; }
         public string? SegundoApellido { get; set; }

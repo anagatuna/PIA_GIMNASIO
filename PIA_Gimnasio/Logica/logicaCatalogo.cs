@@ -4,19 +4,14 @@ using PIA_Gimnasio.Datos;
 
 namespace PIA_Gimnasio.Logica
 {
-    // Catálogos del sistema: los combos que salen de la base (spCatalogo)
-    // y las listas fijas que se validan en las páginas.
     public class logicaCatalogo
     {
-        // ---------- Listas fijas ----------
-
+        // Listas fijas que se usan en los combos y se validan en las páginas
         public static List<string> TiposSangre = new List<string> { "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-" };
         public static List<string> DiasSemana = new List<string> { "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO" };
         public static List<string> Objetivos = new List<string> { "HIPERTROFIA", "PERDIDA DE PESO", "REACONDICIONAMIENTO", "FUERZA", "RESISTENCIA" };
         public static List<string> GruposMusculares = new List<string> { "PECHO", "ESPALDA", "PIERNA", "GLUTEO", "HOMBRO", "BRAZO", "ABDOMEN", "CARDIO", "CUERPO COMPLETO" };
         public static List<string> NivelesDificultad = new List<string> { "PRINCIPIANTE", "INTERMEDIO", "AVANZADO" };
-
-        // ---------- Catálogos de la base (spCatalogo) ----------
 
         private readonly bdConexion _bd;
 
@@ -56,7 +51,7 @@ namespace PIA_Gimnasio.Logica
         }
 
         // Accion 6: tipos de membresía activos para vender.
-        // La descripción del combo se arma aquí: "ORO - $1,199.00 (5 clases/sem)"
+        // La descripción del combo se arma aquí"
         public DataTable ConsultarMembresiasVenta()
         {
             DataTable dt = Consultar(6);

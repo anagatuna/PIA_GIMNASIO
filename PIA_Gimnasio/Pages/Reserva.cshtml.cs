@@ -127,7 +127,7 @@ namespace PIA_Gimnasio.Pages
         // Llena combos y tabla
         private void Cargar()
         {
-            // Fecha fuera de rango se toma como vacía
+            // La fecha fuera de rango se toma como vacía
             BusquedaFecha = FechaValida(BusquedaFecha);
 
             try

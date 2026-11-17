@@ -4,6 +4,6 @@ namespace PIA_Gimnasio.Entidades
     {
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
-        public int Id { get; set; }     // Id del registro nuevo, cuando el SP lo regresa (ej. IdRutina)
+        public int Id { get; set; }     // Id del registro nuevo, cuando el SP lo regresa
     }
 }

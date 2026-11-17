@@ -15,7 +15,7 @@
 <section class="gestion inicio">
     @if (Model.Rol == "ENTRENADOR")
     {
-        // ---------- Entrenador: agenda de la semana ----------
+        // Entrenador: su agenda de la semana
         int clasesHoy = 0;
         int alumnos = 0;
         foreach (DataRow c in Model.Agenda)
@@ -74,7 +74,7 @@
     }
     else if (Model.Indicadores != null)
     {
-        // ---------- Administrador y Recepcionista: resumen del día ----------
+        // Administrador y Recepcionista: resumen del día
         var ind = Model.Indicadores;
         int dentro = Convert.ToInt32(ind["DentroAhora"]);
         int aforoMaximo = Convert.ToInt32(ind["AforoMaximo"]);
