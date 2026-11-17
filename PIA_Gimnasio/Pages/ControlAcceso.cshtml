@@ -3,8 +3,7 @@
 @{
     ViewData["Title"] = "Control de acceso";
     ViewData["AnchoCompleto"] = true;
-    int ocupacion = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["Ocupacion"]);
-    int aforo = Model.Aforo == null ? 0 : Convert.ToInt32(Model.Aforo["AforoMaximo"]);
+
     // Hora en formato 08:30 (vacío si no hay)
     string Hora(object valor)
     {
@@ -12,10 +11,37 @@
             return "";
         return ((TimeSpan)valor).ToString(@"hh\:mm");
     }
+
+    // Colores del semáforo según el resultado del último folio
+    string estado = "espera";
+    string icono = "bi-hourglass";
+    string titulo = "Esperando folio";
+    string aviso = "Captura o escanea el folio del socio.";
+
+    if (Model.Resultado == "Permitido")
+    {
+        estado = "verde";
+        icono = "bi-check-lg";
+        titulo = "ACCESO PERMITIDO";
+    }
+    else if (Model.Resultado == "Salida")
+    {
+        estado = "salida";
+        icono = "bi-box-arrow-right";
+        titulo = "SALIDA REGISTRADA";
+    }
+    else if (Model.Resultado != "")
+    {
+        estado = "rojo";
+        icono = "bi-x-lg";
+        titulo = "ACCESO DENEGADO";
+    }
+
+    if (Model.Aviso != "")
+        aviso = Model.Aviso;
 }
 
 <section class="gestion control-acceso">
-    @Html.AntiForgeryToken()
 
     @if (Model.EsAdministrador)
     {
@@ -39,45 +65,65 @@
                         Horario @Hora(Model.Aforo["HoraApertura"]) - @Hora(Model.Aforo["HoraCierre"])
                         @if (DateTime.Now.TimeOfDay < (TimeSpan)Model.Aforo["HoraApertura"] || DateTime.Now.TimeOfDay > (TimeSpan)Model.Aforo["HoraCierre"])
                         {
-                            <br /><span class="text-danger fw-semibold"><i class="bi bi-lock"></i> Cerrada en este momento: no se registran entradas.</span>
+                            <br /><span class="text-danger fw-semibold"><i class="bi bi-lock"></i> Cerrada en este momento: no se registran entradas ni salidas.</span>
                         }
                     </p>
 
-                    <form id="formAcceso" autocomplete="off">
+                    <form method="post" autocomplete="off">
+                        <input type="hidden" asp-for="IdSucursal" />
                         <div class="form-floating mb-3">
-                            <input id="folio" class="form-control campo-folio" placeholder="Folio" inputmode="numeric" maxlength="8" autofocus />
+                            <input asp-for="Folio" id="folio" class="form-control campo-folio" placeholder="Folio" inputmode="numeric" maxlength="8" autofocus />
                             <label for="folio"><i class="bi bi-upc-scan"></i> Folio del socio</label>
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-verde flex-fill py-3" data-accion="Entrada">
+                            @* El primer botón es el que se usa al presionar Enter *@
+                            <button type="submit" class="btn btn-verde flex-fill py-3" asp-page-handler="Entrada">
                                 <i class="bi bi-box-arrow-in-right me-1"></i>Registrar entrada <small class="d-block opacity-75">Enter</small>
                             </button>
-                            <button type="button" class="btn btn-oscuro flex-fill py-3" data-accion="Salida" id="btnSalida">
-                                <i class="bi bi-box-arrow-right me-1"></i>Registrar salida <small class="d-block opacity-75">Shift + Enter</small>
+                            <button type="submit" class="btn btn-oscuro flex-fill py-3" asp-page-handler="Salida">
+                                <i class="bi bi-box-arrow-right me-1"></i>Registrar salida
                             </button>
                         </div>
                     </form>
 
                     <!-- Semáforo -->
-                    <div id="semaforo" class="semaforo espera mt-3">
-                        <div class="luz"><i class="bi bi-hourglass"></i></div>
+                    <div class="semaforo @estado mt-3">
+                        <div class="luz"><i class="bi @icono"></i></div>
                         <div class="semaforo-texto">
-                            <div class="semaforo-titulo" id="semaforoTitulo">Esperando folio</div>
-                            <div id="semaforoMensaje">Captura o escanea el folio del socio.</div>
-                            <div id="semaforoSocio" class="semaforo-socio"></div>
+                            <div class="semaforo-titulo">@titulo</div>
+                            <div>@aviso</div>
+                            @if (Model.DatosSocio != null && Model.DatosSocio["Socio"] != DBNull.Value)
+                            {
+                                <div class="semaforo-socio">
+                                    <b>@Model.DatosSocio["Socio"]</b> · Folio @Model.FolioCapturado
+                                    @if (Model.DatosSocio["Membresia"] != DBNull.Value)
+                                    {
+                                        <br />
+                                        <span>Membresía @Model.DatosSocio["Membresia"] · vence @Convert.ToDateTime(Model.DatosSocio["FechaVencimiento"]).ToString("dd/MM/yyyy")</span>
+                                    }
+                                    @if (Model.DatosSocio["Minutos"] != DBNull.Value)
+                                    {
+                                        <br />
+                                        <span>Permanencia: <b>@Model.DatosSocio["Minutos"] min</b></span>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Aforo en tiempo real + movimientos -->
+            <!-- Aforo + movimientos -->
             <div class="col-lg-7">
                 <div class="card-gestion h-100">
                     <div class="aforo-tiempo-real mb-3">
                         <div>
                             <div class="text-secondary small text-uppercase fw-semibold">Aforo actual</div>
-                            <div class="aforo-cifra"><span id="ocupacion">@ocupacion</span><small> / <span id="aforoMaximo">@aforo</span></small></div>
+                            <div class="aforo-cifra">@Model.Aforo["Ocupacion"]<small> / @Model.Aforo["AforoMaximo"]</small></div>
                         </div>
+                        <a class="btn btn-oscuro btn-sm-pill ms-auto" asp-page="/ControlAcceso" asp-route-idSucursal="@Model.IdSucursal" title="Actualizar">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        </a>
                     </div>
 
                     <h5 class="titulo-card"><i class="bi bi-clock-history"></i>&nbsp;Movimientos de hoy</h5>
@@ -92,8 +138,32 @@
                                     <th class="text-end">Permanencia</th>
                                 </tr>
                             </thead>
-                            <tbody id="movimientos">
-                                <tr><td colspan="5" class="text-center text-secondary">Cargando...</td></tr>
+                            <tbody>
+                                @if (Model.Movimientos.Count == 0)
+                                {
+                                    <tr><td colspan="5" class="text-center text-secondary">Sin movimientos hoy.</td></tr>
+                                }
+                                @foreach (DataRow m in Model.Movimientos)
+                                {
+                                    bool dentro = m["FechaSalida"] == DBNull.Value;
+
+                                    <tr class="@(dentro ? "dentro" : "")">
+                                        <td class="fw-bold">@m["Folio"]</td>
+                                        <td>@m["Socio"]</td>
+                                        <td>@Convert.ToDateTime(m["FechaEntrada"]).ToString("HH:mm")</td>
+                                        <td>
+                                            @if (dentro)
+                                            {
+                                                <span class="etiqueta etiqueta-activo">Dentro</span>
+                                            }
+                                            else
+                                            {
+                                                @Convert.ToDateTime(m["FechaSalida"]).ToString("HH:mm")
+                                            }
+                                        </td>
+                                        <td class="text-end">@m["Minutos"] min</td>
+                                    </tr>
+                                }
                             </tbody>
                         </table>
                     </div>
@@ -103,153 +173,3 @@
         </div>
     }
 </section>
-
-@section Scripts {
-@if (Model.Aforo != null)
-{
-    <script>
-        var idSucursal = '@Model.IdSucursal';
-
-        // Convierte un texto para meterlo al HTML sin que se interprete como etiquetas
-        // (por si un nombre trae caracteres como < o >)
-        function escapar(valor) {
-            var span = document.createElement('span');
-            span.textContent = valor;
-            return span.innerHTML;
-        }
-
-        // Aforo actual: ocupación / máximo
-        function pintarAforo(ocupacion, maximo) {
-            document.getElementById('ocupacion').textContent = ocupacion;
-            document.getElementById('aforoMaximo').textContent = maximo;
-        }
-
-        // Semáforo: verde (permitido), rojo (denegado) o salida
-        function pintarSemaforo(r) {
-            var estado = 'rojo';
-            var icono = 'bi-x-lg';
-            var titulo = 'ACCESO DENEGADO';
-
-            if (r.resultado == 'Permitido') {
-                estado = 'verde';
-                icono = 'bi-check-lg';
-                titulo = 'ACCESO PERMITIDO';
-            } else if (r.resultado == 'Salida') {
-                estado = 'salida';
-                icono = 'bi-box-arrow-right';
-                titulo = 'SALIDA REGISTRADA';
-            }
-
-            var semaforo = document.getElementById('semaforo');
-            semaforo.className = 'semaforo mt-3 ' + estado;
-            semaforo.querySelector('.luz').innerHTML = '<i class="bi ' + icono + '"></i>';
-            document.getElementById('semaforoTitulo').textContent = titulo;
-            document.getElementById('semaforoMensaje').textContent = r.mensaje;
-
-            // Datos del socio
-            var datos = '';
-            if (r.socio)
-                datos += '<b>' + escapar(r.socio) + '</b> · Folio ' + r.folio;
-            if (r.membresia)
-                datos += '<br>Membresía ' + escapar(r.membresia) + ' · vence ' + r.vence;
-            if (r.minutos != null)
-                datos += '<br>Permanencia: <b>' + r.minutos + ' min</b>';
-            document.getElementById('semaforoSocio').innerHTML = datos;
-        }
-
-        // Pide el aforo y los movimientos del día (se llama cada 5 segundos)
-        function actualizarEstado() {
-            fetch('?handler=Estado&idSucursal=' + idSucursal, { cache: 'no-store' })
-                .then(function (respuesta) { return respuesta.json(); })
-                .then(function (datos) {
-                    pintarAforo(datos.ocupacion, datos.aforoMaximo);
-
-                    var filas = '';
-                    for (var i = 0; i < datos.movimientos.length; i++) {
-                        var m = datos.movimientos[i];
-                        var salida = m.salida;
-                        var claseFila = '';
-                        if (salida == null) {
-                            salida = '<span class="etiqueta etiqueta-activo">Dentro</span>';
-                            claseFila = 'dentro';
-                        }
-
-                        filas += '<tr class="' + claseFila + '">'
-                            + '<td class="fw-bold">' + m.folio + '</td>'
-                            + '<td>' + escapar(m.socio) + '</td>'
-                            + '<td>' + m.entrada + '</td>'
-                            + '<td>' + salida + '</td>'
-                            + '<td class="text-end">' + m.minutos + ' min</td>'
-                            + '</tr>';
-                    }
-
-                    if (filas == '')
-                        filas = '<tr><td colspan="5" class="text-center text-secondary">Sin movimientos hoy.</td></tr>';
-                    document.getElementById('movimientos').innerHTML = filas;
-                })
-                .catch(function () {
-                    // Sin conexión: se vuelve a intentar en el siguiente ciclo
-                });
-        }
-
-        // Registra la entrada o la salida del folio capturado
-        function registrar(accion) {
-            var campo = document.getElementById('folio');
-            var folio = campo.value.trim();
-            if (folio == '') {
-                campo.focus();
-                return;
-            }
-
-            var datos = new FormData();
-            datos.append('folio', folio);
-            datos.append('idSucursal', idSucursal);
-
-            // El token antifalsificación que ASP.NET pide en los POST
-            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            fetch('?handler=' + accion, {
-                method: 'POST',
-                headers: { 'RequestVerificationToken': token },
-                body: datos
-            })
-                .then(function (respuesta) { return respuesta.json(); })
-                .then(function (r) {
-                    pintarSemaforo(r);
-                    if (r.aforoMaximo)
-                        pintarAforo(r.ocupacion, r.aforoMaximo);
-                    actualizarEstado();
-                })
-                .catch(function () {
-                    pintarSemaforo({ resultado: 'Denegado', mensaje: 'No se pudo conectar con el servidor.' });
-                });
-
-            campo.value = '';
-            campo.focus();
-        }
-
-        // Enter = entrada
-        document.getElementById('formAcceso').addEventListener('submit', function (e) {
-            e.preventDefault();
-            registrar('Entrada');
-        });
-
-        // Botón salida
-        document.getElementById('btnSalida').addEventListener('click', function () {
-            registrar('Salida');
-        });
-
-        // Shift + Enter = salida
-        document.getElementById('folio').addEventListener('keydown', function (e) {
-            if (e.key == 'Enter' && e.shiftKey) {
-                e.preventDefault();
-                registrar('Salida');
-            }
-        });
-
-        pintarAforo(@ocupacion, @aforo);
-        actualizarEstado();
-        setInterval(actualizarEstado, 5000);
-    </script>
-}
-}

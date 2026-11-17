@@ -80,7 +80,7 @@
                                     }
                                     @foreach (var d in delDia)
                                     {
-                                        var alerta = logicaRutina.RevisarContraindicacion(Model.Expediente, d["Ejercicio"].ToString()!, d["ContraIndicacion"].ToString());
+                                        var alerta = logicaRutina.RevisarContraindicacion(Model.Expediente, d["Ejercicio"].ToString() ?? "", d["ContraIndicacion"].ToString());
                                         <div class="ejercicio-dia @(alerta != null ? "con-alerta" : "")" title="@alerta">
                                             <div class="nombre">
                                                 @if (alerta != null)

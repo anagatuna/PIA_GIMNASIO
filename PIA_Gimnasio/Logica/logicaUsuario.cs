@@ -44,9 +44,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Cuenta", Valor(cuenta?.Trim())),
-                new SqlParameter("@IdRol", Valor(idRol)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@Cuenta", bdConexion.Valor(cuenta)),
+                new SqlParameter("@IdRol", bdConexion.Valor(idRol)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus))
             };
             return _bd.EjecutarStoredProcedure("spUsuario", p);
         }
@@ -79,14 +79,19 @@ namespace PIA_Gimnasio.Logica
         {
             int accion = usuario.IdUsuario == 0 ? 5 : 6;
 
+            // La contraseña se manda tal cual (sin recortar espacios); vacía = NULL
+            object contrasenia = DBNull.Value;
+            if (!string.IsNullOrEmpty(usuario.Contrasenia))
+                contrasenia = usuario.Contrasenia;
+
             SqlParameter[] p = {
                 new SqlParameter("@Accion", accion),
                 new SqlParameter("@IdUsuario", usuario.IdUsuario),
-                new SqlParameter("@Cuenta", Valor(usuario.Cuenta?.Trim())),
-                new SqlParameter("@Contrasenia", Valor(usuario.Contrasenia)),
-                new SqlParameter("@IdRol", Valor(usuario.IdRol)),
-                new SqlParameter("@IdEstatus", Valor(usuario.IdEstatus)),
-                new SqlParameter("@IdEmpleado", Valor(usuario.IdEmpleado)),
+                new SqlParameter("@Cuenta", bdConexion.Valor(usuario.Cuenta)),
+                new SqlParameter("@Contrasenia", contrasenia),
+                new SqlParameter("@IdRol", bdConexion.Valor(usuario.IdRol)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(usuario.IdEstatus)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(usuario.IdEmpleado)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spUsuario", p));
@@ -105,18 +110,6 @@ namespace PIA_Gimnasio.Logica
 
 
 
-        // Accion 10: ¿ya existe la cuenta? (idUsuario excluye al usuario que se está editando)
-        public bool ExisteCuenta(string cuenta, int idUsuario)
-        {
-            SqlParameter[] p = {
-                new SqlParameter("@Accion", 10),
-                new SqlParameter("@Cuenta", cuenta.Trim()),
-                new SqlParameter("@IdUsuario", idUsuario)
-            };
-            DataTable dt = _bd.EjecutarStoredProcedure("spUsuario", p);
-
-            return Convert.ToInt32(dt.Rows[0]["Total"]) > 0;
-        }
 
         // Accion 11: empleados activos sin cuenta (al editar incluye al empleado del usuario)
         public DataTable ConsultarEmpleadosDisponibles(int idUsuario)
@@ -148,18 +141,6 @@ namespace PIA_Gimnasio.Logica
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto;
-        }
-
-        // Manda NULL a SQL cuando el número no tiene valor (filtros y combos sin seleccionar)
-        private object Valor(int? numero)
-        {
-            return numero.HasValue ? numero.Value : DBNull.Value;
         }
     }
 }

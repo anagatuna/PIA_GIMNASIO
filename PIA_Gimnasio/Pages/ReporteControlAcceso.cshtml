@@ -17,12 +17,16 @@
                         <label asp-for="Busqueda">Socio (folio o nombre)</label>
                     </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <div class="form-floating">
-                        <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
-                        <label asp-for="IdSucursal">Sucursal</label>
+                @* La recepcionista solo consulta su sucursal *@
+                @if (!Model.EsRecepcionista)
+                {
+                    <div class="col-md-3 mb-3">
+                        <div class="form-floating">
+                            <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
+                            <label asp-for="IdSucursal">Sucursal</label>
+                        </div>
                     </div>
-                </div>
+                }
                 <div class="col-md-2 mb-3">
                     <div class="form-floating">
                         <input asp-for="Desde" type="date" class="form-control" />

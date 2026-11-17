@@ -22,12 +22,16 @@
                 }
                 else
                 {
+                    // Primera letra del nombre para el círculo
+                    string nombre = Model.Socio["Socio"].ToString() ?? "";
+                    string inicial = nombre == "" ? "" : nombre.Substring(0, 1);
+
                     <div class="perfil-encabezado mb-3">
-                        <div class="perfil-avatar">@Model.Socio["Socio"].ToString()!.Substring(0, 1)</div>
+                        <div class="perfil-avatar">@inicial</div>
                         <div>
                             <div class="perfil-nombre">@Model.Socio["Socio"]</div>
                             <span class="etiqueta etiqueta-rol">Folio @Model.Socio["Folio"]</span>
-                            <span class="small text-secondary ms-1">@Model.Socio["Edad"] años · @Model.Socio["Telefono"]</span>
+                            <span class="small text-secondary ms-1">@Model.Edad años · @Model.Socio["Telefono"]</span>
                         </div>
                     </div>
 
@@ -122,10 +126,10 @@
                             <tbody>
                                 @foreach (DataRow fila in Model.Socios)
                                 {
-                                    var id = fila["IdCliente"].ToString()!;
+                                    var id = fila["IdCliente"].ToString() ?? "";
                                     bool tiene = Convert.ToInt32(fila["TieneExpediente"]) == 1;
 
-                                    <tr class="@(Model.IdCliente?.ToString() == id ? "fila-seleccionada" : "")">
+                                    <tr class="@(Convert.ToString(Model.IdCliente) == id ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
                                             <a class="btn-circulo btn-sm-circulo @(tiene ? "btn-verde" : "btn-rojo")" title="Ver expediente"
                                                asp-page="/ExpedienteMedico" asp-route-IdCliente="@id" asp-route-Busqueda="@Model.Busqueda">

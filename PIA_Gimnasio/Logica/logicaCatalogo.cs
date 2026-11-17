@@ -11,10 +11,10 @@ namespace PIA_Gimnasio.Logica
         // ---------- Listas fijas ----------
 
         public static List<string> TiposSangre = new List<string> { "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-" };
-        public static List<string> DiasSemana = new List<string> { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
-        public static List<string> Objetivos = new List<string> { "Hipertrofia", "Pérdida de peso", "Reacondicionamiento", "Fuerza", "Resistencia" };
-        public static List<string> GruposMusculares = new List<string> { "Pecho", "Espalda", "Pierna", "Glúteo", "Hombro", "Brazo", "Abdomen", "Cardio", "Cuerpo completo" };
-        public static List<string> NivelesDificultad = new List<string> { "Principiante", "Intermedio", "Avanzado" };
+        public static List<string> DiasSemana = new List<string> { "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO" };
+        public static List<string> Objetivos = new List<string> { "HIPERTROFIA", "PERDIDA DE PESO", "REACONDICIONAMIENTO", "FUERZA", "RESISTENCIA" };
+        public static List<string> GruposMusculares = new List<string> { "PECHO", "ESPALDA", "PIERNA", "GLUTEO", "HOMBRO", "BRAZO", "ABDOMEN", "CARDIO", "CUERPO COMPLETO" };
+        public static List<string> NivelesDificultad = new List<string> { "PRINCIPIANTE", "INTERMEDIO", "AVANZADO" };
 
         // ---------- Catálogos de la base (spCatalogo) ----------
 
@@ -55,10 +55,19 @@ namespace PIA_Gimnasio.Logica
             return Consultar(5);
         }
 
-        // Accion 6: tipos de membresía activos para vender (con precio)
+        // Accion 6: tipos de membresía activos para vender.
+        // La descripción del combo se arma aquí: "ORO - $1,199.00 (5 clases/sem)"
         public DataTable ConsultarMembresiasVenta()
         {
-            return Consultar(6);
+            DataTable dt = Consultar(6);
+
+            foreach (DataRow fila in dt.Rows)
+            {
+                decimal precio = Convert.ToDecimal(fila["Precio"]);
+                fila["Descripcion"] = fila["Descripcion"] + " - $" + precio.ToString("N2")
+                                      + " (" + fila["MaxClasesSemana"] + " clases/sem)";
+            }
+            return dt;
         }
 
         // Accion 7: estatus de suscripción (Activo, Vencida, Cancelada)

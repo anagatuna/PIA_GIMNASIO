@@ -14,49 +14,35 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Registrar la rutina con sus ejercicios.
-        // Primero se valida la cabecera y cada ejercicio; si todo está bien se guarda la cabecera
-        // (Accion 1) y después cada ejercicio (Accion 10).
+        // Registrar la rutina con sus ejercicios. La página ya validó los datos (Validar).
+        // El SP valida la cabecera (socio activo, entrenador) y la guarda (Accion 1);
+        // si se guardó, se agrega cada ejercicio (Accion 10).
         public bdRespuesta Guardar(bdRutina rutina, int usuarioSesion)
         {
             if (rutina.Detalles.Count == 0)
                 return new bdRespuesta { Mensaje = "Agrega al menos un ejercicio a la rutina.", TipoMensaje = "warning" };
 
-            // 1. Validar sin guardar
-            bdRespuesta r = GuardarCabecera(rutina, true, usuarioSesion);
+            bdRespuesta r = GuardarCabecera(rutina, usuarioSesion);
             if (r.TipoMensaje != "success")
                 return r;
 
             foreach (bdDetalleRutina d in rutina.Detalles)
             {
-                r = GuardarEjercicio(0, d, true);
-                if (r.TipoMensaje != "success")
-                    return r;
-            }
-
-            // 2. Guardar la cabecera y sus ejercicios
-            r = GuardarCabecera(rutina, false, usuarioSesion);
-            if (r.TipoMensaje != "success")
-                return r;
-
-            foreach (bdDetalleRutina d in rutina.Detalles)
-            {
-                GuardarEjercicio(r.Id, d, false);
+                GuardarEjercicio(r.Id, d);
             }
             return r;
         }
 
-        // Accion 1: cabecera de la rutina (soloValidar = true no guarda)
-        private bdRespuesta GuardarCabecera(bdRutina rutina, bool soloValidar, int usuarioSesion)
+        // Accion 1: cabecera de la rutina
+        private bdRespuesta GuardarCabecera(bdRutina rutina, int usuarioSesion)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
-                new SqlParameter("@IdCliente", Valor(rutina.IdCliente)),
-                new SqlParameter("@IdEmpleado", Valor(rutina.IdEmpleado)),
-                new SqlParameter("@Nombre", Valor(rutina.Nombre?.Trim().ToUpper())),
-                new SqlParameter("@Objetivo", Valor(rutina.Objetivo)),
+                new SqlParameter("@IdCliente", bdConexion.Valor(rutina.IdCliente)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(rutina.IdEmpleado)),
+                new SqlParameter("@Nombre", bdConexion.Valor(rutina.Nombre)),
+                new SqlParameter("@Objetivo", bdConexion.Valor(rutina.Objetivo)),
                 new SqlParameter("@FechaAsignacion", (object?)rutina.FechaAsignacion ?? DBNull.Value),
-                new SqlParameter("@SoloValidar", soloValidar),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spRutina", p);
@@ -66,18 +52,17 @@ namespace PIA_Gimnasio.Logica
             return r;
         }
 
-        // Accion 10: un ejercicio del detalle (soloValidar = true no guarda)
-        private bdRespuesta GuardarEjercicio(int idRutina, bdDetalleRutina d, bool soloValidar)
+        // Accion 10: agrega un ejercicio al detalle de la rutina
+        private bdRespuesta GuardarEjercicio(int idRutina, bdDetalleRutina d)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 10),
                 new SqlParameter("@IdRutina", idRutina),
                 new SqlParameter("@IdEjercicio", d.IdEjercicio),
-                new SqlParameter("@DiaSemana", Valor(d.DiaSemana)),
+                new SqlParameter("@DiaSemana", bdConexion.Valor(d.DiaSemana)),
                 new SqlParameter("@Series", d.Series),
                 new SqlParameter("@Repeticiones", d.Repeticiones),
-                new SqlParameter("@TiempoDescanso", d.TiempoDescanso),
-                new SqlParameter("@SoloValidar", soloValidar)
+                new SqlParameter("@TiempoDescanso", d.TiempoDescanso)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spRutina", p));
         }
@@ -99,9 +84,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@IdCliente", Valor(idCliente)),
-                new SqlParameter("@IdEmpleado", Valor(idEmpleado)),
-                new SqlParameter("@Objetivo", Valor(objetivo))
+                new SqlParameter("@IdCliente", bdConexion.Valor(idCliente)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(idEmpleado)),
+                new SqlParameter("@Objetivo", bdConexion.Valor(objetivo))
             };
             return _bd.EjecutarStoredProcedure("spRutina", p);
         }
@@ -155,94 +140,34 @@ namespace PIA_Gimnasio.Logica
 
         // ---------- Verificación médica ----------
         // Compara la contraindicación de cada ejercicio contra el expediente del socio.
-        // Ejemplo: el ejercicio dice "Rodilla, Lumbar" y el socio tiene en lesiones previas "lesión de rodilla".
+        // Ejemplo: el ejercicio dice "RODILLA, LUMBAR" y el socio tiene en lesiones previas "LESION DE RODILLA".
 
         // Campos del expediente que se revisan y cómo se nombran en la alerta
         private static string[] CamposMedicos = { "PadecimientosCronicos", "LesionesPrevias", "Alergias", "CondicionRiesgo" };
         private static string[] NombresCampos = { "padecimientos crónicos", "lesiones previas", "alergias", "condición de riesgo" };
 
-        // Palabras demasiado generales para considerarlas coincidencia por sí solas
-        private static List<string> PalabrasGenerales = new List<string>
-        {
-            "lesion", "lesiones", "dolor", "problema", "problemas", "cronico", "cronica", "previa", "previas",
-            "condicion", "riesgo", "enfermedad", "sindrome", "leve", "grave", "severa", "severo", "ninguna", "ninguno", "n a"
-        };
-
         // Regresa el texto de la alerta si el ejercicio está contraindicado para el socio; si no, null.
         public static string? RevisarContraindicacion(DataRow? expediente, string ejercicio, string? contraIndicacion)
         {
-            if (expediente == null)
+            if (expediente == null || string.IsNullOrWhiteSpace(contraIndicacion))
                 return null;
 
-            foreach (string termino in Terminos(contraIndicacion))
+            // La contraindicación viene separada por comas: "RODILLA, LUMBAR"
+            foreach (string parte in contraIndicacion.Split(','))
             {
+                string termino = parte.Trim().ToUpper();
+                if (termino == "" || termino == "NINGUNA")
+                    continue;
+
+                // Si algún campo del expediente menciona el término, el ejercicio está contraindicado
                 for (int i = 0; i < CamposMedicos.Length; i++)
                 {
-                    string valor = expediente[CamposMedicos[i]].ToString() ?? "";
-
-                    foreach (string dato in Terminos(valor))
-                    {
-                        if (Coinciden(termino, dato))
-                            return ejercicio + ": está contraindicado por \"" + termino + "\" y el socio registra en " + NombresCampos[i] + ": \"" + dato + "\".";
-                    }
+                    string valor = (expediente[CamposMedicos[i]].ToString() ?? "").ToUpper();
+                    if (valor.Contains(termino))
+                        return ejercicio + ": está contraindicado por \"" + termino + "\" y el socio registra en " + NombresCampos[i] + ": \"" + valor + "\".";
                 }
             }
             return null;
-        }
-
-        // Separa un texto en términos: "Rodilla, hipertensión / asma" -> Rodilla | hipertensión | asma
-        private static List<string> Terminos(string? texto)
-        {
-            List<string> terminos = new List<string>();
-            if (string.IsNullOrWhiteSpace(texto))
-                return terminos;
-
-            string[] partes = texto.Replace(" y ", ",").Split(new char[] { ',', ';', '/' });
-            foreach (string parte in partes)
-            {
-                string termino = parte.Trim();
-                if (termino != "" && !PalabrasGenerales.Contains(Normalizar(termino).Trim()))
-                    terminos.Add(termino);
-            }
-            return terminos;
-        }
-
-        // Coinciden si uno contiene al otro ("rodilla" / "lesión de rodilla")
-        // o si comparten una palabra importante ("lesión de rodilla" / "rodilla operada")
-        private static bool Coinciden(string a, string b)
-        {
-            string x = Normalizar(a);
-            string y = Normalizar(b);
-
-            if (x.Contains(y) || y.Contains(x))
-                return true;
-
-            List<string> palabrasY = new List<string>(y.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-            foreach (string palabra in x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (palabra.Length >= 4 && !PalabrasGenerales.Contains(palabra) && palabrasY.Contains(palabra))
-                    return true;
-            }
-            return false;
-        }
-
-        // Minúsculas y sin acentos, para comparar "Lesión" con "lesion"
-        private static string Normalizar(string texto)
-        {
-            string resultado = texto.Trim().ToLower();
-            resultado = resultado.Replace("á", "a").Replace("é", "e").Replace("í", "i")
-                                 .Replace("ó", "o").Replace("ú", "u").Replace("ü", "u");
-
-            // Cualquier signo que no sea letra o número se cambia por espacio
-            string limpio = "";
-            foreach (char c in resultado)
-            {
-                if (char.IsLetterOrDigit(c))
-                    limpio += c;
-                else
-                    limpio += ' ';
-            }
-            return limpio;
         }
 
         // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta
@@ -253,18 +178,6 @@ namespace PIA_Gimnasio.Logica
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto;
-        }
-
-        // Manda NULL a SQL cuando el número no tiene valor
-        private object Valor(int? numero)
-        {
-            return numero.HasValue ? numero.Value : DBNull.Value;
         }
     }
 }

@@ -13,7 +13,7 @@ namespace PIA_Gimnasio.Pages
         public PaseListaModel(logicaPaseLista logica)
         {
             _logica = logica;
-            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "ENTRENADOR" };
         }
 
         [BindProperty(SupportsGet = true)]
@@ -22,8 +22,7 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)]
         public int? IdClase { get; set; }
 
-        // IdReserva -> estatus (5 Confirmado, 6 Asistió, 7 Falta). Se envía como Asistencia[IdReserva]
-        [BindProperty]
+        // IdReserva -> estatus (6 Asistió, 7 Falta). Se llena en OnPostGuardar con los socios que se marcaron.
         public Dictionary<int, int> Asistencia { get; set; } = new Dictionary<int, int>();
 
         public List<DataRow> Clases { get; set; } = new List<DataRow>();
@@ -32,7 +31,7 @@ namespace PIA_Gimnasio.Pages
 
         public DateTime Dia
         {
-            get { return (Fecha ?? DateTime.Today).Date; }
+            get { return (FechaValida(Fecha) ?? DateTime.Today).Date; }
         }
 
         // El entrenador queda limitado a sus propias clases (-1 si no tiene empleado ligado)
@@ -51,9 +50,23 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar asistencia
         public IActionResult OnPostGuardar()
         {
+            // Cada socio marcado llega como "Asistencia[IdReserva]" = 6 o 7.
+            // Los que no se marcaron no llegan (siguen pendientes).
+            foreach (string campo in Request.Form.Keys)
+            {
+                if (campo.StartsWith("Asistencia[") && campo.EndsWith("]"))
+                {
+                    string id = campo.Substring(11, campo.Length - 12);
+                    int idReserva;
+                    int estatus;
+                    if (int.TryParse(id, out idReserva) && int.TryParse(Request.Form[campo], out estatus))
+                        Asistencia[idReserva] = estatus;
+                }
+            }
+
             if (IdClase == null || Asistencia.Count == 0)
             {
-                Mensaje = "No hay participantes para registrar.";
+                Mensaje = "Marca Asistió o Falta en al menos un socio.";
                 TipoMensaje = "warning";
                 Cargar();
                 return Page();

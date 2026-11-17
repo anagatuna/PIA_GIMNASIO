@@ -19,7 +19,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSocio = logicaSocio;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         [BindProperty]
@@ -56,6 +56,14 @@ namespace PIA_Gimnasio.Pages
             Cargar();
         }
 
+        // Al cambiar la fecha de inicio: recarga la página para mostrar el vencimiento
+        public IActionResult OnPostVencimiento()
+        {
+            Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
+            Cargar();
+            return Page();
+        }
+
         // Botón Renovar (tabla)
         public IActionResult OnPostRenovar(int id)
         {
@@ -77,6 +85,9 @@ namespace PIA_Gimnasio.Pages
         // Botón Registrar
         public IActionResult OnPostGuardar()
         {
+            // Fecha fuera de rango = vacía (la validación pide capturarla)
+            Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
+
             if (Suscripcion.IdCliente == null)
                 Mensaje = "Selecciona el socio.";
             else if (Suscripcion.IdTipoMembresia == null)

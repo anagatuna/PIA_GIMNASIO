@@ -166,7 +166,7 @@
                                 @foreach (DataRow fila in Model.Usuarios)
                                 {
                                     var id = fila["IdUsuario"];
-                                    var empleado = fila["Empleado"]?.ToString();
+                                    var empleado = fila["Empleado"].ToString();
 
                                     <tr class="@(Model.Usuario.IdUsuario.ToString() == id.ToString() ? "fila-seleccionada" : "")">
                                         <td class="col-accion">
@@ -177,7 +177,7 @@
                                         </td>
                                         <td class="col-accion">
                                             <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Eliminar"
-                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar" onclick="prepararEliminar(this)"
                                                     data-id="@id" data-nombre="@fila["Cuenta"]">
                                                 <i class="bi bi-x-lg"></i>
                                             </button>

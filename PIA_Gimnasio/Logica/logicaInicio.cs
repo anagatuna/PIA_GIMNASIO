@@ -19,7 +19,7 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
-                new SqlParameter("@IdSucursal", Valor(idSucursal))
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal))
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spInicio", p);
 
@@ -31,15 +31,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 2),
-                new SqlParameter("@IdSucursal", Valor(idSucursal))
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal))
             };
             return _bd.EjecutarStoredProcedure("spInicio", p);
-        }
-
-        // Manda NULL a SQL cuando el dato no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
         }
     }
 }

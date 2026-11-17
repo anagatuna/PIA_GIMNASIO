@@ -3,6 +3,10 @@ using PIA_Gimnasio.Logica;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fechas y números en español de México en todo el sistema (lunes, noviembre, 1,199.00)
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = new System.Globalization.CultureInfo("es-MX");
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = new System.Globalization.CultureInfo("es-MX");
+
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AddPageRoute("/Inicio", "");   // La raíz del sitio abre el inicio

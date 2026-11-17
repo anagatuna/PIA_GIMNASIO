@@ -24,22 +24,54 @@
 
                 <form method="post" asp-page-handler="Guardar">
                     <div class="form-floating mb-3">
-                        <select asp-for="Reserva.IdCliente" asp-items="Model.Socios" class="form-select" id="selSocio" required>
+                        <select asp-for="Reserva.IdCliente" asp-items="Model.Socios" class="form-select" required onchange="mostrarResumen(this.form)">
                             <option value="">Selecciona...</option>
                         </select>
                         <label asp-for="Reserva.IdCliente">Socio<span class="asterisco"> *</span></label>
                     </div>
 
-                    <!-- Plan del socio y uso semanal -->
-                    <div id="resumenSocio" class="resumen-plan d-none mb-3"></div>
+                    <!-- Plan del socio y uso semanal (lo calcula el servidor al elegir socio o clase) -->
+                    @if (Model.Reserva.IdCliente == null)
+                    {
+                        <div class="resumen-plan mb-3"><i class="bi bi-info-circle"></i> Elige un socio para ver cuántas clases le quedan en la semana.</div>
+                    }
+                    else if (Model.Resumen == null || Model.Resumen["Membresia"] == DBNull.Value)
+                    {
+                        <div class="resumen-plan sin-plan mb-3">
+                            <i class="bi bi-x-octagon"></i> Sin membresía vigente @(Model.Reserva.IdClase == null ? "hoy" : "en la fecha de la clase"): no puede reservar.
+                        </div>
+                    }
+                    else
+                    {
+                        int maximo = Convert.ToInt32(Model.Resumen["MaxClasesSemana"]);
+                        int usadas = Convert.ToInt32(Model.Resumen["Usadas"]);
+                        int disponibles = maximo - usadas;
+                        if (disponibles < 0)
+                            disponibles = 0;
+
+                        <div class="resumen-plan @(disponibles == 0 ? "al-limite" : "") mb-3">
+                            <i class="bi bi-tags"></i> Plan <b>@Model.Resumen["Membresia"]</b> (vence @Convert.ToDateTime(Model.Resumen["FechaVencimiento"]).ToString("dd/MM/yyyy"))<br />
+                            @if (maximo == 0)
+                            {
+                                <span>Su plan no incluye clases grupales.</span>
+                            }
+                            else
+                            {
+                                <span>
+                                    @(Model.Reserva.IdClase == null ? "Esta semana" : "Semana del " + Convert.ToDateTime(Model.Resumen["Lunes"]).ToString("dd/MM/yyyy")):
+                                    <b>@usadas de @maximo</b> clases · le quedan <b>@disponibles</b>
+                                </span>
+                            }
+                        </div>
+                    }
 
                     <div class="form-floating mb-1">
-                        <select asp-for="Reserva.IdClase" asp-items="Model.Clases" class="form-select" id="selClase" required>
+                        <select asp-for="Reserva.IdClase" asp-items="Model.Clases" class="form-select" required onchange="mostrarResumen(this.form)">
                             <option value="">Selecciona...</option>
                         </select>
                         <label asp-for="Reserva.IdClase">Clase<span class="asterisco"> *</span></label>
                     </div>
-                    <small class="ayuda">Solo aparecen clases futuras con lugares disponibles (también de las semanas siguientes).</small>
+                    <small class="ayuda">Aparecen las clases futuras (también de las semanas siguientes). Las llenas solo se pueden reservar con plan Oro.</small>
 
                     <div class="d-flex justify-content-center gap-2 mt-4">
                         <button type="submit" class="btn btn-naranja"><i class="bi bi-bookmark-check me-1"></i>Reservar</button>
@@ -50,9 +82,9 @@
                 <hr />
                 <h5 class="titulo-card text-center"><i class="bi bi-info-circle-fill"></i>&nbsp;Validaciones automáticas</h5>
                 <div class="info">
-                    Al reservar se verifica que la clase tenga <b>cupo</b> en el salón, que el socio tenga una
-                    <b>membresía vigente</b> en la fecha de la clase y que no rebase su <b>límite semanal</b>
-                    (lunes a domingo): <b>Bronce 0</b>, <b>Plata 3</b>, <b>Oro 5</b>.
+                    Al reservar se verifica que el socio tenga una <b>membresía vigente</b> en la fecha de la clase
+                    y que no rebase su <b>límite semanal</b> (lunes a domingo): <b>Bronce 0</b>, <b>Plata 3</b>, <b>Oro 5</b>.
+                    El plan <b>Plata</b> está sujeto al <b>cupo</b> del salón; el plan <b>Oro</b> no tiene restricción de aforo.
                 </div>
             </div>
         </div>
@@ -109,6 +141,7 @@
                                     <th>Clase</th>
                                     <th>Fecha</th>
                                     <th>Estatus</th>
+                                    <th class="text-center" title="Clases que le quedan al socio en la semana de esa clase">Le quedan</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -124,7 +157,7 @@
                                             @if (Convert.ToInt32(fila["PuedeCancelar"]) == 1)
                                             {
                                                 <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Cancelar"
-                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar" onclick="prepararEliminar(this)"
                                                         data-id="@fila["IdReserva"]" data-nombre="@fila["Socio"] – @fila["Clase"]">
                                                     <i class="bi bi-x-lg"></i>
                                                 </button>
@@ -138,6 +171,22 @@
                                         </td>
                                         <td class="text-nowrap">@Convert.ToDateTime(fila["Fecha"]).ToString("dd/MM/yyyy") @Hora(fila["HoraInicio"])</td>
                                         <td><span class="etiqueta @clase">@fila["Estatus"]</span></td>
+                                        <td class="text-center text-nowrap">
+                                            @if (fila["MaxClasesSemana"] == DBNull.Value)
+                                            {
+                                                <span class="small text-secondary">Sin plan</span>
+                                            }
+                                            else
+                                            {
+                                                // Clases disponibles esa semana (lunes a domingo): máximo del plan - reservas que cuentan
+                                                int maximo = Convert.ToInt32(fila["MaxClasesSemana"]);
+                                                int quedan = maximo - Convert.ToInt32(fila["UsadasSemana"]);
+                                                if (quedan < 0)
+                                                    quedan = 0;
+                                                <b class="@(quedan == 0 ? "text-danger" : "text-success")">@quedan</b>
+                                                <span class="small text-secondary">de @maximo</span>
+                                            }
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -161,54 +210,10 @@
 
 @section Scripts {
     <script>
-        // Al elegir socio (y clase) muestra su plan y cuántas clases lleva en la semana de esa clase
-        function mostrarResumen() {
-            var socio = document.getElementById('selSocio');
-            var clase = document.getElementById('selClase');
-            var resumen = document.getElementById('resumenSocio');
-
-            if (socio.value == '') {
-                resumen.classList.add('d-none');
-                return;
-            }
-
-            // Pide el resumen a la página (handler Resumen)
-            fetch('?handler=Resumen&idCliente=' + socio.value + '&idClase=' + clase.value)
-                .then(function (respuesta) { return respuesta.json(); })
-                .then(function (r) {
-                    resumen.classList.remove('d-none');
-                    resumen.classList.remove('sin-plan');
-                    resumen.classList.remove('al-limite');
-
-                    if (!r.tienePlan) {
-                        resumen.classList.add('sin-plan');
-                        resumen.innerHTML = '<i class="bi bi-x-octagon"></i> Sin membresía vigente ' + (clase.value == '' ? 'hoy' : 'en la fecha de la clase') + ': no puede reservar.';
-                        return;
-                    }
-
-                    var disponibles = r.maximo - r.usadas;
-                    if (disponibles < 0)
-                        disponibles = 0;
-                    if (disponibles == 0)
-                        resumen.classList.add('al-limite');
-
-                    // El nombre del plan se pasa por textContent para que no se interprete como HTML
-                    var plan = document.createElement('b');
-                    plan.textContent = r.membresia;
-                    var texto = '<i class="bi bi-tags"></i> Plan ' + plan.outerHTML + ' (vence ' + r.vence + ')<br>';
-                    if (r.maximo == 0)
-                        texto += 'Su plan no incluye clases grupales.';
-                    else
-                        texto += (clase.value == '' ? 'Esta semana' : 'Semana del ' + r.lunes) + ': <b>' + r.usadas + ' de ' + r.maximo + '</b> clases · le quedan <b>' + disponibles + '</b>';
-                    resumen.innerHTML = texto;
-                })
-                .catch(function () {
-                    resumen.classList.add('d-none');
-                });
+        // Al elegir socio o clase se manda el formulario al handler Resumen (sin guardar la reserva)
+        function mostrarResumen(formulario) {
+            formulario.action = '?handler=Resumen';
+            formulario.submit();
         }
-
-        document.getElementById('selSocio').addEventListener('change', mostrarResumen);
-        document.getElementById('selClase').addEventListener('change', mostrarResumen);
-        mostrarResumen();
     </script>
 }

@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using PIA_Gimnasio.Entidades;
@@ -17,7 +16,7 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         [BindProperty]
@@ -135,7 +134,7 @@ namespace PIA_Gimnasio.Pages
         {
             if (string.IsNullOrWhiteSpace(Sucursal.Nombre))
                 return "Ingresa el nombre de la sucursal.";
-            if (string.IsNullOrWhiteSpace(Sucursal.Telefono) || !Regex.IsMatch(Sucursal.Telefono.Trim(), @"^\d{10}$"))
+            if (string.IsNullOrWhiteSpace(Sucursal.Telefono) || !SoloNumeros(Sucursal.Telefono.Trim(), 10))
                 return "El teléfono debe tener 10 dígitos.";
             if (Sucursal.AforoMaximo == null || Sucursal.AforoMaximo < 1 || Sucursal.AforoMaximo > 5000)
                 return "El aforo máximo debe estar entre 1 y 5000 personas.";
@@ -148,7 +147,7 @@ namespace PIA_Gimnasio.Pages
                 return "Ingresa la dirección completa (calle, número, colonia y municipio).";
             if (Sucursal.IdEstado == null)
                 return "Selecciona el estado.";
-            if (string.IsNullOrWhiteSpace(Sucursal.CodigoPostal) || !Regex.IsMatch(Sucursal.CodigoPostal.Trim(), @"^\d{5}$"))
+            if (string.IsNullOrWhiteSpace(Sucursal.CodigoPostal) || !SoloNumeros(Sucursal.CodigoPostal.Trim(), 5))
                 return "El código postal debe tener 5 dígitos.";
             return "";
         }

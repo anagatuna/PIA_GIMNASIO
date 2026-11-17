@@ -14,7 +14,7 @@ namespace PIA_Gimnasio.Pages
         public RutinaModel(logicaRutina logica)
         {
             _logica = logica;
-            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "ENTRENADOR" };
         }
 
         // Filtros de búsqueda

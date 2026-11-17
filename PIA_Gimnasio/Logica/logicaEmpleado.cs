@@ -15,31 +15,53 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1 (registrar) o 4 (modificar).
-        // Las especialidades viajan como "1,3,5"; el SP las ignora si el puesto no es Entrenador.
+        // Accion 1 (registrar) o 4 (modificar). Si sale bien, guarda cada especialidad marcada (Accion 7);
+        // el SP solo las guarda si el puesto es Entrenador.
         public bdRespuesta Guardar(bdEmpleado e, int usuarioSesion)
         {
             int accion = e.IdEmpleado == 0 ? 1 : 4;
 
+            // El correo se guarda en minúsculas
+            string correo = (e.Correo ?? "").ToLower();
+
             SqlParameter[] p = {
                 new SqlParameter("@Accion", accion),
                 new SqlParameter("@IdEmpleado", e.IdEmpleado),
-                new SqlParameter("@IdSucursal", Valor(e.IdSucursal)),
-                new SqlParameter("@IdPuesto", Valor(e.IdPuesto)),
-                new SqlParameter("@IdEstatus", Valor(e.IdEstatus)),
-                new SqlParameter("@Nombre", Valor(e.Nombre?.Trim().ToUpper())),
-                new SqlParameter("@PrimerApellido", Valor(e.PrimerApellido?.Trim().ToUpper())),
-                new SqlParameter("@SegundoApellido", Valor(e.SegundoApellido?.Trim().ToUpper())),
-                new SqlParameter("@CURP", Valor(e.CURP?.Trim().ToUpper())),
-                new SqlParameter("@RFC", Valor(e.RFC?.Trim().ToUpper())),
-                new SqlParameter("@FechaNacimiento", Valor(e.FechaNacimiento)),
-                new SqlParameter("@Correo", Valor(e.Correo?.Trim().ToLower())),
-                new SqlParameter("@Telefono", Valor(e.Telefono)),
-                new SqlParameter("@FechaContratacion", Valor(e.FechaContratacion)),
-                new SqlParameter("@Especialidades", string.Join(",", e.Especialidades)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(e.IdSucursal)),
+                new SqlParameter("@IdPuesto", bdConexion.Valor(e.IdPuesto)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(e.IdEstatus)),
+                new SqlParameter("@Nombre", bdConexion.Valor(e.Nombre)),
+                new SqlParameter("@PrimerApellido", bdConexion.Valor(e.PrimerApellido)),
+                new SqlParameter("@SegundoApellido", bdConexion.Valor(e.SegundoApellido)),
+                new SqlParameter("@CURP", bdConexion.Valor(e.CURP)),
+                new SqlParameter("@RFC", bdConexion.Valor(e.RFC)),
+                new SqlParameter("@FechaNacimiento", bdConexion.Valor(e.FechaNacimiento)),
+                new SqlParameter("@Correo", bdConexion.Valor(correo)),
+                new SqlParameter("@Telefono", bdConexion.Valor(e.Telefono)),
+                new SqlParameter("@FechaContratacion", bdConexion.Valor(e.FechaContratacion)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
-            return Respuesta(_bd.EjecutarStoredProcedure("spEmpleado", p));
+            DataTable dt = _bd.EjecutarStoredProcedure("spEmpleado", p);
+            bdRespuesta respuesta = Respuesta(dt);
+            if (respuesta.TipoMensaje != "success")
+                return respuesta;
+
+            // Al registrar, el SP regresa el Id del empleado nuevo
+            int idEmpleado = e.IdEmpleado;
+            if (accion == 1)
+                idEmpleado = Convert.ToInt32(dt.Rows[0]["Id"]);
+
+            foreach (int idEspecialidad in e.Especialidades)
+            {
+                SqlParameter[] pe = {
+                    new SqlParameter("@Accion", 7),
+                    new SqlParameter("@IdEmpleado", idEmpleado),
+                    new SqlParameter("@IdEspecialidad", idEspecialidad),
+                    new SqlParameter("@UsuarioSesion", usuarioSesion)
+                };
+                _bd.EjecutarStoredProcedure("spEmpleado", pe);
+            }
+            return respuesta;
         }
 
         // Accion 2: leer un registro
@@ -86,10 +108,10 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Nombre", Valor(nombre)),
-                new SqlParameter("@IdSucursal", Valor(idSucursal)),
-                new SqlParameter("@IdPuesto", Valor(idPuesto)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@Nombre", bdConexion.Valor(nombre)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@IdPuesto", bdConexion.Valor(idPuesto)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus))
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spEmpleado", p);
 
@@ -114,7 +136,7 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 6),
-                new SqlParameter("@IdEmpleado", Valor(idEmpleado))
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(idEmpleado))
             };
             return _bd.EjecutarStoredProcedure("spEmpleado", p);
         }
@@ -178,18 +200,6 @@ namespace PIA_Gimnasio.Logica
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
-
-        // Manda NULL a SQL cuando el dato (número o fecha) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
         }
     }
 }

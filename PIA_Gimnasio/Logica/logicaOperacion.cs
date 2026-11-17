@@ -20,9 +20,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
-                new SqlParameter("@IdCliente", Valor(s.IdCliente)),
-                new SqlParameter("@IdTipoMembresia", Valor(s.IdTipoMembresia)),
-                new SqlParameter("@FechaInicio", Valor(s.FechaInicio)),
+                new SqlParameter("@IdCliente", bdConexion.Valor(s.IdCliente)),
+                new SqlParameter("@IdTipoMembresia", bdConexion.Valor(s.IdTipoMembresia)),
+                new SqlParameter("@FechaInicio", bdConexion.Valor(s.FechaInicio)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spSuscripcion", p));
@@ -33,9 +33,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Busqueda", Valor(busqueda)),
-                new SqlParameter("@IdTipoMembresia", Valor(idTipoMembresia)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@Busqueda", bdConexion.Valor(busqueda)),
+                new SqlParameter("@IdTipoMembresia", bdConexion.Valor(idTipoMembresia)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus))
             };
             return _bd.EjecutarStoredProcedure("spSuscripcion", p);
         }
@@ -62,26 +62,23 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spSuscripcion", p));
         }
 
-
+        // Convierte el Mensaje y TipoMensaje del SP en bdRespuesta.
+        // Si el SP manda las fechas Desde / Hasta, se agregan al mensaje en formato dd/MM/yyyy.
         private bdRespuesta Respuesta(DataTable dt)
         {
-            return new bdRespuesta
+            DataRow fila = dt.Rows[0];
+            bdRespuesta r = new bdRespuesta
             {
-                Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
-                TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
+                Mensaje = fila["Mensaje"].ToString() ?? "",
+                TipoMensaje = fila["TipoMensaje"].ToString() ?? ""
             };
-        }
 
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
+            if (dt.Columns.Contains("Desde") && fila["Desde"] != DBNull.Value)
+                r.Mensaje = r.Mensaje + " Inicia el " + Convert.ToDateTime(fila["Desde"]).ToString("dd/MM/yyyy") + ".";
+            if (dt.Columns.Contains("Hasta") && fila["Hasta"] != DBNull.Value)
+                r.Mensaje = r.Mensaje + " Vence el " + Convert.ToDateTime(fila["Hasta"]).ToString("dd/MM/yyyy") + ".";
 
-        // Manda NULL a SQL cuando el dato (número o fecha) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
+            return r;
         }
     }
 
@@ -160,14 +157,14 @@ namespace PIA_Gimnasio.Logica
             SqlParameter[] p = {
                 new SqlParameter("@Accion", accion),
                 new SqlParameter("@IdClase", c.IdClase),
-                new SqlParameter("@Nombre", Valor(c.Nombre?.Trim().ToUpper())),
-                new SqlParameter("@Fecha", Valor(c.Fecha)),
-                new SqlParameter("@HoraInicio", Valor(c.HoraInicio)),
-                new SqlParameter("@HoraFin", Valor(c.HoraFin)),
-                new SqlParameter("@Salon", Valor(c.Salon?.Trim().ToUpper())),
-                new SqlParameter("@CupoMaximo", Valor(c.CupoMaximo)),
-                new SqlParameter("@IdEmpleado", Valor(c.IdEmpleado)),
-                new SqlParameter("@IdSucursal", Valor(c.IdSucursal)),
+                new SqlParameter("@Nombre", bdConexion.Valor(c.Nombre)),
+                new SqlParameter("@Fecha", bdConexion.Valor(c.Fecha)),
+                new SqlParameter("@HoraInicio", bdConexion.Valor(c.HoraInicio)),
+                new SqlParameter("@HoraFin", bdConexion.Valor(c.HoraFin)),
+                new SqlParameter("@Salon", bdConexion.Valor(c.Salon)),
+                new SqlParameter("@CupoMaximo", bdConexion.Valor(c.CupoMaximo)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(c.IdEmpleado)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(c.IdSucursal)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spClase", p));
@@ -207,9 +204,9 @@ namespace PIA_Gimnasio.Logica
                 new SqlParameter("@Accion", 3),
                 new SqlParameter("@Fecha", desde.Date),
                 new SqlParameter("@FechaHasta", hasta.Date),
-                new SqlParameter("@Nombre", Valor(nombre)),
-                new SqlParameter("@IdSucursal", Valor(idSucursal)),
-                new SqlParameter("@IdEmpleado", Valor(idEmpleado))
+                new SqlParameter("@Nombre", bdConexion.Valor(nombre)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(idEmpleado))
             };
             return _bd.EjecutarStoredProcedure("spClase", p);
         }
@@ -233,18 +230,6 @@ namespace PIA_Gimnasio.Logica
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
         }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
-
-        // Manda NULL a SQL cuando el dato (número, fecha u hora) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
-        }
     }
 
     // Reservas de clases (spReserva): cupo del salón + límite semanal del plan
@@ -257,17 +242,53 @@ namespace PIA_Gimnasio.Logica
             _bd = bd;
         }
 
-        // Accion 1: registrar (idEmpleado = recepcionista que captura)
+        // Registrar reserva (idEmpleado = recepcionista que captura).
+        // C# valida el límite semanal del plan (lunes a domingo de la clase);
+        // el SP (Accion 1) valida la clase, el socio, el plan vigente, reservas repetidas y el cupo.
         public bdRespuesta Registrar(bdReserva r, int idEmpleado, int usuarioSesion)
         {
+            // Plan vigente el día de la clase y cuántas clases lleva en esa semana
+            DataRow? plan = ObtenerResumenSocio(Convert.ToInt32(r.IdCliente), r.IdClase);
+            bool tienePlan = false;
+            string membresia = "";
+            int maximo = 0;
+            int usadas = 0;
+
+            if (plan != null && plan["Membresia"] != DBNull.Value)
+            {
+                tienePlan = true;
+                membresia = plan["Membresia"].ToString() ?? "";
+                maximo = Convert.ToInt32(plan["MaxClasesSemana"]);
+                usadas = Convert.ToInt32(plan["Usadas"]);
+
+                if (maximo > 0 && usadas >= maximo)
+                {
+                    return new bdRespuesta
+                    {
+                        Mensaje = "Límite semanal alcanzado: la membresía " + membresia + " permite " + maximo
+                                  + " clases por semana y ya tiene " + usadas + ".",
+                        TipoMensaje = "warning"
+                    };
+                }
+            }
+
+            // Accion 1: el SP valida lo demás y guarda
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
-                new SqlParameter("@IdCliente", Valor(r.IdCliente)),
-                new SqlParameter("@IdClase", Valor(r.IdClase)),
+                new SqlParameter("@IdCliente", bdConexion.Valor(r.IdCliente)),
+                new SqlParameter("@IdClase", bdConexion.Valor(r.IdClase)),
                 new SqlParameter("@IdEmpleado", idEmpleado),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
-            return Respuesta(_bd.EjecutarStoredProcedure("spReserva", p));
+            bdRespuesta respuesta = Respuesta(_bd.EjecutarStoredProcedure("spReserva", p));
+
+            // Al confirmar, el mensaje dice cuántas clases lleva y cuántas le quedan esa semana
+            if (respuesta.TipoMensaje == "success" && tienePlan)
+            {
+                respuesta.Mensaje = "Reserva confirmada (" + (usadas + 1) + " de " + maximo + " clases de la semana, plan "
+                                    + membresia + "). Clases restantes esa semana: " + (maximo - usadas - 1) + ".";
+            }
+            return respuesta;
         }
 
         // Accion 2: cancelar
@@ -281,40 +302,105 @@ namespace PIA_Gimnasio.Logica
             return Respuesta(_bd.EjecutarStoredProcedure("spReserva", p));
         }
 
-        // Accion 3: consulta general (filtros opcionales)
+        // Accion 3: consulta general (filtros opcionales).
+        // Se agrega la columna "UsadasSemana": clases del socio en la semana de cada reserva.
         public DataTable Consultar(string? busqueda, int? idClase, DateTime? fecha, int? idEstatus)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Busqueda", Valor(busqueda)),
-                new SqlParameter("@IdClase", Valor(idClase)),
-                new SqlParameter("@Fecha", Valor(fecha)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@Busqueda", bdConexion.Valor(busqueda)),
+                new SqlParameter("@IdClase", bdConexion.Valor(idClase)),
+                new SqlParameter("@Fecha", bdConexion.Valor(fecha)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus))
             };
-            return _bd.EjecutarStoredProcedure("spReserva", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spReserva", p);
+            DataTable cuentan = ConsultarReservasQueCuentan();
+
+            dt.Columns.Add("UsadasSemana", typeof(int));
+            foreach (DataRow fila in dt.Rows)
+            {
+                fila["UsadasSemana"] = ContarEnSemana(cuentan, Convert.ToInt32(fila["IdCliente"]), Convert.ToDateTime(fila["Fecha"]));
+            }
+            return dt;
         }
 
-        // Accion 4: clases futuras con lugares disponibles
+        // Accion 4: clases futuras (las llenas solo se pueden reservar con plan Oro)
         public DataTable ConsultarClasesDisponibles()
         {
             SqlParameter[] p = { new SqlParameter("@Accion", 4) };
-            return _bd.EjecutarStoredProcedure("spReserva", p);
+            DataTable dt = _bd.EjecutarStoredProcedure("spReserva", p);
+
+            // Texto del combo: "YOGA · 20/11 08:00 · SUCURSAL CENTRO / SALON ZEN (3 lugares)"
+            dt.Columns.Add("Clase");
+            foreach (DataRow fila in dt.Rows)
+            {
+                int libres = Convert.ToInt32(fila["CupoMaximo"]) - Convert.ToInt32(fila["Reservadas"]);
+                string lugares = " (" + libres + " lugares)";
+                if (libres <= 0)
+                    lugares = " (llena: solo Oro)";
+
+                TimeSpan hora = (TimeSpan)fila["HoraInicio"];
+                fila["Clase"] = fila["Nombre"] + " · " + Convert.ToDateTime(fila["Fecha"]).ToString("dd/MM") + " " + hora.ToString(@"hh\:mm")
+                                + " · " + fila["Sucursal"] + " / " + fila["Salon"] + lugares;
+            }
+            return dt;
         }
 
-        // Accion 5: plan del socio y clases reservadas en la semana de la clase (sin clase, la semana actual)
+        // Accion 5: plan del socio vigente en la fecha de la clase (sin clase, hoy).
+        // Se agregan "Lunes" (inicio de esa semana) y "Usadas" (clases que lleva en esa semana).
         public DataRow? ObtenerResumenSocio(int idCliente, int? idClase)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 5),
                 new SqlParameter("@IdCliente", idCliente),
-                new SqlParameter("@IdClase", Valor(idClase)),
+                new SqlParameter("@IdClase", bdConexion.Valor(idClase)),
                 new SqlParameter("@Fecha", DBNull.Value)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spReserva", p);
+            if (dt.Rows.Count == 0)
+                return null;
 
-            return dt.Rows.Count == 0 ? null : dt.Rows[0];
+            DataRow fila = dt.Rows[0];
+            DateTime fechaClase = Convert.ToDateTime(fila["FechaClase"]);
+
+            dt.Columns.Add("Lunes", typeof(DateTime));
+            dt.Columns.Add("Usadas", typeof(int));
+            fila["Lunes"] = Lunes(fechaClase);
+            fila["Usadas"] = ContarEnSemana(ConsultarReservasQueCuentan(), idCliente, fechaClase);
+            return fila;
         }
 
+        // Accion 7: reservas que cuentan para el límite semanal (confirmada, asistió o falta) con la fecha de su clase
+        private DataTable ConsultarReservasQueCuentan()
+        {
+            SqlParameter[] p = { new SqlParameter("@Accion", 7) };
+            return _bd.EjecutarStoredProcedure("spReserva", p);
+        }
+
+        // Cuántas reservas tiene el socio en la semana (lunes a domingo) de esa fecha
+        private int ContarEnSemana(DataTable cuentan, int idCliente, DateTime fecha)
+        {
+            DateTime lunes = Lunes(fecha);
+            DateTime domingo = lunes.AddDays(6);
+
+            int usadas = 0;
+            foreach (DataRow r in cuentan.Rows)
+            {
+                DateTime fechaClase = Convert.ToDateTime(r["Fecha"]);
+                if (Convert.ToInt32(r["IdCliente"]) == idCliente && fechaClase >= lunes && fechaClase <= domingo)
+                    usadas++;
+            }
+            return usadas;
+        }
+
+        // Lunes de la semana de una fecha: se recorre hacia atrás hasta llegar al lunes
+        private DateTime Lunes(DateTime fecha)
+        {
+            DateTime lunes = fecha.Date;
+            while (lunes.DayOfWeek != DayOfWeek.Monday)
+                lunes = lunes.AddDays(-1);
+            return lunes;
+        }
 
         private bdRespuesta Respuesta(DataTable dt)
         {
@@ -323,18 +409,6 @@ namespace PIA_Gimnasio.Logica
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
-
-        // Manda NULL a SQL cuando el dato (número o fecha) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
         }
     }
 }

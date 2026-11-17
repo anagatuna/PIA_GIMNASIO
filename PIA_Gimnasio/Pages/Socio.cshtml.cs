@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using PIA_Gimnasio.Entidades;
@@ -20,7 +19,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         [BindProperty]
@@ -63,6 +62,14 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Socio = _logica.Obtener(id) ?? new bdSocio();
+
+                // La recepcionista solo edita socios de su sucursal
+                if (EsRecepcionista && Socio.IdCliente > 0 && Socio.IdSucursal != IdSucursalSesion())
+                {
+                    Socio = new bdSocio { IdSucursal = IdSucursalSesion() };
+                    Mensaje = "El socio no pertenece a tu sucursal.";
+                    TipoMensaje = "warning";
+                }
             }
             catch (Exception)
             {
@@ -75,9 +82,16 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // Fecha fuera de rango = vacía (la validación pide capturarla)
+            Socio.FechaNacimiento = FechaValida(Socio.FechaNacimiento);
+
             // El estatus no se captura: siempre Activo (solo pasa a Inactivo con la baja lógica)
             bool esNuevo = Socio.IdCliente == 0;
             Socio.IdEstatus = 1;
+
+            // La recepcionista solo registra socios en su sucursal asignada
+            if (EsRecepcionista)
+                Socio.IdSucursal = IdSucursalSesion();
 
             Mensaje = Validar();
             if (Mensaje != "")
@@ -139,6 +153,7 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            LimitarSucursal();
             DataTable dt = _logica.Consultar(Busqueda, BusquedaIdSucursal, null, BusquedaIdTipoMembresia);
             return ExportarExcel(dt, "Socios",
                 new string[] { "Folio", "Socio", "Correo", "Teléfono", "Sucursal", "Membresía", "Vencimiento", "Inscripción" },
@@ -152,6 +167,20 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
+
+                // La recepcionista solo ve su sucursal en el combo y en la tabla
+                if (EsRecepcionista)
+                {
+                    List<SelectListItem> propia = new List<SelectListItem>();
+                    foreach (SelectListItem s in Sucursales)
+                    {
+                        if (s.Value == IdSucursalSesion().ToString())
+                            propia.Add(s);
+                    }
+                    Sucursales = propia;
+                }
+                LimitarSucursal();
+
                 Membresias = CargarCombo(_logicaCatalogo.ConsultarMembresias(), "IdCatalogo", "Descripcion");
                 Socios = Paginar(_logica.Consultar(Busqueda, BusquedaIdSucursal, null, BusquedaIdTipoMembresia));
             }
@@ -160,6 +189,13 @@ namespace PIA_Gimnasio.Pages
                 Mensaje = "No se pudo conectar con la base de datos.";
                 TipoMensaje = "danger";
             }
+        }
+
+        // La recepcionista solo consulta los socios de su sucursal
+        private void LimitarSucursal()
+        {
+            if (EsRecepcionista)
+                BusquedaIdSucursal = IdSucursalSesion() ?? -1;
         }
 
         // Reglas de captura. Regresa el primer error o "" si todo está bien.
@@ -173,9 +209,9 @@ namespace PIA_Gimnasio.Pages
             if (Socio.FechaNacimiento > DateTime.Today.AddYears(-12) || Socio.FechaNacimiento < DateTime.Today.AddYears(-100))
                 return "El socio debe tener entre 12 y 100 años.";
 
-            if (string.IsNullOrWhiteSpace(Socio.Correo) || !Regex.IsMatch(Socio.Correo.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            if (string.IsNullOrWhiteSpace(Socio.Correo) || !CorreoValido(Socio.Correo.Trim()))
                 return "Ingresa un correo válido.";
-            if (string.IsNullOrWhiteSpace(Socio.Telefono) || !Regex.IsMatch(Socio.Telefono.Trim(), @"^\d{10}$"))
+            if (string.IsNullOrWhiteSpace(Socio.Telefono) || !SoloNumeros(Socio.Telefono.Trim(), 10))
                 return "El teléfono debe tener 10 dígitos.";
 
             if (Socio.IdSucursal == null)

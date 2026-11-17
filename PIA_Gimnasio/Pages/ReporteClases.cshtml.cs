@@ -5,19 +5,21 @@ using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
-    // Reporte 4: ocupación y asistencia de clases. El entrenador solo ve sus clases.
+    // Reporte 4: clases grupales, reservas y asistencia. Solo Administrador.
     public class ReporteClasesModel : PaginaProtegida
     {
         private readonly logicaReporte _logica;
         private readonly logicaSucursal _logicaSucursal;
         private readonly logicaEmpleado _logicaEmpleado;
+        private readonly logicaCatalogo _logicaCatalogo;
 
-        public ReporteClasesModel(logicaReporte logica, logicaSucursal logicaSucursal, logicaEmpleado logicaEmpleado)
+        public ReporteClasesModel(logicaReporte logica, logicaSucursal logicaSucursal, logicaEmpleado logicaEmpleado, logicaCatalogo logicaCatalogo)
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaEmpleado = logicaEmpleado;
-            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
+            _logicaCatalogo = logicaCatalogo;
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         // Filtros
@@ -26,18 +28,25 @@ namespace PIA_Gimnasio.Pages
         [BindProperty(SupportsGet = true)] public int? IdEmpleado { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Desde { get; set; }
         [BindProperty(SupportsGet = true)] public DateTime? Hasta { get; set; }
+        [BindProperty(SupportsGet = true)] public int? IdEstatus { get; set; }      // Estatus de reserva
 
         public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> EstatusReserva { get; set; } = new List<SelectListItem>();
         public List<DataRow> Filas { get; set; } = new List<DataRow>();
 
         // Resumen
-        public int TotalReservas { get; set; }
+        public int TotalReservas { get; set; }      // Las que ocupan lugar (confirmada, asistió, falta)
+        public int TotalCanceladas { get; set; }
         public double OcupacionPromedio { get; set; }
         public double? Efectividad { get; set; }
 
         public void OnGet()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
             // Por omisión, el mes actual
             if (Desde == null)
                 Desde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -47,8 +56,8 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
-                if (!EsEntrenador)
-                    Entrenadores = CargarCombo(_logicaEmpleado.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
+                EstatusReserva = CargarCombo(_logicaCatalogo.ConsultarEstatusReserva(), "IdCatalogo", "Descripcion");
+                Entrenadores = CargarCombo(_logicaEmpleado.ConsultarEntrenadores(), "IdEmpleado", "Entrenador");
 
                 if (Desde > Hasta)
                 {
@@ -65,6 +74,7 @@ namespace PIA_Gimnasio.Pages
                 foreach (DataRow r in dt.Rows)
                 {
                     TotalReservas += Convert.ToInt32(r["Reservas"]);
+                    TotalCanceladas += Convert.ToInt32(r["Canceladas"]);
                     sumaOcupacion += Convert.ToDouble(r["Ocupacion"]);
                     asistieron += Convert.ToInt32(r["Asistieron"]);
                     faltas += Convert.ToInt32(r["Faltas"]);
@@ -86,17 +96,18 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
             return ExportarExcel(Consultar(), "Reporte_Clases",
-                new string[] { "Clase", "Fecha", "Hora", "Salón", "Sucursal", "Entrenador", "Cupo", "Reservas", "Ocupación %", "Asistieron", "Faltas", "Efectividad %" },
-                new string[] { "Clase", "Fecha", "HoraInicio", "Salon", "Sucursal", "Entrenador", "CupoMaximo", "Reservas", "Ocupacion", "Asistieron", "Faltas", "Efectividad" });
+                new string[] { "Clase", "Sucursal", "Fecha", "Inicio", "Fin", "Salón", "Entrenador", "Cupo", "Reservas hechas", "Confirmadas", "Canceladas", "Asistieron", "Faltas", "Ocupación %", "Efectividad %" },
+                new string[] { "Clase", "Sucursal", "Fecha", "HoraInicio", "HoraFin", "Salon", "Entrenador", "CupoMaximo", "TotalReservas", "Confirmadas", "Canceladas", "Asistieron", "Faltas", "Ocupacion", "Efectividad" });
         }
 
-        // El entrenador solo ve sus propias clases
         private DataTable Consultar()
         {
-            if (EsEntrenador)
-                IdEmpleado = IdEmpleadoSesion() ?? -1;
-            return _logica.Clases(Clase, IdSucursal, IdEmpleado, Desde, Hasta);
+            return _logica.Clases(Clase, IdSucursal, IdEmpleado, Desde, Hasta, IdEstatus);
         }
     }
 }

@@ -12,7 +12,7 @@ namespace PIA_Gimnasio.Pages
         public RutinaDetalleModel(logicaRutina logica)
         {
             _logica = logica;
-            RolesPermitidos = new string[] { "Administrador", "Entrenador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "ENTRENADOR" };
         }
 
         // Para la vista
@@ -41,7 +41,7 @@ namespace PIA_Gimnasio.Pages
                 foreach (DataRow d in _logica.ConsultarDetalle(id).Rows)
                 {
                     Detalle.Add(d);
-                    string dia = d["DiaSemana"].ToString()!;
+                    string dia = d["DiaSemana"].ToString() ?? "";
                     if (!dias.Contains(dia))
                         dias.Add(dia);
                 }
@@ -52,7 +52,7 @@ namespace PIA_Gimnasio.Pages
                 // Verificación médica de los ejercicios asignados
                 foreach (DataRow d in Detalle)
                 {
-                    string? alerta = logicaRutina.RevisarContraindicacion(Expediente, d["Ejercicio"].ToString()!, d["ContraIndicacion"].ToString());
+                    string? alerta = logicaRutina.RevisarContraindicacion(Expediente, d["Ejercicio"].ToString() ?? "", d["ContraIndicacion"].ToString());
                     if (alerta != null && !Alertas.Contains(alerta))
                         Alertas.Add(alerta);
                 }

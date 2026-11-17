@@ -17,7 +17,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         // Filtros
@@ -37,6 +37,10 @@ namespace PIA_Gimnasio.Pages
 
         public void OnGet()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
             try
             {
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
@@ -55,7 +59,7 @@ namespace PIA_Gimnasio.Pages
                 // Cuenta los empleados de cada sucursal
                 foreach (DataRow r in dt.Rows)
                 {
-                    string sucursal = r["Sucursal"].ToString()!;
+                    string sucursal = r["Sucursal"].ToString() ?? "";
                     if (PorSede.ContainsKey(sucursal))
                         PorSede[sucursal]++;
                     else
@@ -74,10 +78,14 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
             DataTable dt = _logica.Empleados(IdSucursal, IdPuesto, IdEspecialidad, Desde, Hasta);
             return ExportarExcel(dt, "Reporte_Empleados",
-                new string[] { "Sucursal", "Empleado", "Puesto", "Especialidades", "Correo", "Teléfono", "Fecha de contratación", "Estatus" },
-                new string[] { "Sucursal", "Empleado", "Puesto", "Especialidades", "Correo", "Telefono", "FechaContratacion", "Estatus" });
+                new string[] { "Empleado", "CURP", "RFC", "Puesto", "Especialidades", "Fecha de contratación", "Correo", "Teléfono", "Sucursal" },
+                new string[] { "Empleado", "CURP", "RFC", "Puesto", "Especialidades", "FechaContratacion", "Correo", "Telefono", "Sucursal" });
         }
     }
 }

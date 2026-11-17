@@ -5,7 +5,11 @@
     ViewData["AnchoCompleto"] = true;
     ViewData["EliminarTitulo"] = "¿Cancelar suscripción?";
     ViewData["EliminarDescripcion"] = "perderá el acceso al gimnasio y a las clases. Después se le puede vender una nueva.";
-    var inicio = Model.Suscripcion.FechaInicio ?? DateTime.Today;
+
+    // Vencimiento que se muestra junto a la fecha de inicio (lo calcula C#)
+    string vence = "";
+    if (Model.Suscripcion.FechaInicio != null)
+        vence = PIA_Gimnasio.Entidades.bdSuscripcion.CalcularVencimiento(Model.Suscripcion.FechaInicio.Value).ToString("dd/MM/yyyy");
 }
 
 <section class="gestion">
@@ -37,15 +41,14 @@
                     <div class="row">
                         <div class="col-6 mb-3">
                             <div class="form-floating">
-                                <input asp-for="Suscripcion.FechaInicio" type="date" class="form-control" id="fechaInicio"
+                                <input asp-for="Suscripcion.FechaInicio" type="date" class="form-control" onchange="calcularVencimiento(this.form)"
                                        min="@DateTime.Today.ToString("yyyy-MM-dd")" max="@DateTime.Today.AddMonths(1).ToString("yyyy-MM-dd")" required />
                                 <label asp-for="Suscripcion.FechaInicio">Inicio<span class="asterisco"> *</span></label>
                             </div>
                         </div>
                         <div class="col-6 mb-3">
                             <div class="form-floating">
-                                <input class="form-control" id="fechaVencimiento" readonly tabindex="-1"
-                                       value="@PIA_Gimnasio.Entidades.bdSuscripcion.CalcularVencimiento(inicio).ToString("dd/MM/yyyy")" />
+                                <input class="form-control" readonly tabindex="-1" value="@vence" />
                                 <label>Vence (1 mes)</label>
                             </div>
                         </div>
@@ -144,7 +147,7 @@
                                             @if (estatus == 1)
                                             {
                                                 <button type="button" class="btn-circulo btn-sm-circulo btn-rojo" title="Cancelar"
-                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                        data-bs-toggle="modal" data-bs-target="#modalEliminar" onclick="prepararEliminar(this)"
                                                         data-id="@fila["IdSuscripcion"]" data-nombre="@fila["Socio"]">
                                                     <i class="bi bi-x-lg"></i>
                                                 </button>
@@ -163,7 +166,7 @@
                                         <td>@fila["Socio"]</td>
                                         <td>
                                             @fila["Membresia"]
-                                            <div class="small text-secondary">@Convert.ToDecimal(fila["Precio"]).ToString("C2", new System.Globalization.CultureInfo("es-MX"))</div>
+                                            <div class="small text-secondary">$@Convert.ToDecimal(fila["Precio"]).ToString("N2")</div>
                                         </td>
                                         <td class="text-nowrap">
                                             @Convert.ToDateTime(fila["FechaInicio"]).ToString("dd/MM/yyyy") – @Convert.ToDateTime(fila["FechaVencimiento"]).ToString("dd/MM/yyyy")
@@ -174,7 +177,7 @@
                                             else if (estatus == 1)
                                             {
                                                 <div class="small @(dias <= 5 ? "text-danger fw-semibold" : "text-secondary")">
-                                                    @(dias == 0 ? "Vence hoy" : $"Quedan {dias} días")
+                                                    @(dias == 0 ? "Vence hoy" : "Quedan " + dias + " días")
                                                 </div>
                                             }
                                         </td>
@@ -202,29 +205,10 @@
 
 @section Scripts {
     <script>
-        // Muestra la fecha de vencimiento (1 mes menos 1 día, igual que spSuscripcion)
-        document.getElementById('fechaInicio').addEventListener('change', function () {
-            var salida = document.getElementById('fechaVencimiento');
-            if (this.value == '') {
-                salida.value = '';
-                return;
-            }
-
-            // La fecha viene como "2026-11-13"
-            var partes = this.value.split('-');
-            var anio = parseInt(partes[0]);
-            var mes = parseInt(partes[1]);
-            var dia = parseInt(partes[2]);
-
-            var vence = new Date(anio, mes, dia);   // mismo día del mes siguiente (en JavaScript los meses van de 0 a 11)
-            if (vence.getDate() != dia)
-                vence.setDate(0);                   // 31 ene -> 28/29 feb (igual que DATEADD)
-            vence.setDate(vence.getDate() - 1);
-
-            // Formato dd/MM/yyyy
-            var dd = ('0' + vence.getDate()).slice(-2);
-            var mm = ('0' + (vence.getMonth() + 1)).slice(-2);
-            salida.value = dd + '/' + mm + '/' + vence.getFullYear();
-        });
+        // Al cambiar la fecha de inicio se manda el formulario al handler Vencimiento (C# calcula la fecha, no guarda)
+        function calcularVencimiento(formulario) {
+            formulario.action = '?handler=Vencimiento';
+            formulario.submit();
+        }
     </script>
 }

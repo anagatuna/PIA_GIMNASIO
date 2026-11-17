@@ -16,7 +16,7 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         // Datos del formulario

@@ -14,7 +14,7 @@ namespace PIA_Gimnasio.Pages
         public ExpedienteMedicoModel(logicaExpediente logica)
         {
             _logica = logica;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista", "Entrenador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA", "ENTRENADOR" };
         }
 
         [BindProperty]
@@ -36,10 +36,46 @@ namespace PIA_Gimnasio.Pages
             get { return Socio != null && Socio["IdExpediente"] != DBNull.Value; }
         }
 
+        // Edad del socio a partir de su fecha de nacimiento
+        public int Edad
+        {
+            get
+            {
+                if (Socio == null || Socio["FechaNacimiento"] == DBNull.Value)
+                    return 0;
+
+                DateTime nacimiento = Convert.ToDateTime(Socio["FechaNacimiento"]);
+                int edad = DateTime.Today.Year - nacimiento.Year;
+
+                // Si este año todavía no llega su cumpleaños, tiene un año menos
+                if (DateTime.Today.Month < nacimiento.Month ||
+                    (DateTime.Today.Month == nacimiento.Month && DateTime.Today.Day < nacimiento.Day))
+                    edad--;
+
+                return edad;
+            }
+        }
+
         // El entrenador solo puede leer
         public bool SoloLectura
         {
             get { return EsEntrenador; }
+        }
+
+        // La recepcionista solo ve los socios de su sucursal (null = todas)
+        private int? SucursalPermitida()
+        {
+            if (RolSesion() == "RECEPCIONISTA")
+                return IdSucursalSesion() ?? -1;
+            return null;
+        }
+
+        // El entrenador solo ve a sus alumnos: socios con una rutina suya o con reserva en sus clases (null = todos)
+        private int? EntrenadorPermitido()
+        {
+            if (EsEntrenador)
+                return IdEmpleadoSesion() ?? -1;
+            return null;
         }
 
         public void OnGet()
@@ -47,10 +83,10 @@ namespace PIA_Gimnasio.Pages
             Cargar();
 
             // Llena el formulario con el expediente guardado
-            if (TieneExpediente)
+            if (Socio != null && TieneExpediente)
             {
-                Expediente.IdCliente = IdCliente!.Value;
-                Expediente.TipoSangre = Socio!["TipoSangre"].ToString();
+                Expediente.IdCliente = Convert.ToInt32(IdCliente);
+                Expediente.TipoSangre = Socio["TipoSangre"].ToString();
                 Expediente.PadecimientosCronicos = Socio["PadecimientosCronicos"].ToString();
                 Expediente.LesionesPrevias = Socio["LesionesPrevias"].ToString();
                 Expediente.Alergias = Socio["Alergias"].ToString();
@@ -73,6 +109,8 @@ namespace PIA_Gimnasio.Pages
 
             if (Expediente.IdCliente == 0)
                 Mensaje = "Selecciona un socio.";
+            else if (_logica.Obtener(Expediente.IdCliente, SucursalPermitida(), EntrenadorPermitido()) == null)
+                Mensaje = "El socio no pertenece a tu sucursal.";
             else if (string.IsNullOrEmpty(Expediente.TipoSangre))
                 Mensaje = "Selecciona el tipo de sangre.";
 
@@ -104,10 +142,11 @@ namespace PIA_Gimnasio.Pages
             TiposSangre = CargarCombo(logicaCatalogo.TiposSangre);
             try
             {
-                Socios = Paginar(_logica.Consultar(Busqueda));
+                Socios = Paginar(_logica.Consultar(Busqueda, SucursalPermitida(), EntrenadorPermitido()));
 
+                // Si el socio no está entre los que puede ver, no se muestra su expediente
                 if (IdCliente != null)
-                    Socio = _logica.Obtener(IdCliente.Value);
+                    Socio = _logica.Obtener(IdCliente.Value, SucursalPermitida(), EntrenadorPermitido());
             }
             catch (Exception)
             {

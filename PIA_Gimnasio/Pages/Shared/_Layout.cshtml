@@ -5,15 +5,17 @@
     string rol = Context.Session.GetString("Rol") ?? "";
     string inicial = nombre == "" ? "U" : nombre.Substring(0, 1).ToUpper();
 
-    bool admin = rol == "Administrador";
-    bool recepcion = rol == "Recepcionista";
-    bool entrenador = rol == "Entrenador";
+    bool admin = rol == "ADMINISTRADOR";
+    bool recepcion = rol == "RECEPCIONISTA";
+    bool entrenador = rol == "ENTRENADOR";
 
     // Página actual, para marcar la opción activa del menú
-    string paginaActual = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    string paginaActual = Convert.ToString(ViewContext.RouteData.Values["page"]) ?? "";
 
     // Las pantallas de gestión usan todo el ancho (ViewData["AnchoCompleto"] = true)
-    string contenedor = ViewData["AnchoCompleto"] is true ? "container-fluid px-3 px-lg-4" : "container";
+    string contenedor = "container";
+    if (Convert.ToBoolean(ViewData["AnchoCompleto"]))
+        contenedor = "container-fluid px-3 px-lg-4";
 }
 
 <!DOCTYPE html>
@@ -26,7 +28,6 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/PIA_Gimnasio.styles.css" asp-append-version="true" />
 </head>
 <body>
     <header class="topbar mb-4">
@@ -97,6 +98,7 @@
                 }
                 @if (admin || entrenador)
                 {
+                    <a class="menu-link @(paginaActual == "/PaseLista" ? "active" : "")" asp-page="/PaseLista"><i class="bi bi-list-check"></i> Pase de lista</a>
                     <a class="menu-link @(paginaActual.StartsWith("/Rutina") ? "active" : "")" asp-page="/Rutina"><i class="bi bi-clipboard2-pulse"></i> Rutinas</a>
                 }
 
@@ -109,8 +111,11 @@
                     <a class="menu-link @(paginaActual == "/Empleado" ? "active" : "")" asp-page="/Empleado"><i class="bi bi-person-workspace"></i> Empleados</a>
                 }
 
-                <!-- Reportes -->
-                <div class="menu-seccion">Reportes</div>
+                <!-- Reportes (el entrenador no tiene reportes) -->
+                @if (admin || recepcion)
+                {
+                    <div class="menu-seccion">Reportes</div>
+                }
                 @if (admin)
                 {
                     <a class="menu-link @(paginaActual == "/ReporteEmpleados" ? "active" : "")" asp-page="/ReporteEmpleados"><i class="bi bi-file-earmark-person"></i> Empleados por sucursal</a>
@@ -120,7 +125,11 @@
                     <a class="menu-link @(paginaActual == "/ReporteSocios" ? "active" : "")" asp-page="/ReporteSocios"><i class="bi bi-file-earmark-text"></i> Socios y membresías</a>
                     <a class="menu-link @(paginaActual == "/ReporteControlAcceso" ? "active" : "")" asp-page="/ReporteControlAcceso"><i class="bi bi-file-earmark-bar-graph"></i> Control de acceso</a>
                 }
-              
+                @if (admin)
+                {
+                    <a class="menu-link @(paginaActual == "/ReporteClases" ? "active" : "")" asp-page="/ReporteClases"><i class="bi bi-file-earmark-check"></i> Clases y asistencia</a>
+                    <a class="menu-link @(paginaActual == "/ReporteRutinas" ? "active" : "")" asp-page="/ReporteRutinas"><i class="bi bi-file-earmark-medical"></i> Rutinas asignadas</a>
+                }
 
                 <!-- Cuenta -->
                 <div class="menu-seccion">Mi cuenta</div>
@@ -147,12 +156,13 @@
         </div>
     </footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
 
     <!-- Ventana de aviso: se abre sola si la página trae Mensaje -->
-    @if (Model is PIA_Gimnasio.Pages.PaginaProtegida pagina && pagina.Mensaje != "")
+    @{
+        PIA_Gimnasio.Pages.PaginaProtegida? pagina = Model as PIA_Gimnasio.Pages.PaginaProtegida;
+    }
+    @if (pagina != null && pagina.Mensaje != "")
     {
         <partial name="_Mensaje" model="pagina" />
     }

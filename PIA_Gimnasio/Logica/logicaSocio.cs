@@ -20,22 +20,25 @@ namespace PIA_Gimnasio.Logica
         {
             int accion = s.IdCliente == 0 ? 1 : 4;
 
+            // El correo se guarda en minúsculas
+            string correo = (s.Correo ?? "").ToLower();
+
             SqlParameter[] p = {
                 new SqlParameter("@Accion", accion),
                 new SqlParameter("@IdCliente", s.IdCliente),
-                new SqlParameter("@IdSucursal", Valor(s.IdSucursal)),
-                new SqlParameter("@IdEstatus", Valor(s.IdEstatus)),
-                new SqlParameter("@Nombre", Valor(s.Nombre?.Trim().ToUpper())),
-                new SqlParameter("@PrimerApellido", Valor(s.PrimerApellido?.Trim().ToUpper())),
-                new SqlParameter("@SegundoApellido", Valor(s.SegundoApellido?.Trim().ToUpper())),
-                new SqlParameter("@FechaNacimiento", Valor(s.FechaNacimiento)),
-                new SqlParameter("@Correo", Valor(s.Correo?.Trim().ToLower())),
-                new SqlParameter("@Telefono", Valor(s.Telefono)),
-                new SqlParameter("@TipoSangre", Valor(expediente.TipoSangre)),
-                new SqlParameter("@PadecimientosCronicos", Valor(expediente.PadecimientosCronicos)),
-                new SqlParameter("@LesionesPrevias", Valor(expediente.LesionesPrevias)),
-                new SqlParameter("@Alergias", Valor(expediente.Alergias)),
-                new SqlParameter("@CondicionRiesgo", Valor(expediente.CondicionRiesgo)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(s.IdSucursal)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(s.IdEstatus)),
+                new SqlParameter("@Nombre", bdConexion.Valor(s.Nombre)),
+                new SqlParameter("@PrimerApellido", bdConexion.Valor(s.PrimerApellido)),
+                new SqlParameter("@SegundoApellido", bdConexion.Valor(s.SegundoApellido)),
+                new SqlParameter("@FechaNacimiento", bdConexion.Valor(s.FechaNacimiento)),
+                new SqlParameter("@Correo", bdConexion.Valor(correo)),
+                new SqlParameter("@Telefono", bdConexion.Valor(s.Telefono)),
+                new SqlParameter("@TipoSangre", bdConexion.Valor(expediente.TipoSangre)),
+                new SqlParameter("@PadecimientosCronicos", bdConexion.Valor(expediente.PadecimientosCronicos)),
+                new SqlParameter("@LesionesPrevias", bdConexion.Valor(expediente.LesionesPrevias)),
+                new SqlParameter("@Alergias", bdConexion.Valor(expediente.Alergias)),
+                new SqlParameter("@CondicionRiesgo", bdConexion.Valor(expediente.CondicionRiesgo)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spSocio", p));
@@ -75,10 +78,10 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Nombre", Valor(busqueda)),
-                new SqlParameter("@IdSucursal", Valor(idSucursal)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus)),
-                new SqlParameter("@IdTipoMembresia", Valor(idTipoMembresia))
+                new SqlParameter("@Nombre", bdConexion.Valor(busqueda)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus)),
+                new SqlParameter("@IdTipoMembresia", bdConexion.Valor(idTipoMembresia))
             };
             return _bd.EjecutarStoredProcedure("spSocio", p);
         }
@@ -114,18 +117,6 @@ namespace PIA_Gimnasio.Logica
                 r.Id = Convert.ToInt32(dt.Rows[0]["IdCliente"]);
             return r;
         }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
-
-        // Manda NULL a SQL cuando el dato (número o fecha) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
-        }
     }
 
     // Expediente médico (spExpedienteMedico)
@@ -144,11 +135,11 @@ namespace PIA_Gimnasio.Logica
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 1),
                 new SqlParameter("@IdCliente", e.IdCliente),
-                new SqlParameter("@TipoSangre", Valor(e.TipoSangre)),
-                new SqlParameter("@PadecimientosCronicos", Valor(e.PadecimientosCronicos)),
-                new SqlParameter("@LesionesPrevias", Valor(e.LesionesPrevias)),
-                new SqlParameter("@Alergias", Valor(e.Alergias)),
-                new SqlParameter("@CondicionRiesgo", Valor(e.CondicionRiesgo)),
+                new SqlParameter("@TipoSangre", bdConexion.Valor(e.TipoSangre)),
+                new SqlParameter("@PadecimientosCronicos", bdConexion.Valor(e.PadecimientosCronicos)),
+                new SqlParameter("@LesionesPrevias", bdConexion.Valor(e.LesionesPrevias)),
+                new SqlParameter("@Alergias", bdConexion.Valor(e.Alergias)),
+                new SqlParameter("@CondicionRiesgo", bdConexion.Valor(e.CondicionRiesgo)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spExpedienteMedico", p);
@@ -160,32 +151,31 @@ namespace PIA_Gimnasio.Logica
             };
         }
 
-        // Accion 2: datos del socio + expediente (las columnas del expediente vienen en NULL si no tiene)
-        public DataRow? Obtener(int idCliente)
+        // Accion 2: datos del socio + expediente (las columnas del expediente vienen en NULL si no tiene).
+        // idSucursal (recepcionista) e idEmpleado (entrenador) limitan a qué socios puede ver; null = todos.
+        public DataRow? Obtener(int idCliente, int? idSucursal, int? idEmpleado)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 2),
-                new SqlParameter("@IdCliente", idCliente)
+                new SqlParameter("@IdCliente", idCliente),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(idEmpleado))
             };
             DataTable dt = _bd.EjecutarStoredProcedure("spExpedienteMedico", p);
 
             return dt.Rows.Count == 0 ? null : dt.Rows[0];
         }
 
-        // Accion 3: socios con o sin expediente (búsqueda por folio o nombre)
-        public DataTable Consultar(string? busqueda)
+        // Accion 3: socios con o sin expediente (búsqueda por folio o nombre; mismos límites que Obtener)
+        public DataTable Consultar(string? busqueda, int? idSucursal, int? idEmpleado)
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Busqueda", Valor(busqueda))
+                new SqlParameter("@Busqueda", bdConexion.Valor(busqueda)),
+                new SqlParameter("@IdSucursal", bdConexion.Valor(idSucursal)),
+                new SqlParameter("@IdEmpleado", bdConexion.Valor(idEmpleado))
             };
             return _bd.EjecutarStoredProcedure("spExpedienteMedico", p);
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
         }
     }
 }

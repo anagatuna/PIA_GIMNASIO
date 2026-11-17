@@ -23,18 +23,18 @@ namespace PIA_Gimnasio.Logica
             SqlParameter[] p = {
                 new SqlParameter("@Accion", accion),
                 new SqlParameter("@IdSucursal", s.IdSucursal),
-                new SqlParameter("@IdEstatus", Valor(s.IdEstatus)),
-                new SqlParameter("@IdEstado", Valor(s.IdEstado)),
-                new SqlParameter("@Nombre", Valor(s.Nombre?.Trim().ToUpper())),
-                new SqlParameter("@Telefono", Valor(s.Telefono)),
-                new SqlParameter("@AforoMaximo", Valor(s.AforoMaximo)),
-                new SqlParameter("@HoraApertura", Valor(s.HoraApertura)),
-                new SqlParameter("@HoraCierre", Valor(s.HoraCierre)),
-                new SqlParameter("@Calle", Valor(s.Calle)),
-                new SqlParameter("@NumeroInt", Valor(s.NumeroInt)),
-                new SqlParameter("@Colonia", Valor(s.Colonia)),
-                new SqlParameter("@Municipio", Valor(s.Municipio)),
-                new SqlParameter("@CodigoPostal", Valor(s.CodigoPostal)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(s.IdEstatus)),
+                new SqlParameter("@IdEstado", bdConexion.Valor(s.IdEstado)),
+                new SqlParameter("@Nombre", bdConexion.Valor(s.Nombre)),
+                new SqlParameter("@Telefono", bdConexion.Valor(s.Telefono)),
+                new SqlParameter("@AforoMaximo", bdConexion.Valor(s.AforoMaximo)),
+                new SqlParameter("@HoraApertura", bdConexion.Valor(s.HoraApertura)),
+                new SqlParameter("@HoraCierre", bdConexion.Valor(s.HoraCierre)),
+                new SqlParameter("@Calle", bdConexion.Valor(s.Calle)),
+                new SqlParameter("@NumeroInt", bdConexion.Valor(s.NumeroInt)),
+                new SqlParameter("@Colonia", bdConexion.Valor(s.Colonia)),
+                new SqlParameter("@Municipio", bdConexion.Valor(s.Municipio)),
+                new SqlParameter("@CodigoPostal", bdConexion.Valor(s.CodigoPostal)),
                 new SqlParameter("@UsuarioSesion", usuarioSesion)
             };
             return Respuesta(_bd.EjecutarStoredProcedure("spSucursal", p));
@@ -76,9 +76,9 @@ namespace PIA_Gimnasio.Logica
         {
             SqlParameter[] p = {
                 new SqlParameter("@Accion", 3),
-                new SqlParameter("@Nombre", Valor(nombre)),
-                new SqlParameter("@IdEstado", Valor(idEstado)),
-                new SqlParameter("@IdEstatus", Valor(idEstatus))
+                new SqlParameter("@Nombre", bdConexion.Valor(nombre)),
+                new SqlParameter("@IdEstado", bdConexion.Valor(idEstado)),
+                new SqlParameter("@IdEstatus", bdConexion.Valor(idEstatus))
             };
             return _bd.EjecutarStoredProcedure("spSucursal", p);
         }
@@ -110,18 +110,6 @@ namespace PIA_Gimnasio.Logica
                 Mensaje = dt.Rows[0]["Mensaje"].ToString() ?? "",
                 TipoMensaje = dt.Rows[0]["TipoMensaje"].ToString() ?? ""
             };
-        }
-
-        // Manda NULL a SQL cuando el texto viene vacío
-        private object Valor(string? texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? DBNull.Value : texto.Trim();
-        }
-
-        // Manda NULL a SQL cuando el dato (número, fecha u hora) no tiene valor
-        private object Valor(object? dato)
-        {
-            return dato ?? DBNull.Value;
         }
     }
 }

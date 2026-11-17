@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using PIA_Gimnasio.Entidades;
@@ -19,7 +18,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         [BindProperty]
@@ -70,6 +69,10 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // Fechas fuera de rango = vacías (la validación pide capturarlas)
+            Empleado.FechaNacimiento = FechaValida(Empleado.FechaNacimiento);
+            Empleado.FechaContratacion = FechaValida(Empleado.FechaContratacion);
+
             Cargar();
 
             // El estatus no se captura: siempre Activo (solo pasa a Inactivo con la baja lógica)
@@ -158,6 +161,20 @@ namespace PIA_Gimnasio.Pages
             }
         }
 
+        // CURP: 4 letras, 6 números (fecha), H/M/X (sexo), 5 letras, 1 letra o número y 1 número
+        private bool CurpValida(string curp)
+        {
+            if (!CumpleFormato(curp, "LLLLNNNNNNLLLLLLAN"))
+                return false;
+            return curp[10] == 'H' || curp[10] == 'M' || curp[10] == 'X';
+        }
+
+        // RFC: 3 letras (empresa) o 4 (persona), 6 números (fecha) y 3 letras o números (homoclave)
+        private bool RfcValido(string rfc)
+        {
+            return CumpleFormato(rfc, "LLLNNNNNNAAA") || CumpleFormato(rfc, "LLLLNNNNNNAAA");
+        }
+
         // Reglas de captura. Regresa el primer error o "" si todo está bien.
         private string Validar()
         {
@@ -167,9 +184,9 @@ namespace PIA_Gimnasio.Pages
             // Identificación: al menos CURP o RFC, y con formato válido si se captura
             if (string.IsNullOrWhiteSpace(Empleado.CURP) && string.IsNullOrWhiteSpace(Empleado.RFC))
                 return "Captura al menos la CURP o el RFC del empleado.";
-            if (!string.IsNullOrWhiteSpace(Empleado.CURP) && !Regex.IsMatch(Empleado.CURP.Trim().ToUpper(), @"^[A-Z]{4}\d{6}[HMX][A-Z]{5}[A-Z0-9]\d$"))
+            if (!string.IsNullOrWhiteSpace(Empleado.CURP) && !CurpValida(Empleado.CURP.Trim().ToUpper()))
                 return "La CURP no tiene un formato válido (18 caracteres).";
-            if (!string.IsNullOrWhiteSpace(Empleado.RFC) && !Regex.IsMatch(Empleado.RFC.Trim().ToUpper(), @"^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$"))
+            if (!string.IsNullOrWhiteSpace(Empleado.RFC) && !RfcValido(Empleado.RFC.Trim().ToUpper()))
                 return "El RFC no tiene un formato válido (12 o 13 caracteres).";
 
             if (Empleado.FechaNacimiento == null)
@@ -177,9 +194,9 @@ namespace PIA_Gimnasio.Pages
             if (Empleado.FechaNacimiento > DateTime.Today.AddYears(-18) || Empleado.FechaNacimiento < DateTime.Today.AddYears(-90))
                 return "El empleado debe tener entre 18 y 90 años.";
 
-            if (string.IsNullOrWhiteSpace(Empleado.Correo) || !Regex.IsMatch(Empleado.Correo.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            if (string.IsNullOrWhiteSpace(Empleado.Correo) || !CorreoValido(Empleado.Correo.Trim()))
                 return "Ingresa un correo válido.";
-            if (string.IsNullOrWhiteSpace(Empleado.Telefono) || !Regex.IsMatch(Empleado.Telefono.Trim(), @"^\d{10}$"))
+            if (string.IsNullOrWhiteSpace(Empleado.Telefono) || !SoloNumeros(Empleado.Telefono.Trim(), 10))
                 return "El teléfono debe tener 10 dígitos.";
 
             if (Empleado.IdSucursal == null)

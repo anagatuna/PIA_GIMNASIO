@@ -27,6 +27,22 @@ namespace PIA_Gimnasio.Datos
             }
             return dt;
         }
+
+        // Manda NULL a SQL cuando el texto viene vacío; si trae algo, sin espacios al inicio y al final
+        public static object Valor(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return DBNull.Value;
+            return texto.Trim();
+        }
+
+        // Manda NULL a SQL cuando el dato (número, fecha u hora) no tiene valor
+        public static object Valor(object? dato)
+        {
+            if (dato == null)
+                return DBNull.Value;
+            return dato;
+        }
     }
 }
 

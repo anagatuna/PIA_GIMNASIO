@@ -18,7 +18,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaEmpleado = logicaEmpleado;
-            RolesPermitidos = new string[] { "Administrador" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR" };
         }
 
         [BindProperty]
@@ -38,14 +38,12 @@ namespace PIA_Gimnasio.Pages
         public List<SelectListItem> Entrenadores { get; set; } = new List<SelectListItem>();
         public List<DataRow> Clases { get; set; } = new List<DataRow>();
 
-        public static string[] Dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes" };
-
         // Lunes de la semana que se muestra
         public DateTime Lunes
         {
             get
             {
-                DateTime fecha = (Semana ?? DateTime.Today).Date;
+                DateTime fecha = (FechaValida(Semana) ?? DateTime.Today).Date;
                 while (fecha.DayOfWeek != DayOfWeek.Monday)
                     fecha = fecha.AddDays(-1);
                 return fecha;
@@ -87,6 +85,9 @@ namespace PIA_Gimnasio.Pages
         // Botón Guardar / Actualizar
         public IActionResult OnPostGuardar()
         {
+            // Fecha fuera de rango = vacía (la validación pide capturarla)
+            Clase.Fecha = FechaValida(Clase.Fecha);
+
             Mensaje = Validar();
             if (Mensaje != "")
             {

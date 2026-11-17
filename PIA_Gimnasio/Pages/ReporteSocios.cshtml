@@ -2,7 +2,7 @@
 @model PIA_Gimnasio.Pages.ReporteSociosModel
 @{
     ViewData["Title"] = "Reporte de socios";
-    ViewData["AnchoCompleto"] = true;
+    ViewData["AnchoCompleto"] = true;
 }
 
 <section class="gestion">
@@ -11,12 +11,16 @@
 
         <form method="get" id="formBusqueda">
             <div class="row">
-                <div class="col-md-3 mb-3">
-                    <div class="form-floating">
-                        <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
-                        <label asp-for="IdSucursal">Sucursal</label>
+                @* La recepcionista solo consulta su sucursal *@
+                @if (!Model.EsRecepcionista)
+                {
+                    <div class="col-md-3 mb-3">
+                        <div class="form-floating">
+                            <select asp-for="IdSucursal" asp-items="Model.Sucursales" class="form-select"><option value="">Todas</option></select>
+                            <label asp-for="IdSucursal">Sucursal</label>
+                        </div>
                     </div>
-                </div>
+                }
                 <div class="col-md-3 mb-3">
                     <div class="form-floating">
                         <select asp-for="IdTipoMembresia" asp-items="Model.Membresias" class="form-select"><option value="">Todas</option></select>
@@ -50,7 +54,7 @@
             <div class="table-responsive tabla-gestion">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr><th>Folio</th><th>Socio</th><th>Contacto</th><th>Sucursal</th><th>Membresía</th><th>Vencimiento</th><th>Estatus</th><th class="text-center">Expediente</th></tr>
+                        <tr><th>Folio</th><th>Socio</th><th>Nacimiento</th><th>Contacto</th><th>Sucursal</th><th>Inscripción</th><th>Membresía</th><th>Vigencia</th><th>Estatus</th><th class="text-center">Expediente</th></tr>
                     </thead>
                     <tbody>
                         @foreach (DataRow f in Model.Filas)
@@ -63,10 +67,21 @@
                             <tr>
                                 <td class="fw-bold">@f["Folio"]</td>
                                 <td class="fw-semibold">@f["Socio"]</td>
+                                <td class="text-nowrap">@Convert.ToDateTime(f["FechaNacimiento"]).ToString("dd/MM/yyyy")</td>
                                 <td class="small">@f["Correo"]<br />@f["Telefono"]</td>
                                 <td>@f["Sucursal"]</td>
+                                <td class="text-nowrap">@Convert.ToDateTime(f["FechaInscripcion"]).ToString("dd/MM/yyyy")</td>
                                 <td>@(f["Membresia"] == DBNull.Value ? "—" : f["Membresia"])</td>
-                                <td>@(f["FechaVencimiento"] == DBNull.Value ? "—" : Convert.ToDateTime(f["FechaVencimiento"]).ToString("dd/MM/yyyy"))</td>
+                                <td class="text-nowrap">
+                                    @if (f["FechaInicio"] == DBNull.Value)
+                                    {
+                                        <span>—</span>
+                                    }
+                                    else
+                                    {
+                                        @(Convert.ToDateTime(f["FechaInicio"]).ToString("dd/MM/yyyy") + " – " + Convert.ToDateTime(f["FechaVencimiento"]).ToString("dd/MM/yyyy"))
+                                    }
+                                </td>
                                 <td><span class="etiqueta @clase">@f["EstatusMembresia"]</span></td>
                                 <td class="text-center">
                                     <a asp-page="/ExpedienteMedico" asp-route-IdCliente="@f["IdCliente"]" title="Ver expediente médico"

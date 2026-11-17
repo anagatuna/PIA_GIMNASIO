@@ -1,10 +1,11 @@
 using System.Data;
+using PIA_Gimnasio.Entidades;
 using PIA_Gimnasio.Logica;
 
 namespace PIA_Gimnasio.Pages
 {
     // Pantalla de inicio según el rol:
-    //   Administrador -> resumen de todas las sucursales (con ventas del mes y ocupación por sucursal)
+    //   Administrador -> resumen de todas las sucursales (con ocupación por sucursal)
     //   Recepcionista -> resumen de su sucursal
     //   Entrenador    -> su agenda de la semana
     public class InicioModel : PaginaProtegida
@@ -20,9 +21,8 @@ namespace PIA_Gimnasio.Pages
             _logicaSucursal = logicaSucursal;
         }
 
-        public string Nombre { get; set; } = "";
         public string Rol { get; set; } = "";
-        public string DescripcionRol { get; set; } = "";
+        public string NombreSucursal { get; set; } = "";   // Recepcionista: su sucursal
 
         // Resumen (Administrador y Recepcionista)
         public DataRow? Indicadores { get; set; }
@@ -32,9 +32,6 @@ namespace PIA_Gimnasio.Pages
 
         // Agenda de la semana (Entrenador)
         public List<DataRow> Agenda { get; set; } = new List<DataRow>();
-
-        public static string[] Dias = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes" };
-
         // Lunes de la semana actual
         public DateTime Lunes
         {
@@ -49,19 +46,11 @@ namespace PIA_Gimnasio.Pages
 
         public void OnGet()
         {
-            Nombre = HttpContext.Session.GetString("Nombre") ?? "";
             Rol = RolSesion();
-
-            if (Rol == "Administrador")
-                DescripcionRol = "Tienes acceso total al sistema, incluida la creación de cuentas de usuario.";
-            else if (Rol == "Recepcionista")
-                DescripcionRol = "Registra socios, controla el acceso de tu sucursal y captura reservas de clases.";
-            else if (Rol == "Entrenador")
-                DescripcionRol = "Consulta expedientes médicos, diseña y asigna rutinas y pasa lista en tus clases.";
 
             try
             {
-                if (Rol == "Entrenador")
+                if (Rol == "ENTRENADOR")
                 {
                     // Sin empleado ligado no hay agenda (-1 no coincide con ningún entrenador)
                     int idEmpleado = IdEmpleadoSesion() ?? -1;
@@ -73,7 +62,14 @@ namespace PIA_Gimnasio.Pages
                     // El administrador ve todas las sucursales; la recepcionista, solo la suya
                     int? idSucursal = null;
                     if (!EsAdministrador)
+                    {
                         idSucursal = IdSucursalSesion() ?? -1;
+
+                        // Nombre de su sucursal para el título del resumen
+                        bdSucursal? sucursal = _logicaSucursal.Obtener(idSucursal.Value);
+                        if (sucursal != null)
+                            NombreSucursal = sucursal.Nombre ?? "";
+                    }
 
                     Indicadores = _logica.ObtenerIndicadores(idSucursal);
 

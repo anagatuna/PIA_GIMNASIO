@@ -2,6 +2,7 @@ using System.Data;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -44,6 +45,85 @@ namespace PIA_Gimnasio.Pages
                 if (!permitido)
                     context.Result = RedirectToPage("/AccesoDenegado");
             }
+
+            // Si llegó un valor con formato inválido (ej. letras en un número o una fecha),
+            // se descarta: el campo queda vacío y las validaciones de la página avisan.
+            List<string> invalidos = new List<string>();
+            foreach (string clave in ModelState.Keys)
+            {
+                ModelStateEntry? campo = ModelState[clave];
+                if (campo != null && campo.Errors.Count > 0)
+                    invalidos.Add(clave);
+            }
+            foreach (string clave in invalidos)
+            {
+                ModelState.Remove(clave);
+            }
+        }
+
+        // Fechas fuera del rango 1900 - 2100 se toman como vacías
+        // (evita errores al calcular semanas o vencimientos y al mandarlas a SQL Server)
+        protected DateTime? FechaValida(DateTime? fecha)
+        {
+            if (fecha == null)
+                return null;
+            if (fecha.Value.Year < 1900 || fecha.Value.Year > 2100)
+                return null;
+            return fecha;
+        }
+
+        // ---------- Validaciones de formato ----------
+
+        // true si el texto tiene exactamente "largo" caracteres y todos son números (teléfono, código postal)
+        protected bool SoloNumeros(string texto, int largo)
+        {
+            if (texto.Length != largo)
+                return false;
+            foreach (char c in texto)
+            {
+                if (c < '0' || c > '9')
+                    return false;
+            }
+            return true;
+        }
+
+        // Correo con la forma algo@algo.algo, sin espacios y con una sola @
+        protected bool CorreoValido(string correo)
+        {
+            if (correo.Contains(" "))
+                return false;
+
+            int arroba = correo.IndexOf("@");
+            if (arroba < 1 || arroba != correo.LastIndexOf("@"))
+                return false;
+
+            // Después de la @ debe haber un punto con texto antes y después
+            string dominio = correo.Substring(arroba + 1);
+            int punto = dominio.LastIndexOf(".");
+            return punto > 0 && punto < dominio.Length - 1;
+        }
+
+        // Revisa el texto contra un formato, caracter por caracter:
+        // L = letra (A-Z, Ñ o &), N = número (0-9), A = letra o número
+        protected bool CumpleFormato(string texto, string formato)
+        {
+            if (texto.Length != formato.Length)
+                return false;
+
+            for (int i = 0; i < texto.Length; i++)
+            {
+                char c = texto[i];
+                bool letra = (c >= 'A' && c <= 'Z') || c == 'Ñ' || c == '&';
+                bool numero = c >= '0' && c <= '9';
+
+                if (formato[i] == 'L' && !letra)
+                    return false;
+                if (formato[i] == 'N' && !numero)
+                    return false;
+                if (formato[i] == 'A' && !letra && !numero)
+                    return false;
+            }
+            return true;
         }
 
         // ---------- Datos de la sesión ----------
@@ -71,12 +151,18 @@ namespace PIA_Gimnasio.Pages
 
         public bool EsAdministrador
         {
-            get { return RolSesion() == "Administrador"; }
+            get { return RolSesion() == "ADMINISTRADOR"; }
         }
 
         public bool EsEntrenador
         {
-            get { return RolSesion() == "Entrenador"; }
+            get { return RolSesion() == "ENTRENADOR"; }
+        }
+
+        // La recepcionista solo trabaja con su sucursal asignada
+        public bool EsRecepcionista
+        {
+            get { return RolSesion() == "RECEPCIONISTA"; }
         }
 
         // ---------- Combos ----------
@@ -143,8 +229,8 @@ namespace PIA_Gimnasio.Pages
         // Arma un archivo CSV (se abre con Excel) con las columnas indicadas
         protected IActionResult ExportarExcel(DataTable dt, string nombre, string[] encabezados, string[] columnas)
         {
-            StringBuilder csv = new StringBuilder();
-            csv.AppendLine(string.Join(",", encabezados));
+            // Primer renglón: los encabezados
+            string csv = string.Join(",", encabezados) + "\r\n";
 
             foreach (DataRow fila in dt.Rows)
             {
@@ -153,17 +239,17 @@ namespace PIA_Gimnasio.Pages
                 {
                     // Las fechas van como dd/MM/yyyy HH:mm; lo demás, tal cual
                     string texto;
-                    if (fila[columna] is DateTime)
+                    if (fila[columna].GetType() == typeof(DateTime))
                         texto = Convert.ToDateTime(fila[columna]).ToString("dd/MM/yyyy HH:mm");
                     else
                         texto = fila[columna].ToString() ?? "";
                     valores.Add("\"" + texto.Replace("\"", "\"\"") + "\"");
                 }
-                csv.AppendLine(string.Join(",", valores));
+                csv = csv + string.Join(",", valores) + "\r\n";
             }
 
             // El carácter ﻿ al inicio le indica a Excel que el archivo es UTF-8 (así respeta los acentos)
-            byte[] archivo = Encoding.UTF8.GetBytes("﻿" + csv.ToString());
+            byte[] archivo = Encoding.UTF8.GetBytes("﻿" + csv);
             return File(archivo, "text/csv", nombre + "_" + DateTime.Now.ToString("dd-MM-yyyy") + ".csv");
         }
     }

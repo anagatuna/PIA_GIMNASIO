@@ -6,7 +6,6 @@ using PIA_Gimnasio.Logica;
 namespace PIA_Gimnasio.Pages
 {
     // Control de acceso para recepción: entradas, salidas y aforo de la sucursal.
-    // La entrada/salida se registra con JavaScript (sin recargar) y el aforo se refresca cada 5 segundos.
     // Administrador y Recepcionista.
     public class ControlAccesoModel : PaginaProtegida
     {
@@ -17,26 +16,116 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         [BindProperty(SupportsGet = true)]
         public int? IdSucursal { get; set; }
 
+        [BindProperty]
+        public string? Folio { get; set; }
+
         public List<SelectListItem> Sucursales { get; set; } = new List<SelectListItem>();
         public DataRow? Aforo { get; set; }
+        public List<DataRow> Movimientos { get; set; } = new List<DataRow>();
 
-        // La recepcionista solo opera su propia sucursal; el administrador puede elegir otra
-        private int? SucursalPermitida(int? solicitada)
-        {
-            if (EsAdministrador && solicitada != null)
-                return solicitada;
-            return IdSucursalSesion();
-        }
+        // Semáforo del último folio capturado
+        public string Resultado { get; set; } = "";       // Permitido, Salida o Denegado ("" = esperando folio)
+        public string Aviso { get; set; } = "";            // Texto que explica el resultado
+        public DataRow? DatosSocio { get; set; }           // Lo que regresa el SP (socio, membresía, minutos)
+        public int FolioCapturado { get; set; }
 
         public void OnGet()
         {
-            IdSucursal = SucursalPermitida(IdSucursal);
+            Cargar();
+        }
+
+        // Botón Registrar entrada (también con Enter): valida membresía vigente y aforo
+        public IActionResult OnPostEntrada()
+        {
+            Registrar(true);
+            Cargar();
+            return Page();
+        }
+
+        // Botón Registrar salida: el SP calcula los minutos de permanencia
+        public IActionResult OnPostSalida()
+        {
+            Registrar(false);
+            Cargar();
+            return Page();
+        }
+
+        // La recepcionista solo opera su propia sucursal; el administrador puede elegir otra
+        private int? SucursalPermitida()
+        {
+            if (EsAdministrador && IdSucursal != null)
+                return IdSucursal;
+            return IdSucursalSesion();
+        }
+
+        private void Registrar(bool esEntrada)
+        {
+            Resultado = "Denegado";
+            int? sucursal = SucursalPermitida();
+            if (sucursal == null)
+            {
+                Aviso = "No tienes una sucursal asignada.";
+                return;
+            }
+
+            int numeroFolio;
+            if (!int.TryParse(Folio, out numeroFolio) || numeroFolio <= 0)
+            {
+                Aviso = "Captura un folio válido (solo números).";
+                return;
+            }
+            FolioCapturado = numeroFolio;
+
+            try
+            {
+                // Fuera del horario de la sucursal no se registran entradas ni salidas (el SP también lo valida).
+                // Las salidas pendientes se registran solas a la hora de cierre.
+                DataRow? datos = _logica.ObtenerAforo(sucursal.Value);
+                if (datos == null)
+                {
+                    Aviso = "La sucursal no está activa.";
+                    return;
+                }
+
+                TimeSpan abre = (TimeSpan)datos["HoraApertura"];
+                TimeSpan cierra = (TimeSpan)datos["HoraCierre"];
+                TimeSpan ahora = DateTime.Now.TimeOfDay;
+                if (ahora < abre || ahora > cierra)
+                {
+                    Aviso = "La sucursal está cerrada. Horario: " + abre.ToString(@"hh\:mm") + " - " + cierra.ToString(@"hh\:mm") + ".";
+                    if (!esEntrada)
+                        Aviso = Aviso + " Las salidas pendientes se registraron a la hora de cierre.";
+                    return;
+                }
+
+                if (esEntrada)
+                    DatosSocio = _logica.RegistrarEntrada(sucursal.Value, numeroFolio, IdUsuarioSesion());
+                else
+                    DatosSocio = _logica.RegistrarSalida(sucursal.Value, numeroFolio, IdUsuarioSesion());
+
+                Resultado = DatosSocio["Resultado"].ToString() ?? "";
+                Aviso = DatosSocio["Mensaje"].ToString() ?? "";
+            }
+            catch (Exception)
+            {
+                Aviso = "No se pudo conectar con la base de datos.";
+            }
+        }
+
+        // Llena el combo de sucursales, el aforo y los movimientos de hoy
+        private void Cargar()
+        {
+            IdSucursal = SucursalPermitida();
+
+            // El campo del folio queda vacío para capturar el siguiente
+            ModelState.Clear();
+            Folio = "";
 
             try
             {
@@ -44,7 +133,14 @@ namespace PIA_Gimnasio.Pages
                     Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
 
                 if (IdSucursal != null)
+                {
                     Aforo = _logica.ObtenerAforo(IdSucursal.Value);
+                    if (Aforo != null)
+                    {
+                        foreach (DataRow r in _logica.ConsultarMovimientos(IdSucursal.Value).Rows)
+                            Movimientos.Add(r);
+                    }
+                }
 
                 if (Aforo == null)
                 {
@@ -56,118 +152,6 @@ namespace PIA_Gimnasio.Pages
             {
                 Mensaje = "No se pudo conectar con la base de datos.";
                 TipoMensaje = "danger";
-            }
-        }
-
-        // Aforo y movimientos del día (lo consulta el JavaScript cada 5 segundos)
-        public IActionResult OnGetEstado(int? idSucursal)
-        {
-            int? sucursal = SucursalPermitida(idSucursal);
-            if (sucursal == null)
-                return BadRequest();
-
-            try
-            {
-                DataRow? aforo = _logica.ObtenerAforo(sucursal.Value);
-                if (aforo == null)
-                    return NotFound();
-
-                // Movimientos del día para la tabla
-                List<object> movimientos = new List<object>();
-                foreach (DataRow r in _logica.ConsultarMovimientos(sucursal.Value).Rows)
-                {
-                    movimientos.Add(new
-                    {
-                        folio = r["Folio"],
-                        socio = r["Socio"],
-                        entrada = Convert.ToDateTime(r["FechaEntrada"]).ToString("HH:mm"),
-                        salida = r["FechaSalida"] == DBNull.Value ? null : Convert.ToDateTime(r["FechaSalida"]).ToString("HH:mm"),
-                        minutos = Convert.ToInt32(r["Minutos"])
-                    });
-                }
-
-                return new JsonResult(new
-                {
-                    ocupacion = Convert.ToInt32(aforo["Ocupacion"]),
-                    aforoMaximo = Convert.ToInt32(aforo["AforoMaximo"]),
-                    movimientos = movimientos
-                });
-            }
-            catch (Exception)
-            {
-                return StatusCode(503);
-            }
-        }
-
-        // Registrar entrada: valida membresía vigente y aforo
-        public IActionResult OnPostEntrada(int? idSucursal, string? folio)
-        {
-            return Registrar(idSucursal, folio, true);
-        }
-
-        // Registrar salida: el SP calcula los minutos de permanencia
-        public IActionResult OnPostSalida(int? idSucursal, string? folio)
-        {
-            return Registrar(idSucursal, folio, false);
-        }
-
-        private IActionResult Registrar(int? idSucursal, string? folio, bool esEntrada)
-        {
-            int? sucursal = SucursalPermitida(idSucursal);
-            if (sucursal == null)
-                return new JsonResult(new { resultado = "Denegado", mensaje = "No tienes una sucursal asignada." });
-
-            int numeroFolio;
-            if (!int.TryParse(folio?.Trim(), out numeroFolio) || numeroFolio <= 0)
-                return new JsonResult(new { resultado = "Denegado", mensaje = "Captura un folio válido (solo números)." });
-
-            try
-            {
-                // No se deja entrar fuera del horario de la sucursal (el SP también lo valida)
-                if (esEntrada)
-                {
-                    DataRow? datos = _logica.ObtenerAforo(sucursal.Value);
-                    if (datos == null)
-                        return new JsonResult(new { resultado = "Denegado", mensaje = "La sucursal no está activa." });
-
-                    TimeSpan abre = (TimeSpan)datos["HoraApertura"];
-                    TimeSpan cierra = (TimeSpan)datos["HoraCierre"];
-                    TimeSpan ahora = DateTime.Now.TimeOfDay;
-                    if (ahora < abre || ahora > cierra)
-                    {
-                        return new JsonResult(new
-                        {
-                            resultado = "Denegado",
-                            mensaje = "La sucursal está cerrada. Horario: " + abre.ToString(@"hh\:mm") + " - " + cierra.ToString(@"hh\:mm") + ".",
-                            folio = numeroFolio,
-                            ocupacion = Convert.ToInt32(datos["Ocupacion"]),
-                            aforoMaximo = Convert.ToInt32(datos["AforoMaximo"])
-                        });
-                    }
-                }
-
-                DataRow r;
-                if (esEntrada)
-                    r = _logica.RegistrarEntrada(sucursal.Value, numeroFolio, IdUsuarioSesion());
-                else
-                    r = _logica.RegistrarSalida(sucursal.Value, numeroFolio, IdUsuarioSesion());
-
-                return new JsonResult(new
-                {
-                    resultado = r["Resultado"].ToString(),
-                    mensaje = r["Mensaje"].ToString(),
-                    folio = numeroFolio,
-                    socio = r["Socio"] == DBNull.Value ? null : r["Socio"].ToString(),
-                    membresia = r["Membresia"] == DBNull.Value ? null : r["Membresia"].ToString(),
-                    vence = r["FechaVencimiento"] == DBNull.Value ? null : Convert.ToDateTime(r["FechaVencimiento"]).ToString("dd/MM/yyyy"),
-                    minutos = r["Minutos"] == DBNull.Value ? (int?)null : Convert.ToInt32(r["Minutos"]),
-                    ocupacion = Convert.ToInt32(r["Ocupacion"]),
-                    aforoMaximo = Convert.ToInt32(r["AforoMaximo"])
-                });
-            }
-            catch (Exception)
-            {
-                return new JsonResult(new { resultado = "Denegado", mensaje = "No se pudo conectar con la base de datos." });
             }
         }
     }

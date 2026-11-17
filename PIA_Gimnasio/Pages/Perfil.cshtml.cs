@@ -57,7 +57,7 @@ namespace PIA_Gimnasio.Pages
 
             try
             {
-                bdRespuesta r = _logica.CambiarContrasenia(IdUsuarioSesion(), Cambio.Actual!, Cambio.Nueva!);
+                bdRespuesta r = _logica.CambiarContrasenia(IdUsuarioSesion(), Cambio.Actual ?? "", Cambio.Nueva ?? "");
                 Mensaje = r.Mensaje;
                 TipoMensaje = r.TipoMensaje;
 

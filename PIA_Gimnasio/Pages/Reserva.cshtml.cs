@@ -19,7 +19,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSocio = logicaSocio;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         [BindProperty]
@@ -39,34 +39,19 @@ namespace PIA_Gimnasio.Pages
         public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>();
         public List<DataRow> Reservas { get; set; } = new List<DataRow>();
 
+        // Plan vigente del socio elegido y clases usadas en la semana de la clase (null = sin socio elegido)
+        public DataRow? Resumen { get; set; }
+
         public void OnGet()
         {
             Cargar();
         }
 
-        // Plan del socio y clases usadas en la semana de la clase elegida (lo usa el JavaScript)
-        public IActionResult OnGetResumen(int idCliente, int? idClase)
+        // Al elegir socio o clase se recarga la página para mostrar su plan y las clases que le quedan
+        public IActionResult OnPostResumen()
         {
-            try
-            {
-                DataRow? r = _logica.ObtenerResumenSocio(idCliente, idClase);
-                if (r == null || r["Membresia"] == DBNull.Value)
-                    return new JsonResult(new { tienePlan = false });
-
-                return new JsonResult(new
-                {
-                    tienePlan = true,
-                    membresia = r["Membresia"].ToString(),
-                    maximo = Convert.ToInt32(r["MaxClasesSemana"]),
-                    usadas = Convert.ToInt32(r["Usadas"]),
-                    lunes = Convert.ToDateTime(r["Lunes"]).ToString("dd/MM/yyyy"),
-                    vence = Convert.ToDateTime(r["FechaVencimiento"]).ToString("dd/MM/yyyy")
-                });
-            }
-            catch (Exception)
-            {
-                return StatusCode(503);
-            }
+            Cargar();
+            return Page();
         }
 
         // Botón Reservar
@@ -92,7 +77,7 @@ namespace PIA_Gimnasio.Pages
             try
             {
                 // El SP valida cupo, membresía vigente y límite semanal
-                bdRespuesta r = _logica.Registrar(Reserva, idEmpleado!.Value, IdUsuarioSesion());
+                bdRespuesta r = _logica.Registrar(Reserva, Convert.ToInt32(idEmpleado), IdUsuarioSesion());
                 Mensaje = r.Mensaje;
                 TipoMensaje = r.TipoMensaje;
 
@@ -132,6 +117,7 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            BusquedaFecha = FechaValida(BusquedaFecha);
             DataTable dt = _logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus);
             return ExportarExcel(dt, "Reservas",
                 new string[] { "Folio", "Socio", "Clase", "Fecha", "Hora", "Salón", "Sucursal", "Solicitud", "Estatus" },
@@ -141,12 +127,18 @@ namespace PIA_Gimnasio.Pages
         // Llena combos y tabla
         private void Cargar()
         {
+            // Fecha fuera de rango se toma como vacía
+            BusquedaFecha = FechaValida(BusquedaFecha);
+
             try
             {
                 Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
                 Clases = CargarCombo(_logica.ConsultarClasesDisponibles(), "IdClase", "Clase");
                 Estatus = CargarCombo(_logicaCatalogo.ConsultarEstatusReserva(), "IdCatalogo", "Descripcion");
                 Reservas = Paginar(_logica.Consultar(Busqueda, null, BusquedaFecha, BusquedaIdEstatus));
+
+                if (Reserva.IdCliente != null)
+                    Resumen = _logica.ObtenerResumenSocio(Reserva.IdCliente.Value, Reserva.IdClase);
             }
             catch (Exception)
             {

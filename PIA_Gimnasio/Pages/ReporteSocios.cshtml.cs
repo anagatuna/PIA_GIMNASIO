@@ -17,7 +17,7 @@ namespace PIA_Gimnasio.Pages
             _logica = logica;
             _logicaSucursal = logicaSucursal;
             _logicaCatalogo = logicaCatalogo;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         // Filtros
@@ -31,10 +31,10 @@ namespace PIA_Gimnasio.Pages
         // Estatus de la membresía (0 = nunca ha tenido)
         public List<SelectListItem> Estatus { get; set; } = new List<SelectListItem>
         {
-            new SelectListItem { Text = "Activa", Value = "1" },
-            new SelectListItem { Text = "Vencida", Value = "3" },
-            new SelectListItem { Text = "Cancelada", Value = "4" },
-            new SelectListItem { Text = "Sin membresía", Value = "0" }
+            new SelectListItem { Text = "ACTIVA", Value = "1" },
+            new SelectListItem { Text = "VENCIDA", Value = "3" },
+            new SelectListItem { Text = "CANCELADA", Value = "4" },
+            new SelectListItem { Text = "SIN MEMBRESIA", Value = "0" }
         };
 
         public List<DataRow> Filas { get; set; } = new List<DataRow>();
@@ -52,6 +52,9 @@ namespace PIA_Gimnasio.Pages
                 Sucursales = CargarCombo(_logicaSucursal.ConsultarActivas(), "IdSucursal", "Nombre");
                 Membresias = CargarCombo(_logicaCatalogo.ConsultarMembresias(), "IdCatalogo", "Descripcion");
 
+                // La recepcionista solo consulta su sucursal
+                if (EsRecepcionista)
+                    IdSucursal = IdSucursalSesion() ?? -1;
                 DataTable dt = _logica.Socios(IdSucursal, IdTipoMembresia, IdEstatus);
 
                 foreach (DataRow r in dt.Rows)
@@ -75,10 +78,13 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            // La recepcionista solo consulta su sucursal
+            if (EsRecepcionista)
+                IdSucursal = IdSucursalSesion() ?? -1;
             DataTable dt = _logica.Socios(IdSucursal, IdTipoMembresia, IdEstatus);
             return ExportarExcel(dt, "Reporte_Socios",
-                new string[] { "Folio", "Socio", "Correo", "Teléfono", "Sucursal", "Membresía", "Vencimiento", "Estatus", "Expediente (1=Sí)" },
-                new string[] { "Folio", "Socio", "Correo", "Telefono", "Sucursal", "Membresia", "FechaVencimiento", "EstatusMembresia", "TieneExpediente" });
+                new string[] { "Folio", "Socio", "Fecha de nacimiento", "Correo", "Teléfono", "Sucursal", "Inscripción", "Membresía", "Inicio", "Vencimiento", "Estatus", "Expediente (1=Sí)" },
+                new string[] { "Folio", "Socio", "FechaNacimiento", "Correo", "Telefono", "Sucursal", "FechaInscripcion", "Membresia", "FechaInicio", "FechaVencimiento", "EstatusMembresia", "TieneExpediente" });
         }
     }
 }

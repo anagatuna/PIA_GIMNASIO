@@ -63,19 +63,28 @@
             <div class="table-responsive tabla-gestion">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr><th>Sucursal</th><th>Empleado</th><th>Puesto</th><th>Especialidades</th><th>Contacto</th><th>Contratación</th><th>Estatus</th></tr>
+                        <tr><th>Empleado</th><th>CURP / RFC</th><th>Puesto</th><th>Especialidades</th><th>Contratación</th><th>Contacto</th><th>Sucursal</th></tr>
                     </thead>
                     <tbody>
                         @foreach (DataRow f in Model.Filas)
                         {
                             <tr>
-                                <td>@f["Sucursal"]</td>
                                 <td class="fw-semibold">@f["Empleado"]</td>
+                                <td class="small text-nowrap">
+                                    @if (f["CURP"] != DBNull.Value)
+                                    {
+                                        <div>@f["CURP"]</div>
+                                    }
+                                    @if (f["RFC"] != DBNull.Value)
+                                    {
+                                        <div class="text-secondary">@f["RFC"]</div>
+                                    }
+                                </td>
                                 <td>@f["Puesto"]</td>
                                 <td class="small">@f["Especialidades"]</td>
-                                <td class="small">@f["Correo"]<br />@f["Telefono"]</td>
                                 <td>@Convert.ToDateTime(f["FechaContratacion"]).ToString("dd/MM/yyyy")</td>
-                                <td><span class="etiqueta @(f["Estatus"].ToString() == "Activo" ? "etiqueta-activo" : "etiqueta-inactivo")">@f["Estatus"]</span></td>
+                                <td class="small">@f["Correo"]<br />@f["Telefono"]</td>
+                                <td>@f["Sucursal"]</td>
                             </tr>
                         }
                     </tbody>

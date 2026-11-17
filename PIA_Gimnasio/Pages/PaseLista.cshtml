@@ -11,15 +11,15 @@
             return "";
         return ((TimeSpan)valor).ToString(@"hh\:mm");
     }
-    var cultura = new System.Globalization.CultureInfo("es-MX");
     var clase = Model.ClaseActual;
     bool puedePasarLista = clase != null && Convert.ToInt32(clase["PuedePasarLista"]) == 1;
-    var opciones = new[]
+    // Socios que todavía no tienen asistencia registrada
+    int sinMarcar = 0;
+    foreach (DataRow p in Model.Participantes)
     {
-        (Valor: logicaPaseLista.Confirmado, Texto: "Confirmado", Icono: "bi-hourglass-split", Clase: "confirmado"),
-        (Valor: logicaPaseLista.Asistio, Texto: "Asistió", Icono: "bi-check-lg", Clase: "asistio"),
-        (Valor: logicaPaseLista.Falta, Texto: "Falta", Icono: "bi-x-lg", Clase: "falta")
-    };
+        if (Convert.ToInt32(p["IdEstatus"]) == logicaPaseLista.Pendiente)
+            sinMarcar++;
+    }
 }
 
 <section class="gestion">
@@ -34,7 +34,7 @@
                     <a class="btn-circulo btn-oscuro" title="Día anterior" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(-1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-left"></i></a>
                     <div class="form-floating flex-grow-1">
                         <input id="Fecha" name="Fecha" type="date" class="form-control" value="@Model.Dia.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
-                        <label for="Fecha">@Model.Dia.ToString("dddd", cultura)</label>\
+                        <label for="Fecha">@Model.Dia.ToString("dddd")</label>
                     </div>
                     <a class="btn-circulo btn-oscuro" title="Día siguiente" asp-page="/PaseLista" asp-route-Fecha="@Model.Dia.AddDays(1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-right"></i></a>
                 </form>
@@ -81,10 +81,17 @@
                 {
                     <h4 class="titulo-card"><i class="bi bi-list-check"></i>&nbsp;Pase de lista: <span class="resaltado">@clase["Nombre"]</span></h4>
                     <p class="text-secondary small mb-3">
-                        @Model.Dia.ToString("dddd dd 'de' MMMM", cultura) · @Hora(clase["HoraInicio"]) - @Hora(clase["HoraFin"]) · @clase["Salon"] · @clase["Entrenador"]
+                        @Model.Dia.ToString("dddd dd 'de' MMMM") · @Hora(clase["HoraInicio"]) - @Hora(clase["HoraFin"]) · @clase["Salon"] · @clase["Entrenador"]
                     </p>
 
-                    @if (!puedePasarLista)
+                    @if (!puedePasarLista && Model.Dia < DateTime.Today)
+                    {
+                        // Clase de un día anterior: el pase de lista solo se hace el mismo día
+                        <div class="resumen-plan sin-plan mb-3">
+                            <i class="bi bi-lock"></i> El pase de lista solo se puede hacer el mismo día de la clase.
+                        </div>
+                    }
+                    else if (!puedePasarLista)
                     {
                         <div class="resumen-plan al-limite mb-3">
                             <i class="bi bi-clock"></i> La clase todavía no comienza; podrás registrar la asistencia a partir de las @Hora(clase["HoraInicio"]).
@@ -97,8 +104,8 @@
                     }
                     else
                     {
-                        <form method="post" asp-page-handler="Guardar" asp-route-Fecha="@Model.Dia.ToString("yyyy-MM-dd")" asp-route-IdClase="@Model.IdClase">
-                            @if (puedePasarLista)
+                        <form method="post" asp-page-handler="Guardar" asp-route-Fecha="@Model.Dia.ToString("yyyy-MM-dd")" asp-route-IdClase="@Model.IdClase" id="formAsistencia">
+                            @if (puedePasarLista && sinMarcar > 0)
                             {
                                 <div class="d-flex justify-content-end mb-2">
                                     <button type="button" class="btn btn-verde btn-sm-pill" id="todosAsistieron"><i class="bi bi-check2-all me-1"></i>Todos asistieron</button>
@@ -127,27 +134,67 @@
                                                 }
                                             </div>
                                         </div>
-                                        <div class="opciones-asistencia" role="radiogroup">
-                                            @foreach (var o in opciones)
-                                            {
-                                                bool bloqueada = !puedePasarLista || (o.Valor == logicaPaseLista.Asistio && !tuvoEntrada);
-                                                <label class="opcion @o.Clase" title="@(bloqueada && puedePasarLista ? "Sin entrada registrada" : o.Texto)">
-                                                    <input type="radio" name="Asistencia[@idReserva]" value="@o.Valor" checked="@(estatus == o.Valor)" disabled="@bloqueada" />
-                                                    <span><i class="bi @o.Icono"></i> <span class="d-none d-sm-inline">@o.Texto</span></span>
+                                        @if (estatus == logicaPaseLista.Asistio)
+                                        {
+                                            // Ya registrada: no se puede cambiar
+                                            <span class="etiqueta etiqueta-activo"><i class="bi bi-check-lg"></i> ASISTIÓ</span>
+                                        }
+                                        else if (estatus == logicaPaseLista.Falta)
+                                        {
+                                            <span class="etiqueta etiqueta-inactivo"><i class="bi bi-x-lg"></i> FALTA</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="opciones-asistencia" role="radiogroup">
+                                                @* "Asistió" solo se habilita si el socio registró su entrada ese día *@
+                                                <label class="opcion asistio" title="@(puedePasarLista && !tuvoEntrada ? "Sin entrada registrada" : "Asistió")">
+                                                    <input type="radio" name="Asistencia[@idReserva]" value="@logicaPaseLista.Asistio" disabled="@(!puedePasarLista || !tuvoEntrada)" />
+                                                    <span><i class="bi bi-check-lg"></i> <span class="d-none d-sm-inline">Asistió</span></span>
                                                 </label>
-                                            }
-                                        </div>
+                                                <label class="opcion falta" title="Falta">
+                                                    <input type="radio" name="Asistencia[@idReserva]" value="@logicaPaseLista.Falta" disabled="@(!puedePasarLista)" />
+                                                    <span><i class="bi bi-x-lg"></i> <span class="d-none d-sm-inline">Falta</span></span>
+                                                </label>
+                                            </div>
+                                        }
                                     </div>
                                 }
                             </div>
 
-                            @if (puedePasarLista)
+                            @if (puedePasarLista && sinMarcar > 0)
                             {
                                 <div class="d-flex justify-content-center mt-4">
-                                    <button type="submit" class="btn btn-naranja"><i class="bi bi-floppy me-1"></i>Guardar pase de lista</button>
+                                    @* Primero pide confirmación: la asistencia ya no se puede cambiar *@
+                                    <button type="button" class="btn btn-naranja" data-bs-toggle="modal" data-bs-target="#modalConfirmarAsistencia">
+                                        <i class="bi bi-floppy me-1"></i>Guardar pase de lista
+                                    </button>
                                 </div>
                             }
+                            else if (sinMarcar == 0)
+                            {
+                                <div class="small text-secondary text-center mt-3"><i class="bi bi-lock"></i> El pase de lista de esta clase ya está completo.</div>
+                            }
                         </form>
+
+                        <!-- Ventana de confirmación antes de guardar -->
+                        <div class="modal fade" id="modalConfirmarAsistencia" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content modal-gestion">
+                                    <div class="modal-body text-center p-4">
+                                        <div class="icono-alerta"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                                        <h5 id="modalConfirmarLabel" class="fw-bold">¿Guardar el pase de lista?</h5>
+                                        <p class="text-secondary mb-0">
+                                            Una vez guardada, la asistencia (<b>Asistió</b> o <b>Falta</b>) ya no se puede cambiar.
+                                            Los socios que no marques quedan pendientes.
+                                        </p>
+                                    </div>
+                                    <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                                        <button type="button" class="btn btn-oscuro" data-bs-dismiss="modal">Revisar</button>
+                                        <button type="submit" form="formAsistencia" class="btn btn-naranja">Sí, guardar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     }
                 }
             </div>

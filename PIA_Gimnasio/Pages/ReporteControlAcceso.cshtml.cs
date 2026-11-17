@@ -15,7 +15,7 @@ namespace PIA_Gimnasio.Pages
         {
             _logica = logica;
             _logicaSucursal = logicaSucursal;
-            RolesPermitidos = new string[] { "Administrador", "Recepcionista" };
+            RolesPermitidos = new string[] { "ADMINISTRADOR", "RECEPCIONISTA" };
         }
 
         // Filtros
@@ -34,6 +34,10 @@ namespace PIA_Gimnasio.Pages
 
         public void OnGet()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
             // Por omisión, los últimos 7 días
             if (Desde == null)
                 Desde = DateTime.Today.AddDays(-6);
@@ -51,6 +55,9 @@ namespace PIA_Gimnasio.Pages
                     return;
                 }
 
+                // La recepcionista solo consulta su sucursal
+                if (EsRecepcionista)
+                    IdSucursal = IdSucursalSesion() ?? -1;
                 DataTable dt = _logica.ControlAcceso(Busqueda, IdSucursal, Desde, Hasta);
 
                 int sumaMinutos = 0;
@@ -70,7 +77,7 @@ namespace PIA_Gimnasio.Pages
                         visitasTerminadas++;
                     }
 
-                    string folio = r["Folio"].ToString()!;
+                    string folio = r["Folio"].ToString() ?? "";
                     if (!folios.Contains(folio))
                         folios.Add(folio);
                 }
@@ -89,6 +96,13 @@ namespace PIA_Gimnasio.Pages
         // Botón Exportar a Excel
         public IActionResult OnGetExportar()
         {
+            // Fechas fuera de rango se toman como vacías
+            Desde = FechaValida(Desde);
+            Hasta = FechaValida(Hasta);
+
+            // La recepcionista solo consulta su sucursal
+            if (EsRecepcionista)
+                IdSucursal = IdSucursalSesion() ?? -1;
             DataTable dt = _logica.ControlAcceso(Busqueda, IdSucursal, Desde, Hasta);
             return ExportarExcel(dt, "Reporte_ControlAcceso",
                 new string[] { "Folio", "Socio", "Sucursal", "Entrada", "Salida", "Minutos de permanencia", "En curso (1=Sí)" },

@@ -15,6 +15,6 @@ namespace PIA_Gimnasio.Entidades
         public int? IdPuesto { get; set; }
         public DateTime? FechaContratacion { get; set; } = DateTime.Today;
         public int? IdEstatus { get; set; } = 1;
-        public List<int> Especialidades { get; set; } = new();   // Solo si el puesto es Entrenador
+        public List<int> Especialidades { get; set; } = new List<int>();   // Solo si el puesto es Entrenador
     }
 }

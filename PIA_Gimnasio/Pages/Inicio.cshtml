@@ -3,9 +3,6 @@
 @{
     ViewData["Title"] = "Inicio";
     ViewData["AnchoCompleto"] = true;
-    var inicial = string.IsNullOrEmpty(Model.Nombre) ? "U" : Model.Nombre.Substring(0, 1).ToUpper();
-    var cultura = new System.Globalization.CultureInfo("es-MX");
-
     // Hora en formato 08:30 (vacío si no hay)
     string Hora(object valor)
     {
@@ -15,19 +12,8 @@
     }
 }
 
-<section class="gestion">
-    <!-- Bienvenida -->
-    <div class="card-gestion bienvenida mb-4">
-        <div class="perfil-avatar">@inicial</div>
-        <div class="flex-grow-1">
-            <h3 class="mb-1">Hola, @Model.Nombre</h3>
-            <span class="etiqueta etiqueta-rol">@Model.Rol</span>
-            <p class="mb-0 mt-2 text-secondary">@Model.DescripcionRol</p>
-        </div>
-        <a class="btn btn-oscuro d-none d-md-inline-block" asp-page="/Perfil"><i class="bi bi-person-badge me-1"></i>Mi perfil</a>
-    </div>
-
-    @if (Model.Rol == "Entrenador")
+<section class="gestion inicio">
+    @if (Model.Rol == "ENTRENADOR")
     {
         // ---------- Entrenador: agenda de la semana ----------
         int clasesHoy = 0;
@@ -52,16 +38,16 @@
                 @for (int d = 0; d < 5; d++)
                 {
                     var dia = Model.Lunes.AddDays(d);
-                    // Clases de este día (DiaSemana: 0 = lunes ... 4 = viernes)
+                    // Clases de este día (se compara la fecha de la clase con la del día de la agenda)
                     List<DataRow> clasesDia = new List<DataRow>();
                     foreach (DataRow c in Model.Agenda)
                     {
-                        if (Convert.ToInt32(c["DiaSemana"]) == d)
+                        if (Convert.ToDateTime(c["Fecha"]).Date == dia)
                             clasesDia.Add(c);
                     }
 
                     <div class="agenda-dia @(dia == DateTime.Today ? "hoy" : "")">
-                        <div class="agenda-titulo">@InicioModel.Dias[d] <span>@dia.ToString("dd/MM")</span></div>
+                        <div class="agenda-titulo">@logicaCatalogo.DiasSemana[d] <span>@dia.ToString("dd/MM")</span></div>
 
                         @if (clasesDia.Count == 0)
                         {
@@ -94,7 +80,7 @@
         int aforoMaximo = Convert.ToInt32(ind["AforoMaximo"]);
 
         <div class="card-gestion mb-4">
-            <h4 class="titulo-card"><i class="bi bi-speedometer2"></i>&nbsp;Resumen de hoy: <span class="resaltado">@(Model.EsAdministrador ? "todas las sucursales" : "mi sucursal")</span></h4>
+            <h4 class="titulo-card"><i class="bi bi-speedometer2"></i>&nbsp;Resumen de hoy: <span class="resaltado">@(Model.EsAdministrador ? "todas las sucursales" : Model.NombreSucursal)</span></h4>
 
             <div class="tarjetas-resumen">
                 <div class="tarjeta"><span>Socios activos</span><b>@ind["SociosActivos"]</b></div>
@@ -103,10 +89,6 @@
                 <div class="tarjeta"><span>Dentro ahora</span><b>@dentro <small>/ @aforoMaximo</small></b></div>
                 <div class="tarjeta"><span>Entradas de hoy</span><b>@ind["EntradasHoy"]</b></div>
                 <div class="tarjeta"><span>Clases de hoy</span><b>@ind["ClasesHoy"] <small>· @ind["ReservasHoy"] reservas</small></b></div>
-                @if (Model.EsAdministrador)
-                {
-                    <div class="tarjeta verde"><span>Ventas del mes</span><b>@Convert.ToDecimal(ind["VentasMes"]).ToString("C0", cultura)</b></div>
-                }
             </div>
         </div>
 
@@ -174,7 +156,7 @@
                                             <td>@s["Membresia"]</td>
                                             <td class="text-end text-nowrap">
                                                 @Convert.ToDateTime(s["FechaVencimiento"]).ToString("dd/MM")
-                                                <div class="small @(dias <= 2 ? "text-danger fw-semibold" : "text-secondary")">@(dias == 0 ? "Hoy" : $"En {dias} días")</div>
+                                                <div class="small @(dias <= 2 ? "text-danger fw-semibold" : "text-secondary")">@(dias == 0 ? "Hoy" : "En " + dias + " días")</div>
                                             </td>
                                         </tr>
                                     }
