@@ -59,7 +59,6 @@ namespace PIA_Gimnasio.Pages
         // Al cambiar la fecha de inicio: recarga la página para mostrar el vencimiento
         public IActionResult OnPostVencimiento()
         {
-            Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
             Cargar();
             return Page();
         }
@@ -162,6 +161,9 @@ namespace PIA_Gimnasio.Pages
         // Llena combos y tabla
         private void Cargar()
         {
+            // Fecha fuera de rango = vacía (con cualquier botón; así el vencimiento siempre se puede calcular)
+            Suscripcion.FechaInicio = FechaValida(Suscripcion.FechaInicio);
+
             try
             {
                 Socios = CargarCombo(_logicaSocio.ConsultarActivos(), "IdCliente", "Socio");
